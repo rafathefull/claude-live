@@ -104,7 +104,16 @@ cero y además se ve cuándo Claude está **esperando un permiso tuyo**. En
 
 `"async": true` es importante: así, si el visor no está levantado, Claude Code no espera por
 él. Como son *user settings*, se aplican a todas tus sesiones en todos los directorios sin
-configurar nada por proyecto.
+configurar nada por proyecto, y se recargan en caliente: no hay que reiniciar la sesión.
+
+Para comprobar que están llegando, `GET /api/health` cuenta los hooks recibidos por evento:
+
+```json
+{ "ok": true, "sessions": 1, "clients": 2, "hooks": { "PreToolUse": 4, "PostToolUse": 2 } }
+```
+
+Cada hook trae el `tool_use_id` que después aparecerá en el transcript, así que la llamada
+se ve una sola vez aunque llegue por las dos vías.
 
 ## Privacidad
 
@@ -193,7 +202,7 @@ ventana, informa de los errores de consola y guarda las capturas de las tres vis
 ## Estado y qué falta
 
 Funcionando: sesiones vivas, subagentes, timeline, inspector, historial con reproductor,
-leyenda y modo sobrio.
+leyenda, modo sobrio e ingesta de hooks.
 
 Pendiente:
 

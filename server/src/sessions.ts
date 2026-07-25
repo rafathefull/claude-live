@@ -233,6 +233,7 @@ export class LiveRegistry extends EventEmitter {
       agent.info.kind = 'subagent'
     } else {
       this.emit('agent', { agent: info, state: 'spawn' })
+      this.announceSpawnEvent(state, info)
     }
     return agent
   }
@@ -271,6 +272,25 @@ export class LiveRegistry extends EventEmitter {
     })
     if (spawn.toolUseId) state.agentByToolUse.set(spawn.toolUseId, spawn.agentId)
     this.emit('agent', { agent: info, state: 'spawn' })
+    this.announceSpawnEvent(state, info)
+  }
+
+  /**
+   * Evento de nacimiento. Va en la cola de Claude (agentId null) porque es él quien lanza al
+   * subagente: así el mundo dibuja la línea de padre a hijo y anuncia su cometido.
+   */
+  private announceSpawnEvent(state: SessionState, info: ActorInfo): void {
+    this.push(state, {
+      uuid: `${info.id}:spawn`,
+      parentUuid: null,
+      sessionId: state.info.sessionId,
+      agentId: null,
+      ts: new Date().toISOString(),
+      kind: 'agent_spawn',
+      station: 'desk',
+      summary: `${info.agentType ?? 'agente'}: ${info.description ?? 'arranca'}`,
+      actor: info,
+    })
   }
 
   private finishAgent(state: SessionState, agent: AgentState): void {
@@ -368,6 +388,32 @@ export class LiveRegistry extends EventEmitter {
     if (state.recent.length > RECENT_LIMIT) state.recent.shift()
     state.info.eventCount = (state.info.eventCount ?? 0) + 1
     if (!silent) this.emit('event', event)
+  }
+
+  // ---------------------------------------------------------------- hooks
+
+  /**
+   * Lo que cuentan los hooks de Claude Code sobre un subagente. `SubagentStop` es la única
+   * señal exacta de que ha terminado: sin hooks hay que deducirlo por inactividad.
+   */
+  noteAgentFromHook(sessionId: string, agentId: string, event: 'start' | 'stop'): void {
+    const state = this.sessions.get(sessionId)
+    const agent = state?.agents.get(agentId)
+    if (!state || !agent) return
+    if (event === 'stop') {
+      this.finishAgent(state, agent)
+      return
+    }
+    agent.lastActivity = Date.now()
+    agent.done = false
+  }
+
+  /** Marca actividad en una sesión para que el barrido no dé por muertos a sus agentes. */
+  noteActivityFromHook(sessionId: string, agentId: string | null): void {
+    const state = this.sessions.get(sessionId)
+    if (!state) return
+    const agent = agentId ? state.agents.get(agentId) : undefined
+    if (agent) agent.lastActivity = Date.now()
   }
 
   // ---------------------------------------------------------------- limpieza

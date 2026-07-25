@@ -12,6 +12,8 @@ const registry = new LiveRegistry()
 
 /** Clientes SSE conectados. */
 const clients = new Set<{ write: (chunk: string) => void }>()
+/** Cuántos hooks se han recibido, por evento: sirve para comprobar que están configurados. */
+const hookCounts = new Map<string, number>()
 
 function broadcast(message: ServerMessage): void {
   const payload = `data: ${JSON.stringify(message)}\n\n`
@@ -97,7 +99,22 @@ app.get('/api/sessions/:id/raw/:uuid', async (request, reply) => {
 })
 
 app.post('/hook', async (request, reply) => {
-  const { events, agents } = normalizeHook((request.body ?? {}) as HookPayload)
+  const payload = (request.body ?? {}) as HookPayload
+  const name = payload.hook_event_name ?? 'desconocido'
+  hookCounts.set(name, (hookCounts.get(name) ?? 0) + 1)
+  const { events, agents } = normalizeHook(payload)
+
+  // El registry también se entera: `SubagentStop` es la única señal exacta de que un
+  // subagente ha terminado (sin hooks se deduce por inactividad).
+  if (payload.session_id) {
+    for (const { agent, state } of agents) {
+      registry.noteAgentFromHook(payload.session_id, agent.id, state === 'spawn' ? 'start' : 'stop')
+    }
+    if (agents.length === 0) {
+      registry.noteActivityFromHook(payload.session_id, payload.agent_id ?? null)
+    }
+  }
+
   for (const event of events) broadcast({ type: 'event', event })
   for (const { agent, state } of agents) broadcast({ type: 'agent', agent, state })
   // Nunca bloquear a Claude Code: se contesta vacío y en éxito siempre.
@@ -108,6 +125,7 @@ app.get('/api/health', async () => ({
   ok: true,
   sessions: registry.listSessions().length,
   clients: clients.size,
+  hooks: Object.fromEntries(hookCounts),
 }))
 
 const distDir = fileURLToPath(WEB_DIST)
