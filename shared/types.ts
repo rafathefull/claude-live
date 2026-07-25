@@ -73,6 +73,12 @@ export interface TimelineEvent {
 /** Un habitante del mundo. */
 export interface ActorInfo {
   id: string
+  /**
+   * Sesión a la que pertenece. Va en el propio actor y no en el mensaje que lo transporta
+   * porque el front no puede deducirlo: con dos sesiones abiertas, dar por hecho que es la
+   * seleccionada atribuía los subagentes a la habitación equivocada.
+   */
+  sessionId: string
   kind: 'user' | 'main' | 'subagent' | 'job'
   /** Explore, Plan, general-purpose, claude-code-guide… */
   agentType?: string

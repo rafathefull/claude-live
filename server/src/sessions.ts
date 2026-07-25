@@ -202,6 +202,7 @@ export class LiveRegistry extends EventEmitter {
 
     const info: ActorInfo = {
       id: agentId,
+      sessionId: state.info.sessionId,
       kind: 'subagent',
       agentType: meta.agentType,
       description: meta.description,
@@ -250,6 +251,7 @@ export class LiveRegistry extends EventEmitter {
     }
     const info: ActorInfo = {
       id: spawn.agentId,
+      sessionId: state.info.sessionId,
       kind: 'subagent',
       description: spawn.description,
       depth: 1,

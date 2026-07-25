@@ -12,7 +12,6 @@ const MAX_EVENTS_PER_SESSION = 800
 const HISTORY_LIMIT = 2000
 
 export interface AgentView extends ActorInfo {
-  sessionId: string
   active: boolean
   /** Última estación visitada, para pintarlo en el sitio correcto. */
   lastStation?: string
@@ -118,22 +117,41 @@ function ensureSelection(): void {
   state.selectedSessionId = (live ?? state.sessions[0])?.sessionId ?? null
 }
 
+/** uuids ya recibidos por sesión, para no repetir eventos tras una reconexión. */
+const seen = new Map<string, Set<string>>()
+
 function addEvent(event: TimelineEvent): void {
   const list = (state.events[event.sessionId] ??= [])
+  const known = seen.get(event.sessionId) ?? new Set<string>()
+  if (!seen.has(event.sessionId)) seen.set(event.sessionId, known)
 
-  // Dedupe: los hooks HTTP llegan antes que el transcript y describen la misma llamada.
+  // Al reconectar, el servidor reenvía su buffer reciente. El uuid es la única clave que
+  // tienen todos los eventos: los de pensamiento y texto no llevan toolUseId, así que sin
+  // esto aparecían por duplicado cada vez que se caía el SSE.
+  if (known.has(event.uuid)) {
+    const twin = list.find((e) => e.uuid === event.uuid)
+    if (twin) Object.assign(twin, event)
+    return
+  }
+
+  // Dedupe entre fuentes: los hooks HTTP llegan antes que el transcript y describen la
+  // misma llamada, pero con otro uuid.
   if (event.toolUseId) {
-    const twin = list.find(
-      (e) => e.toolUseId === event.toolUseId && e.kind === event.kind && e.sessionId === event.sessionId,
-    )
+    const twin = list.find((e) => e.toolUseId === event.toolUseId && e.kind === event.kind)
     if (twin) {
+      known.add(event.uuid)
       Object.assign(twin, { ...event, uuid: twin.uuid })
       return
     }
   }
 
   list.push(event)
-  if (list.length > MAX_EVENTS_PER_SESSION) list.splice(0, list.length - MAX_EVENTS_PER_SESSION)
+  known.add(event.uuid)
+  if (list.length > MAX_EVENTS_PER_SESSION) {
+    for (const dropped of list.splice(0, list.length - MAX_EVENTS_PER_SESSION)) {
+      known.delete(dropped.uuid)
+    }
+  }
 
   if (event.agentId) {
     const agent = state.agents[event.agentId]
@@ -146,23 +164,21 @@ function addEvent(event: TimelineEvent): void {
   for (const listener of listeners) listener(event)
 }
 
-function upsertAgent(agent: ActorInfo, sessionId: string, active: boolean): void {
+function upsertAgent(agent: ActorInfo, active: boolean): void {
   const existing = state.agents[agent.id]
   if (existing) {
     Object.assign(existing, agent, { active })
     return
   }
-  state.agents[agent.id] = { ...agent, sessionId, active, events: 0 }
+  state.agents[agent.id] = { ...agent, active, events: 0 }
 }
 
-function handle(message: ServerMessage): void {
+/** Aplica un mensaje del servidor al estado. Exportada para poder probarla sin navegador. */
+export function applyServerMessage(message: ServerMessage): void {
   switch (message.type) {
     case 'hello':
       state.sessions = message.sessions
-      for (const agent of message.agents) {
-        const sessionId = message.sessions[0]?.sessionId ?? ''
-        upsertAgent(agent, sessionId, false)
-      }
+      for (const agent of message.agents) upsertAgent(agent, false)
       ensureSelection()
       break
     case 'sessions':
@@ -172,11 +188,11 @@ function handle(message: ServerMessage): void {
     case 'event':
       addEvent(message.event)
       break
-    case 'agent': {
-      const sessionId = state.selectedSessionId ?? state.sessions[0]?.sessionId ?? ''
-      upsertAgent(message.agent, sessionId, message.state === 'spawn')
+    case 'agent':
+      // El sessionId viaja dentro del actor: deducirlo de la sesión seleccionada metía los
+      // subagentes en la habitación equivocada cuando había dos sesiones abiertas.
+      upsertAgent(message.agent, message.state === 'spawn')
       break
-    }
   }
 }
 
@@ -192,7 +208,7 @@ export function connect(): void {
 
   source.onmessage = (message) => {
     try {
-      handle(JSON.parse(message.data) as ServerMessage)
+      applyServerMessage(JSON.parse(message.data) as ServerMessage)
     } catch {
       // mensaje ilegible: se ignora
     }
@@ -222,7 +238,7 @@ export async function loadSessionEvents(sessionId: string, limit = HISTORY_LIMIT
   // tokens: se suman aquí para que el HUD no muestre un 0 en las sesiones ya cerradas.
   const totals = { input: 0, output: 0, cacheRead: 0, cacheCreate: 0 }
   for (const event of data.events) {
-    if (event.agentId && event.actor) upsertAgent(event.actor, sessionId, false)
+    if (event.agentId && event.actor) upsertAgent(event.actor, false)
     if (!event.tokens) continue
     totals.input += event.tokens.input
     totals.output += event.tokens.output

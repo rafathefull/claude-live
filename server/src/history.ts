@@ -145,6 +145,7 @@ export async function readSessionEvents(
       const agentParser = new TranscriptParser({ sessionId, agentId: ref.agentId })
       const actor = {
         id: ref.agentId as string,
+        sessionId,
         kind: 'subagent' as const,
         agentType: meta.agentType,
         description: meta.description,

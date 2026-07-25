@@ -95,6 +95,7 @@ export function normalizeHook(payload: HookPayload): HookResult {
       if (!payload.agent_id) return { events: [], agents: [] }
       const agent: ActorInfo = {
         id: payload.agent_id,
+        sessionId,
         kind: 'subagent',
         agentType: payload.agent_type,
         depth: 1,

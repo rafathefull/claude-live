@@ -170,7 +170,10 @@ npm run typecheck  # vue-tsc
 
 `test:parser` mide el rendimiento con el transcript más grande que tengas y comprueba que
 los payloads salen recortados. `test:grouping` alimenta la regla de agrupación real con
-sesiones enteras y verifica que la representación no se come pasos.
+sesiones enteras y verifica que la representación no se come pasos. `test:store` aplica
+mensajes del servidor al store del front sin navegador, para cubrir lo que se rompe en
+silencio: eventos duplicados al reconectar el SSE y subagentes atribuidos a la sesión
+equivocada cuando hay dos abiertas.
 
 ### Mundo de demostración
 
