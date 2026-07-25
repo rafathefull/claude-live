@@ -59,6 +59,15 @@ export class Actor {
   /** Qué mostrar al pasar el ratón por encima. */
   tooltipTitle = ''
   tooltipBody = ''
+  /**
+   * Dónde «vive» el actor, en términos del escenario y no en píxeles: la estación y el hueco
+   * que ocupa, o una fracción del ancho y el alto para los que no van a ninguna estación.
+   * Sin esto, al redimensionar la ventana los actores se quedaban en su píxel de antes y
+   * acababan plantados en medio de otro sitio.
+   */
+  homeStation?: string
+  homeSlot = 0
+  homeFraction?: { x: number; y: number }
   /** Posición objetivo; el ticker interpola hacia ella. */
   targetX = 0
   targetY = 0
@@ -80,12 +89,13 @@ export class Actor {
   private bubbleUntil = 0
   private bubbleHeight = 0
   private bubbleBelow = false
+  private ringMood?: ActorMood
   private born = 0
   private spawnProgress = 0
 
   constructor(
     readonly id: string,
-    private emoji: string,
+    emoji: string,
     private color: number,
     labelText: string,
     private radius = 24,
@@ -155,6 +165,14 @@ export class Actor {
   setSubLabel(text: string): void {
     this.subLabel.text = text.length > 38 ? `${text.slice(0, 37)}…` : text
     this.tooltipBody = text
+  }
+
+  /**
+   * En ventanas estrechas la segunda línea se esconde: con los actores tan juntos, los
+   * cometidos se superponían y no se leía ninguno. Siguen en el tooltip y en las píldoras.
+   */
+  setCompact(compact: boolean): void {
+    this.subLabel.visible = !compact
   }
 
   setMood(mood: ActorMood): void {
@@ -240,7 +258,6 @@ export class Actor {
     // Balanceo sutil para que el mundo no parezca congelado
     const t = (now - this.born) / 1000
     this.face.y = Math.sin(t * 2.4) * 1.4
-    this.face.text = this.emoji
 
     // Insignia del estado: 🧠 pensando, 🔧 trabajando, 💬 hablando, ❗ esperando
     const badge = MOOD_EMOJI[this.mood]
@@ -249,13 +266,18 @@ export class Actor {
     this.badgeBg.visible = badge !== ''
     if (badge) this.badge.scale.set(1 + Math.sin(t * 6) * 0.06)
 
-    // Anillo de estado, pulsando cuando piensa o trabaja
+    // Anillo de estado: la geometría se rehace solo al cambiar de estado; el latido es
+    // alpha y escala, que no cuestan nada.
+    if (this.ringMood !== this.mood) {
+      this.ringMood = this.mood
+      this.ring
+        .clear()
+        .circle(0, 0, this.radius + 6)
+        .stroke({ width: 2, color: MOOD_RING[this.mood] })
+    }
     const pulse = this.mood === 'idle' ? 0 : (Math.sin(t * 5) + 1) / 2
-    const ringRadius = this.radius + 5 + pulse * 3
-    this.ring
-      .clear()
-      .circle(0, 0, ringRadius)
-      .stroke({ width: 2, color: MOOD_RING[this.mood], alpha: 0.25 + pulse * 0.45 })
+    this.ring.alpha = 0.25 + pulse * 0.45
+    this.ring.scale.set(1 + pulse * 0.05)
 
     if (this.bubble.visible && now > this.bubbleUntil) this.bubble.visible = false
   }

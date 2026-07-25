@@ -46,49 +46,48 @@ export class Director {
 
   /** Crea los habitantes fijos: tú y Claude. */
   bootstrap(sessionLabel: string): void {
-    const user = this.scene.ensureActor({
+    this.scene.ensureActor({
       id: USER_ID,
       emoji: '🧑',
       color: 0xfacc15,
       label: 'tú',
+      subLabel: 'quien pide las cosas',
       at: 'desk',
     })
-    user.place(...this.deskSpot(0.5, 0.9))
+    this.scene.placeAtFraction(USER_ID, 0.5, 0.9)
 
-    const main = this.scene.ensureActor({
+    this.scene.ensureActor({
       id: MAIN_ID,
       emoji: '🤖',
       color: 0xe5e7eb,
       label: sessionLabel,
+      subLabel: 'el agente principal',
       radius: 28,
       at: 'desk',
     })
-    main.place(...this.deskSpot(0.5, 0.62))
+    this.scene.placeAtFraction(MAIN_ID, 0.5, 0.62)
   }
 
   setMainLabel(label: string): void {
     this.scene.actor(MAIN_ID)?.setLabel(label)
   }
 
-  /** Vacía el mundo (cambio de sesión). */
+  /**
+   * Vacía el mundo al cambiar de sesión.
+   *
+   * La lista de actores se pide a la escena, no a las colas: antes se borraban primero las
+   * colas y después se recorrían para saber a quién eliminar, con lo que la lista ya estaba
+   * vacía y no se borraba ningún actor. Efecto visible: al volver del historial al directo,
+   * los subagentes de la conversación reproducida seguían en la escena.
+   */
   reset(sessionLabel: string): void {
-    for (const id of [...this.queues.keys()]) this.queues.delete(id)
-    this.busyUntil.clear()
-    this.agentsByType.clear()
-    for (const actorId of this.knownActors()) {
+    for (const actorId of this.scene.actorIds()) {
       if (actorId !== USER_ID && actorId !== MAIN_ID) this.scene.removeActor(actorId)
     }
+    this.queues.clear()
+    this.busyUntil.clear()
+    this.agentsByType.clear()
     this.setMainLabel(sessionLabel)
-  }
-
-  private knownActors(): string[] {
-    return [...this.queues.keys()]
-  }
-
-  private deskSpot(x: number, y: number): [number, number] {
-    const width = this.scene.app.screen.width
-    const height = this.scene.app.screen.height
-    return [x * width, y * height]
   }
 
   private actorIdFor(event: TimelineEvent): string {

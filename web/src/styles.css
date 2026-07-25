@@ -516,6 +516,48 @@ button.active {
   word-break: break-word;
 }
 
+/* ------------------------------------------------- ventanas estrechas y bajas */
+
+/* La timeline es fija en escritorio; en ventanas medianas se estrecha y en las pequeñas pasa
+   debajo del escenario, que si no se queda sin sitio para el mundo. */
+@media (max-width: 1280px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr) 340px;
+  }
+
+  .replay-title {
+    display: none;
+  }
+}
+
+@media (max-width: 960px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(220px, 1fr) minmax(160px, 40%);
+  }
+
+  .stage {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .hud {
+    gap: 10px;
+    row-gap: 6px;
+  }
+
+  .session-picker {
+    max-width: 100%;
+  }
+}
+
+/* Con poca altura, la leyenda y el inspector se comen la pantalla. */
+@media (max-height: 620px) {
+  .inspector {
+    max-height: 72%;
+  }
+}
+
 /* ---------------------------------------------------------------- leyenda */
 
 .legend-backdrop {

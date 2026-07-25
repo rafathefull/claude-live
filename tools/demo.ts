@@ -135,6 +135,19 @@ await page.screenshot({ path: join(outDir, 'leyenda-habitantes.png') })
 console.log(`  captura → ${join(outDir, 'leyenda-habitantes.png')}`)
 await page.keyboard.press('Escape')
 
+// Redimensionado: las estaciones se recolocan con la ventana, así que los actores tienen que
+// seguirlas. Antes se quedaban en su píxel y acababan plantados en medio de otra estación.
+for (const size of [
+  { width: 1024, height: 660, name: 'estrecho' },
+  { width: 1600, height: 900, name: 'ancho' },
+]) {
+  await page.setViewportSize({ width: size.width, height: size.height })
+  await page.waitForTimeout(1500)
+  const path = join(outDir, `preview-${size.name}.png`)
+  await page.screenshot({ path })
+  console.log(`  captura → ${path} (${size.width}×${size.height})`)
+}
+
 await page.locator('.timeline-head button', { hasText: 'pensamiento' }).waitFor()
 await browser.close()
 

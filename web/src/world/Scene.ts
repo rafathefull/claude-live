@@ -62,15 +62,20 @@ export class Scene {
   private width = 0
   private height = 0
   private hoverHandler?: (info: HoverInfo | null, x: number, y: number) => void
+  private onVisibility?: () => void
 
   async mount(host: HTMLElement): Promise<void> {
     await this.app.init({
       background: 0x0b0d12,
       antialias: true,
       resizeTo: host,
-      resolution: Math.min(window.devicePixelRatio || 1, 2),
+      // Resolución 1 y 30 fps de techo: es un panel que se deja abierto durante horas, no un
+      // juego. A doble resolución y 60 fps la GPU trabajaba cuatro veces más sin que se note.
+      resolution: 1,
       autoDensity: true,
+      powerPreference: 'low-power',
     })
+    this.app.ticker.maxFPS = 30
     host.appendChild(this.app.canvas)
     this.app.stage.addChild(this.deskZone, this.linksLayer, this.stationsLayer, this.actorsLayer)
 
@@ -93,6 +98,14 @@ export class Scene {
     this.layout()
     this.app.renderer.on('resize', () => this.layout())
     this.app.ticker.add((ticker) => this.tick(ticker.deltaMS))
+
+    // Con la pestaña en segundo plano no hay nada que mirar: parar el ticker evita tener el
+    // mundo animándose (y calentando la máquina) mientras trabajas en otra ventana.
+    this.onVisibility = () => {
+      if (document.hidden) this.app.ticker.stop()
+      else this.app.ticker.start()
+    }
+    document.addEventListener('visibilitychange', this.onVisibility)
   }
 
   /** El front pinta el tooltip en HTML: aquí solo se dice qué hay bajo el cursor y dónde. */
@@ -115,6 +128,7 @@ export class Scene {
   }
 
   destroy(): void {
+    if (this.onVisibility) document.removeEventListener('visibilitychange', this.onVisibility)
     this.app.destroy(true, { children: true })
   }
 
@@ -195,6 +209,25 @@ export class Scene {
       station.view.position.set(x, y)
     }
     this.drawDeskZone()
+    this.relocateActors()
+  }
+
+  /**
+   * Recoloca a los actores tras un cambio de tamaño. Las estaciones se mueven con la ventana,
+   * así que un actor que conserve su píxel de antes acaba plantado en otro sitio: aquí se
+   * recalcula desde su estación y hueco, o desde su fracción del escenario.
+   */
+  private relocateActors(): void {
+    const compact = this.width < 1200
+    for (const actor of this.actors.values()) {
+      actor.setCompact(compact)
+      if (actor.homeStation) {
+        const { x, y } = this.slotPosition(actor.homeStation as StationId, actor.homeSlot)
+        actor.place(x, y)
+      } else if (actor.homeFraction) {
+        actor.place(actor.homeFraction.x * this.width, actor.homeFraction.y * this.height)
+      }
+    }
   }
 
   /** Alfombra de la zona central, con su nombre pegado al borde para no estorbar. */
@@ -279,34 +312,68 @@ export class Scene {
     return this.actors.get(id)
   }
 
+  /** Todos los actores que hay en el escenario ahora mismo. */
+  actorIds(): string[] {
+    return [...this.actors.keys()]
+  }
+
   removeActor(id: string): void {
     this.actors.get(id)?.hide()
+  }
+
+  /**
+   * Punto de un hueco concreto delante de una estación. Tres por fila, separados lo bastante
+   * para que las etiquetas de dos líneas no se pisen (con 44 px de paso eran ilegibles).
+   */
+  private slotPosition(station: StationId, slot: number): { x: number; y: number } {
+    const spot = this.positionOf(station)
+    // El paso se encoge en ventanas estrechas y el resultado se mantiene dentro del lienzo:
+    // con un paso fijo, los huecos de las estaciones pegadas al borde caían fuera de pantalla.
+    const step = Math.max(58, Math.min(104, this.width * 0.075))
+    const margin = 66
+    const x = spot.x + ((slot % 3) - 1) * step
+    const y = spot.y + PLATE_H / 2 + 30 + Math.floor(slot / 3) * 74
+    return {
+      x: Math.max(margin, Math.min(this.width - margin, x)),
+      y: Math.max(50, Math.min(this.height - 56, y)),
+    }
   }
 
   /** Coloca a un actor en una estación, repartiendo el sitio si hay varios. */
   sendActorTo(id: string, station: StationId): void {
     const actor = this.actors.get(id)
     if (!actor) return
-    const spot = this.positionOf(station)
     const peers = [...this.actors.values()].filter((a) => a !== actor)
 
     // Se busca un hueco comparando con el destino de los demás, no con el centro de la
     // estación: comparar contra el centro dejaba a dos subagentes exactamente encima.
     const taken = (x: number, y: number): boolean =>
-      peers.some((peer) => Math.hypot(peer.targetX - x, peer.targetY - y) < 42)
+      peers.some((peer) => Math.hypot(peer.targetX - x, peer.targetY - y) < 54)
 
-    // Tres huecos por fila, separados lo suficiente para que las etiquetas de dos líneas no
-    // se pisen: con 44 px de paso, tres subagentes en la misma estación eran ilegibles.
-    const baseY = spot.y + PLATE_H / 2 + 30
     for (let slot = 0; slot < 12; slot++) {
-      const x = spot.x + ((slot % 3) - 1) * 104
-      const y = baseY + Math.floor(slot / 3) * 74
+      const { x, y } = this.slotPosition(station, slot)
       if (!taken(x, y)) {
+        actor.homeStation = station
+        actor.homeSlot = slot
+        actor.homeFraction = undefined
         actor.moveTo(x, y)
         return
       }
     }
-    actor.moveTo(spot.x, baseY)
+    actor.homeStation = station
+    actor.homeSlot = 0
+    actor.homeFraction = undefined
+    const fallback = this.slotPosition(station, 0)
+    actor.moveTo(fallback.x, fallback.y)
+  }
+
+  /** Sitio fijo expresado en fracciones del escenario, para el usuario y para Claude. */
+  placeAtFraction(id: string, fx: number, fy: number): void {
+    const actor = this.actors.get(id)
+    if (!actor) return
+    actor.homeFraction = { x: fx, y: fy }
+    actor.homeStation = undefined
+    actor.place(fx * this.width, fy * this.height)
   }
 
   /** Línea temporal entre un actor y una estación (o entre dos actores). */
@@ -346,8 +413,9 @@ export class Scene {
       if (remaining < -6000 && station.detail.text) station.detail.text = ''
     }
 
-    this.linksLayer.clear()
+    const hadLinks = this.links.length > 0
     this.links = this.links.filter((link) => link.until > now)
+    if (hadLinks || this.links.length > 0) this.linksLayer.clear()
     for (const link of this.links) {
       const from = this.actors.get(link.from)
       if (!from) continue

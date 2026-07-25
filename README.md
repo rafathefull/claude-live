@@ -62,12 +62,27 @@ la cuenta de las veces que se ha usado y muestra lo último que pasó por ella.*
 git clone https://github.com/rafathefull/claude-live.git
 cd claude-live
 npm install
-npm run build
-npm start
+./scripts/claude-live.sh
 ```
 
 Abre http://127.0.0.1:7317 y, en otra terminal, lanza `claude` donde quieras: la sesión
 aparecerá sola.
+
+El script compila el front la primera vez (y cuando detecta cambios sin compilar), comprueba
+que el puerto esté libre y arranca en primer plano, así que **Ctrl+C lo para de verdad**:
+
+| Orden | Qué hace |
+|---|---|
+| `./scripts/claude-live.sh` | Arranca en primer plano |
+| `./scripts/claude-live.sh bg` | Arranca en segundo plano, con registro en `~/.local/state/claude-live/` |
+| `./scripts/claude-live.sh status` | Dice si escucha, con qué pid y cuántas sesiones ve |
+| `./scripts/claude-live.sh stop` | Lo para, aunque lo hubiera arrancado otra terminal |
+| `./scripts/claude-live.sh restart` | Las dos anteriores seguidas |
+| `./scripts/claude-live.sh logs` | Sigue el registro del modo segundo plano |
+
+`stop` mata el grupo de procesos completo, no solo el lanzador: así no queda un servidor
+suelto ocupando el puerto. También sirve `npm run server` y `npm start` (este último sin
+comprobaciones).
 
 Para desarrollo, con recarga en caliente del front y del servidor:
 
@@ -245,6 +260,17 @@ más rápido camina y menos se sostiene cada acción. En atascos —tres o más 
 consecutivas a la **misma herramienta** se agrupan («Read ×7»); dos `Read` con un `Grep` en
 medio no se juntan, y un resultado nunca se fusiona con su llamada. Nunca se descarta un
 evento: la timeline los muestra todos.
+
+**Cuesta poco tenerlo abierto.** Es un panel para dejar en una pantalla durante horas, no un
+juego: la escena va a 30 fps de techo, a resolución 1, y **se detiene por completo cuando la
+pestaña pasa a segundo plano**. Los anillos y las líneas solo rehacen su geometría cuando
+cambian de estado; el latido se anima con opacidad y escala, que no cuestan nada.
+
+**Se adapta al tamaño de la ventana.** Las estaciones se colocan en fracciones del escenario,
+y los actores recuerdan *en qué estación y hueco* están, no en qué píxel: al redimensionar se
+recolocan delante de su estación en lugar de quedarse donde estaban. Por debajo de 1280 px la
+timeline se estrecha, por debajo de 960 px pasa debajo del escenario, y en ventanas estrechas
+los actores esconden su segunda línea para no pisarse (sigue en el tooltip).
 
 **Tolerancia a los cambios de formato.** Los ficheros de `~/.claude` no son una API pública.
 El parser ignora los tipos que no conoce, una línea corrupta no tumba el watcher, y los
