@@ -127,7 +127,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
               <span class="legend-icon">👤</span>
               <strong>Subagentes</strong>
             </div>
-            <p>Nacen junto a Claude cuando él los lanza, trabajan por su cuenta y al terminar
+            <p><strong>Nacen en semicírculo delante de Claude</strong> y esperan ahí, en la
+              Mesa, hasta que su primera herramienta los manda a una estación: si ves uno
+              quieto en el centro, es que acaba de arrancar. Trabajan por su cuenta y al terminar
               le entregan su informe (línea verde) antes de desaparecer. Bajo cada uno se lee
               <strong>su cometido</strong>, y si hay varios del mismo tipo cada uno recibe un
               matiz distinto del color y se numeran en la timeline («Explore 1», «Explore 2»),

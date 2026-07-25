@@ -131,6 +131,10 @@ export class Director {
   private ensureActorFor(event: TimelineEvent, actorId: string): void {
     if (actorId === USER_ID || actorId === MAIN_ID) return
     const info = event.actor
+    // Un subagente que ya terminó no vuelve a la escena: sus eventos siguen en la timeline,
+    // pero plantar su avatar otra vez (al reconectar o al recargar) dejaba figuras quietas en
+    // medio de la Mesa sin nada que hacer.
+    if (info?.done) return
     this.scene.ensureActor({
       id: actorId,
       emoji: '👤',
@@ -223,6 +227,7 @@ export class Director {
               nearActorId: MAIN_ID,
             })
             this.registerAgentActor(id, event.actor)
+            scene.actor(id)?.setMood('thinking')
             scene.drawLink(MAIN_ID, id, color, 1400)
             if (event.actor?.description) {
               scene.actor(id)?.say(event.actor.description, 5000)

@@ -290,10 +290,20 @@ export class Scene {
     const actor = new Actor(opts.id, opts.emoji, opts.color, opts.label, opts.radius ?? 24)
     if (opts.subLabel) actor.setSubLabel(opts.subLabel)
     const anchor = opts.nearActorId ? this.actors.get(opts.nearActorId) : undefined
-    const start = anchor
-      ? { x: anchor.view.x, y: anchor.view.y }
-      : this.positionOf(opts.at ?? 'desk')
-    actor.place(start.x + (Math.random() - 0.5) * 30, start.y + (Math.random() - 0.5) * 20)
+    if (anchor) {
+      // Los recién nacidos esperan en semicírculo delante de quien los lanzó, hasta que su
+      // primera herramienta los manda a una estación. Antes se colocaban con un
+      // desplazamiento aleatorio y salían casi encima de Claude, como pegotes en la Mesa.
+      const waiting = [...this.actors.values()].filter(
+        (peer) => peer !== actor && peer !== anchor && !peer.homeStation,
+      ).length
+      const angle = -Math.PI / 2 + (waiting - 1) * 0.55
+      const radius = 96
+      actor.place(anchor.view.x + Math.cos(angle) * radius, anchor.view.y - Math.sin(angle) * radius + 40)
+    } else {
+      const start = this.positionOf(opts.at ?? 'desk')
+      actor.place(start.x, start.y)
+    }
     actor.tooltipTitle = opts.label
     actor.tooltipBody = opts.subLabel ?? ''
     this.makeHoverable(actor.view, new Circle(0, 0, (opts.radius ?? 24) + 6), () => ({

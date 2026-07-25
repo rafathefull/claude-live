@@ -233,6 +233,7 @@ export class LiveRegistry extends EventEmitter {
       this.ingest(state, agent, tail, { silent: true })
       // Un subagente ya presente al arrancar y sin actividad reciente ya había terminado.
       agent.done = true
+      agent.info.done = true
       agent.info.kind = 'subagent'
     } else {
       this.emit('agent', { agent: info, state: 'spawn' })
@@ -313,6 +314,7 @@ export class LiveRegistry extends EventEmitter {
   private finishAgent(state: SessionState, agent: AgentState): void {
     if (agent.done) return
     agent.done = true
+    agent.info.done = true
     this.emit('agent', { agent: agent.info, state: 'done' })
     this.push(state, {
       uuid: `${agent.info.id}:done`,
@@ -350,6 +352,7 @@ export class LiveRegistry extends EventEmitter {
     if (agent.done) {
       // Revivió: había pasado el umbral de inactividad pero sigue trabajando.
       agent.done = false
+      agent.info.done = false
       this.emit('agent', { agent: agent.info, state: 'spawn' })
     }
     if (!agent.path) agent.path = path

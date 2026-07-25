@@ -33,6 +33,14 @@ const EXACT: Record<string, StationId> = {
   TaskStop: 'board',
   // Estante de skills
   Skill: 'skills',
+  // Lanzar un subagente no es «ir a un sitio»: ocurre en la Mesa, junto a Claude, que es
+  // donde nace el hijo. Sin esta línea, `Agent` caía en el Trastero (40 usos en un histórico
+  // real, así que se notaba).
+  Agent: 'desk',
+  SendMessage: 'desk',
+  Workflow: 'desk',
+  // Programar algo para más tarde va con las tareas
+  ScheduleWakeup: 'board',
   // Worktrees
   EnterWorktree: 'worktree',
   ExitWorktree: 'worktree',

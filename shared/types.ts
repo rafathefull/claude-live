@@ -92,6 +92,12 @@ export interface ActorInfo {
    * simultáneos serían indistinguibles con el color del tipo a secas.
    */
   variant?: number
+  /**
+   * true cuando el subagente ya terminó. Viaja con el actor porque el front necesita saberlo
+   * al reconectar: si no, el backfill de eventos recreaba en la escena a subagentes muertos,
+   * que se quedaban plantados en la Mesa sin hacer nada.
+   */
+  done?: boolean
 }
 
 export type SessionStatus = 'busy' | 'idle' | 'unknown' | 'dead'

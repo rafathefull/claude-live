@@ -178,7 +178,7 @@ export function applyServerMessage(message: ServerMessage): void {
   switch (message.type) {
     case 'hello':
       state.sessions = message.sessions
-      for (const agent of message.agents) upsertAgent(agent, false)
+      for (const agent of message.agents) upsertAgent(agent, agent.done !== true)
       ensureSelection()
       break
     case 'sessions':
