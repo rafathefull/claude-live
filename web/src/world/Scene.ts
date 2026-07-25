@@ -149,7 +149,7 @@ export class Scene {
       const hit = new Container()
       hit.on('pointerover', () => this.highlightKnight(index))
       hit.on('pointerout', () => this.highlightKnight(null))
-      this.makeHoverable(hit, new Circle(0, 0, 19), () => ({
+      this.makeHoverable(hit, new Circle(0, 0, 26), () => ({
         icon: '🛡️',
         title: knight.name,
         body: knight.quip,
@@ -341,8 +341,8 @@ export class Scene {
   /** Caballeros sentados a los cuatro lados, mirando al centro. Tres por lado. */
   private drawKnights(cx: number, cy: number, half: number): void {
     const perSide = 3
-    const inset = half - 16
-    const spread = half * 0.58
+    const inset = half - 24
+    const spread = half * 0.6
 
     for (let side = 0; side < 4; side++) {
       // 0 arriba, 1 derecha, 2 abajo, 3 izquierda. `toCentre` es hacia dónde miran.
@@ -376,9 +376,9 @@ export class Scene {
   ): void {
     const g = this.deskZone
     const line = {
-      width: highlighted ? 1.8 : 1.4,
-      color: highlighted ? 0xdde3ee : 0xa8bcd8,
-      alpha: highlighted ? 0.85 : 0.28,
+      width: highlighted ? 2.2 : 1.7,
+      color: highlighted ? 0xdde3ee : 0xb8c9e2,
+      alpha: highlighted ? 0.9 : 0.5,
     } as const
     const ox = Math.cos(toCentre)
     const oy = Math.sin(toCentre)
@@ -389,22 +389,22 @@ export class Scene {
     const to = back + Math.PI / 2
 
     // Espalda y hombros.
-    g.moveTo(x + Math.cos(from) * 12, y + Math.sin(from) * 12)
-      .arc(x, y, 12, from, to)
+    g.moveTo(x + Math.cos(from) * 17, y + Math.sin(from) * 17)
+      .arc(x, y, 17, from, to)
       .stroke(line)
     // Casco y cimera, mirando al tablero.
-    g.circle(x + ox * 2, y + oy * 2, 6.5).stroke({ ...line, alpha: 0.36 })
-    g.moveTo(x + ox * 8, y + oy * 8)
-      .lineTo(x + ox * 11, y + oy * 11)
-      .stroke({ ...line, alpha: 0.36 })
-    // Lanza apoyada en el hombro: corta, o se come la escena.
-    g.moveTo(x + px * 13 + ox * 2, y + py * 13 + oy * 2)
-      .lineTo(x + px * 15 - ox * 14, y + py * 15 - oy * 14)
-      .stroke({ ...line, alpha: 0.2 })
+    g.circle(x + ox * 2, y + oy * 2, 9).stroke({ ...line, alpha: highlighted ? 1 : 0.62 })
+    g.moveTo(x + ox * 11, y + oy * 11)
+      .lineTo(x + ox * 15.5, y + oy * 15.5)
+      .stroke({ ...line, alpha: highlighted ? 1 : 0.62 })
+    // Lanza apoyada en el hombro.
+    g.moveTo(x + px * 18 + ox * 3, y + py * 18 + oy * 3)
+      .lineTo(x + px * 21 - ox * 20, y + py * 21 - oy * 20)
+      .stroke({ ...line, alpha: highlighted ? 0.8 : 0.38 })
 
     // Escudo con su emblema, sobre el tablero.
     if (crest) {
-      this.drawCrest(crest, x - px * 16 + ox * 10, y - py * 16 + oy * 10, toCentre, highlighted)
+      this.drawCrest(crest, x - px * 25 + ox * 6, y - py * 25 + oy * 6, toCentre, highlighted)
     }
   }
 
@@ -421,16 +421,16 @@ export class Scene {
   ): void {
     const g = this.deskZone
     const ink = {
-      width: highlighted ? 1.6 : 1.1,
-      color: highlighted ? 0xffe6a3 : 0xa8bcd8,
-      alpha: highlighted ? 0.95 : 0.34,
+      width: highlighted ? 2 : 1.5,
+      color: highlighted ? 0xffe6a3 : 0xc3d3ea,
+      alpha: highlighted ? 0.98 : 0.62,
     } as const
     const ox = Math.cos(toCentre)
     const oy = Math.sin(toCentre)
     const px = -oy
     const py = ox
-    // El escudo crece al pasar el ratón: a tamaño normal son diez píxeles de filigrana.
-    const k = highlighted ? 2.1 : 1.35
+    // Grande de serie —diez píxeles no se veían— y todavía más al pasar el ratón.
+    const k = highlighted ? 3.1 : 2.2
     /** Punto local del emblema: `a` hacia el centro, `b` a lo ancho. */
     const at = (a: number, b: number): [number, number] => [
       x + ox * a * k + px * b * k,
@@ -443,7 +443,7 @@ export class Scene {
       .lineTo(...at(-6, 0))
       .lineTo(...at(0, -5))
       .lineTo(...at(6, 0))
-      .stroke({ ...ink, alpha: highlighted ? 0.7 : 0.22 })
+      .stroke({ ...ink, alpha: highlighted ? 0.8 : 0.4 })
 
     switch (crest) {
       case 'crown':
