@@ -11,20 +11,11 @@ evento.
 No hay que arrancar nada en el directorio que quieras vigilar, ni lanzar Claude de forma
 especial: **cualquier sesión de Claude Code que abras aparece sola**.
 
-```
-┌─ claude-live ── backend · master · opus-5 · plan ── ctx 42% ─ 118k tok ────────┐
-│                                                     │ TIMELINE               │
-│    [📚 Biblioteca]        [⌨️ Terminal]              │ 14:02:11 Read App.java │
-│      Explore 🔵··········>  🤖 Claude                │ 14:02:13 Bash mvn test │
-│                             💭 «reviso los tests»    │   └ 4.2s exit 0        │
-│    [✏️ Taller]            [🔌 serena] [🔌 ulyses]    │ 14:02:20 Agent Explore │
-│      Plan 🟣 ✓ (entrega)                             │   Grep @RestController │
-│                                                      │   → 12 coincidencias   │
-│    [📋 Tablón]  [🌐 Exterior]  [📖 Skills]           │ 14:02:31 Skill openspec│
-│                                                      │                        │
-│              🧑 Tú ── «arregla el test de cuotas»    │ [x] mostrar pensamiento│
-└──────────────────────────────────────────────────────┴────────────────────────┘
-```
+![El mundo de claude-live en marcha](docs/preview.png)
+
+*Claude acaba de terminar en la Terminal mientras dos subagentes —`Explore` en azul y `Plan`
+en morado— trabajan en la Biblioteca. Cada estación lleva la cuenta de las veces que se ha
+usado y muestra lo último que pasó por ella.*
 
 ## Qué muestra
 
@@ -41,7 +32,11 @@ especial: **cualquier sesión de Claude Code que abras aparece sola**.
   muestra el payload completo de cualquier evento.
 - **Reproductor del historial**: abre cualquier conversación pasada y reprodúcela como una
   película, con `⏮ ⏪ ⏵ ⏩ ⏭`, velocidades de 0,5× a 16× y barra para saltar a cualquier punto.
-- **Leyenda** (botón `❔`) que explica cada lugar, cada habitante y cada color.
+- **Leyenda** (botón `❔`) que explica cada lugar, cada habitante y cada color. La lista de
+  herramientas de cada estación sale de la tabla de mapeo, así que nunca se queda desfasada.
+
+  ![Leyenda del mundo](docs/leyenda.png)
+
 - **Modo sobrio**: apaga la escena y deja solo la timeline, para cuando quieras leer en vez
   de mirar.
 
@@ -176,6 +171,21 @@ npm run typecheck  # vue-tsc
 `test:parser` mide el rendimiento con el transcript más grande que tengas y comprueba que
 los payloads salen recortados. `test:grouping` alimenta la regla de agrupación real con
 sesiones enteras y verifica que la representación no se come pasos.
+
+### Mundo de demostración
+
+```bash
+npm run demo          # genera las capturas de este README
+npm run demo -- --keep   # deja el servidor de demostración vivo para mirarlo
+```
+
+Fabrica un `~/.claude` ficticio en un directorio temporal —una sesión inventada sobre un
+proyecto `tienda-api`, con dos subagentes— y arranca un servidor aparte apuntando a él con
+`CLAUDE_CONFIG_DIR`. No toca tu configuración ni tus transcripts. Sirve para probar el visor
+sin datos personales y para ver el mundo en movimiento sin esperar a que Claude haga algo.
+
+`npm run screenshot` hace lo propio contra el servidor normal: abre la app en un Chromium sin
+ventana, informa de los errores de consola y guarda las capturas de las tres vistas.
 
 ## Estado y qué falta
 

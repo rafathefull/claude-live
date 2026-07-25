@@ -11,6 +11,7 @@
     "build": "vite build",
     "start": "NODE_ENV=production tsx server/src/index.ts",
     "typecheck": "vue-tsc --noEmit",
+    "demo": "tsx tools/demo.ts",
     "screenshot": "tsx tools/screenshot.ts",
     "test:parser": "tsx server/test/parser.smoke.ts",
     "test:grouping": "tsx server/test/grouping.smoke.ts",

@@ -178,18 +178,22 @@ export class Scene {
     if (!actor) return
     const spot = this.positionOf(station)
     const peers = [...this.actors.values()].filter((a) => a !== actor)
-    let offsetX = 0
-    let offsetY = PLATE_H / 2 + 28
-    for (const peer of peers) {
-      if (Math.hypot(peer.targetX - spot.x, peer.targetY - spot.y) < 34) {
-        offsetX += 40
-        if (offsetX > 120) {
-          offsetX = 0
-          offsetY += 34
-        }
+
+    // Se busca un hueco comparando con el destino de los demás, no con el centro de la
+    // estación: comparar contra el centro dejaba a dos subagentes exactamente encima.
+    const taken = (x: number, y: number): boolean =>
+      peers.some((peer) => Math.hypot(peer.targetX - x, peer.targetY - y) < 42)
+
+    const baseY = spot.y + PLATE_H / 2 + 28
+    for (let slot = 0; slot < 12; slot++) {
+      const x = spot.x - 20 + (slot % 4) * 44
+      const y = baseY + Math.floor(slot / 4) * 38
+      if (!taken(x, y)) {
+        actor.moveTo(x, y)
+        return
       }
     }
-    actor.moveTo(spot.x + offsetX - 20, spot.y + offsetY)
+    actor.moveTo(spot.x - 20, baseY)
   }
 
   /** Línea temporal entre un actor y una estación (o entre dos actores). */

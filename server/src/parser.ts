@@ -194,6 +194,12 @@ export function summarizeToolResult(tool: string | undefined, result: unknown): 
   if (Array.isArray(r.matches)) return `${r.matches.length} coincidencia(s)`
   if (typeof r.numFiles === 'number') return `${r.numFiles} fichero(s)`
   if (typeof r.numLines === 'number') return `${r.numLines} línea(s)`
+  // Read devuelve el fichero anidado: {type:'text', file:{numLines, totalLines, …}}
+  const file = asRecord(r.file)
+  if (typeof file.numLines === 'number') {
+    const total = typeof file.totalLines === 'number' ? ` de ${file.totalLines}` : ''
+    return `${file.numLines} línea(s)${total}`
+  }
   if (str(r.status) === 'async_launched') return `lanzado (${str(r.agentId) ?? '?'})`
   if (Array.isArray(r.tasks)) return `${r.tasks.length} tarea(s)`
   if (typeof r.type === 'string' && typeof r.filePath === 'string') {

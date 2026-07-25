@@ -181,9 +181,25 @@ export class LiveRegistry extends EventEmitter {
   ): Promise<AgentState> {
     const agentId = ref.agentId as string
     const existing = state.agents.get(agentId)
-    if (existing) return existing
-
     const meta = await readAgentMeta(ref.path)
+
+    if (existing) {
+      // Ya se había anunciado por el `tool_result` de `Agent`, que no dice de qué tipo es.
+      // Ahora que existe su .meta.json se completa y se vuelve a emitir, o se quedaría
+      // como «agente» genérico en el mundo y en la timeline.
+      const wasIncomplete = !existing.info.agentType
+      if (meta.agentType) existing.info.agentType = meta.agentType
+      if (meta.description && !existing.info.description) {
+        existing.info.description = meta.description
+      }
+      if (meta.spawnDepth !== undefined) existing.info.depth = meta.spawnDepth
+      if (meta.toolUseId) state.agentByToolUse.set(meta.toolUseId, agentId)
+      if (wasIncomplete && meta.agentType) {
+        this.emit('agent', { agent: existing.info, state: 'spawn' })
+      }
+      return existing
+    }
+
     const info: ActorInfo = {
       id: agentId,
       kind: 'subagent',

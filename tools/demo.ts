@@ -1,0 +1,134 @@
+/**
+ * Monta el mundo de demostración y saca las capturas del README.
+ *
+ * Arranca un servidor aparte apuntando a un `~/.claude` ficticio (CLAUDE_CONFIG_DIR), va
+ * escribiendo el guion mientras el navegador mira, y captura el mundo en plena faena. No
+ * toca tu configuración ni tus transcripts.
+ *
+ *   npm run demo                      # capturas en docs/
+ *   npm run demo -- --out /tmp/x      # otro destino
+ *   npm run demo -- --keep            # deja el servidor vivo para mirarlo tú
+ */
+import { mkdir, mkdtemp, rm } from 'node:fs/promises'
+import { spawn } from 'node:child_process'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { chromium } from 'playwright'
+import { buildDemoScript, playStep, writeDemoWorld } from './demo-data.js'
+
+function arg(name: string, fallback: string): string {
+  const index = process.argv.indexOf(`--${name}`)
+  return index !== -1 && process.argv[index + 1] ? process.argv[index + 1] : fallback
+}
+const keep = process.argv.includes('--keep')
+const outDir = arg('out', 'docs')
+const port = Number(arg('port', '7318'))
+const url = `http://127.0.0.1:${port}`
+
+const demoDir = await mkdtemp(join(tmpdir(), 'claude-live-demo-'))
+await mkdir(outDir, { recursive: true })
+
+// El guion arranca «hace un rato» para que los tiempos de la timeline sean creíbles.
+const { past, live } = buildDemoScript(Date.now() - 4 * 60 * 1000)
+const world = await writeDemoWorld(demoDir, past)
+console.log(`mundo de demostración en ${demoDir}`)
+
+// Si el puerto ya responde, hay un servidor de una ejecución anterior: sus datos apuntan a
+// un directorio que ya no existe y la demo saldría vacía.
+try {
+  await fetch(`${url}/api/health`)
+  console.error(`el puerto ${port} ya está ocupado; ciérralo o usa --port`)
+  await rm(demoDir, { recursive: true, force: true })
+  process.exit(1)
+} catch {
+  // libre, seguimos
+}
+
+// `detached` crea un grupo de procesos para poder matar también a los hijos: matar solo al
+// lanzador dejaba el servidor vivo ocupando el puerto.
+const server = spawn(join('node_modules', '.bin', 'tsx'), ['server/src/index.ts'], {
+  env: { ...process.env, CLAUDE_CONFIG_DIR: demoDir, CLAUDE_LIVE_PORT: String(port) },
+  stdio: 'ignore',
+  detached: true,
+})
+
+async function waitForServer(): Promise<boolean> {
+  for (let attempt = 0; attempt < 40; attempt++) {
+    try {
+      const response = await fetch(`${url}/api/health`)
+      if (response.ok) return true
+    } catch {
+      // todavía no escucha
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500))
+  }
+  return false
+}
+
+async function cleanup(): Promise<void> {
+  try {
+    if (server.pid) process.kill(-server.pid, 'SIGTERM')
+  } catch {
+    server.kill('SIGTERM')
+  }
+  await rm(demoDir, { recursive: true, force: true })
+}
+
+// Un Ctrl+C tampoco debe dejar el servidor colgado.
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  process.on(signal, () => void cleanup().then(() => process.exit(1)))
+}
+
+if (!(await waitForServer())) {
+  console.error('el servidor de demostración no arrancó')
+  await cleanup()
+  process.exit(1)
+}
+
+const problems: string[] = []
+const browser = await chromium.launch()
+const page = await browser.newPage({ viewport: { width: 1600, height: 900 } })
+page.on('pageerror', (error) => problems.push(`[pageerror] ${error.message}`))
+page.on('console', (message) => {
+  if (message.type() === 'error') problems.push(`[error] ${message.text()}`)
+})
+
+await page.goto(url, { waitUntil: 'domcontentloaded' })
+await page.locator('.stage canvas').waitFor({ state: 'visible', timeout: 15_000 })
+await page.waitForTimeout(2500)
+
+// Ahora el guion «en directo»: el visor lo va detectando por el watcher.
+console.log(`representando ${live.length} pasos en vivo`)
+for (const step of live) {
+  await playStep(world, step)
+  await new Promise((resolve) => setTimeout(resolve, 320))
+}
+await page.waitForTimeout(2200)
+
+const health = (await (await fetch(`${url}/api/health`)).json()) as { sessions: number }
+const eventos = await page.locator('.timeline-head .muted').textContent()
+const agentes = await page.locator('.agent-legend .agent-pill').count()
+console.log(`  sesiones detectadas: ${health.sessions} · ${eventos?.trim()} · ${agentes} actores en la leyenda`)
+
+await page.screenshot({ path: join(outDir, 'preview.png') })
+console.log(`  captura → ${join(outDir, 'preview.png')}`)
+
+await page.getByRole('button', { name: /Leyenda/ }).click()
+await page.locator('.legend').waitFor({ state: 'visible' })
+await page.waitForTimeout(400)
+await page.screenshot({ path: join(outDir, 'leyenda.png') })
+console.log(`  captura → ${join(outDir, 'leyenda.png')}`)
+await page.keyboard.press('Escape')
+
+await page.locator('.timeline-head button', { hasText: 'pensamiento' }).waitFor()
+await browser.close()
+
+if (keep) {
+  console.log(`\nservidor de demostración en ${url} (Ctrl+C para terminar)`)
+  console.log(`datos en ${demoDir}`)
+} else {
+  await cleanup()
+}
+
+console.log(problems.length === 0 ? '\nSin errores de consola' : `\n${problems.length} error(es):`)
+for (const problem of [...new Set(problems)].slice(0, 20)) console.log(`  ${problem}`)
