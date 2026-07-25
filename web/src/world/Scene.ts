@@ -79,13 +79,15 @@ export class Scene {
     name.anchor.set(0.5)
     name.y = 18
 
+    // El contador va dentro del cartel: el hueco de debajo es por donde llegan los actores.
     const counter = new Text({
       text: '',
       style: { fontFamily: 'ui-monospace, monospace', fontSize: 11, fill: 0x5b6474 },
     })
-    counter.anchor.set(0.5)
-    counter.y = 38
+    counter.anchor.set(1, 0)
+    counter.position.set(PLATE_W / 2 - 8, -PLATE_H / 2 + 5)
 
+    // Y el detalle encima, por el mismo motivo.
     const detail = new Text({
       text: '',
       style: {
@@ -93,12 +95,13 @@ export class Scene {
         fontSize: 11,
         fill: 0x7dd3fc,
         wordWrap: true,
-        wordWrapWidth: 170,
+        wordWrapWidth: 180,
         breakWords: true,
+        align: 'center',
       },
     })
-    detail.anchor.set(0.5, 0)
-    detail.y = 52
+    detail.anchor.set(0.5, 1)
+    detail.y = -PLATE_H / 2 - 6
 
     view.addChild(glow, plate, icon, name, counter, detail)
     this.stationsLayer.addChild(view)
@@ -128,7 +131,9 @@ export class Scene {
     station.counter.text = `×${station.uses}`
     station.flashUntil = performance.now() + 900
     if (detail !== undefined) {
-      station.detail.text = detail.length > 90 ? `${detail.slice(0, 89)}…` : detail
+      // Corto: el cartel es un rótulo, no un visor de logs. El detalle completo está en la
+      // timeline y en el inspector.
+      station.detail.text = detail.length > 58 ? `${detail.slice(0, 57)}…` : detail
     }
   }
 
@@ -202,6 +207,8 @@ export class Scene {
     const now = performance.now()
 
     for (const [id, actor] of this.actors) {
+      // Arriba del escenario los carteles están por encima del actor: la burbuja se va abajo.
+      actor.setBubbleBelow(actor.view.y < this.height * 0.42)
       actor.update(deltaMs, now)
       if (actor.dying && actor.view.scale.x < 0.03) {
         this.actorsLayer.removeChild(actor.view)

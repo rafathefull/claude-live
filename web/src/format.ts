@@ -1,15 +1,20 @@
 import { STATION_BY_ID, colorForAgentType } from '@shared/mapping'
 import type { EventKind, TimelineEvent } from '@shared/types'
 
-/** Límite de contexto por modelo: los ids con sufijo [1m] llevan ventana de 1M. */
-export function contextLimitFor(model: string | undefined): number {
-  if (!model) return 200_000
-  return /\[1m\]/.test(model) ? 1_000_000 : 200_000
+/**
+ * Límite de contexto. Los modelos con sufijo `[1m]` llevan ventana de 1M, pero el
+ * transcript guarda el id sin el sufijo (`claude-opus-5`), así que el nombre no basta: si
+ * se han visto más tokens de los que caben en 200k, la ventana es necesariamente la grande.
+ */
+export function contextLimitFor(model: string | undefined, observedTokens = 0): number {
+  if (model && /\[1m\]/.test(model)) return 1_000_000
+  return observedTokens > 200_000 ? 1_000_000 : 200_000
 }
 
 export function contextPercent(session: { model?: string; lastContextTokens?: number }): number {
-  if (!session.lastContextTokens) return 0
-  return Math.min(100, Math.round((session.lastContextTokens / contextLimitFor(session.model)) * 100))
+  const used = session.lastContextTokens ?? 0
+  if (!used) return 0
+  return Math.min(100, Math.round((used / contextLimitFor(session.model, used)) * 100))
 }
 
 export function formatTokens(n: number | undefined): string {

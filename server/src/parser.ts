@@ -183,6 +183,14 @@ export function summarizeToolResult(tool: string | undefined, result: unknown): 
     return `+${added} / −${removed}`
   }
 
+  // AskUserQuestion: interesa lo que respondió el usuario, no el JSON de las preguntas.
+  if (r.answers && typeof r.answers === 'object') {
+    const chosen = Object.values(r.answers as Record<string, unknown>)
+      .filter((value): value is string => typeof value === 'string')
+      .join(' · ')
+    if (chosen) return clip(`elegido: ${chosen}`, 120)
+  }
+
   if (Array.isArray(r.matches)) return `${r.matches.length} coincidencia(s)`
   if (typeof r.numFiles === 'number') return `${r.numFiles} fichero(s)`
   if (typeof r.numLines === 'number') return `${r.numLines} línea(s)`

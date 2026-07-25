@@ -217,9 +217,21 @@ export async function loadSessionEvents(sessionId: string, limit = HISTORY_LIMIT
   if (!response.ok) return 0
   const data = (await response.json()) as { events: TimelineEvent[]; total: number }
   state.events[sessionId] = data.events
+
+  // El índice del historial solo lee la cabeza y la cola del fichero, así que no sabe de
+  // tokens: se suman aquí para que el HUD no muestre un 0 en las sesiones ya cerradas.
+  const totals = { input: 0, output: 0, cacheRead: 0, cacheCreate: 0 }
   for (const event of data.events) {
     if (event.agentId && event.actor) upsertAgent(event.actor, sessionId, false)
+    if (!event.tokens) continue
+    totals.input += event.tokens.input
+    totals.output += event.tokens.output
+    totals.cacheRead += event.tokens.cacheRead
+    totals.cacheCreate += event.tokens.cacheCreate
   }
+  const session = state.sessions.find((s) => s.sessionId === sessionId)
+  if (session && !session.live) session.tokens = totals
+
   return data.events.length
 }
 

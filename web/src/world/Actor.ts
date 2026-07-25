@@ -50,6 +50,8 @@ export class Actor {
   private bubbleBg = new Graphics()
   private bubbleText: Text
   private bubbleUntil = 0
+  private bubbleHeight = 0
+  private bubbleBelow = false
   private born = 0
   private spawnProgress = 0
 
@@ -102,18 +104,35 @@ export class Actor {
   }
 
   say(text: string, ms = 4200): void {
-    this.bubbleText.text = text.length > 240 ? `${text.slice(0, 239)}…` : text
-    const width = Math.min(256, this.bubbleText.width + 16)
-    const height = this.bubbleText.height + 12
+    this.bubbleText.text = text.length > 170 ? `${text.slice(0, 169)}…` : text
+    const width = Math.min(240, this.bubbleText.width + 16)
+    this.bubbleHeight = this.bubbleText.height + 12
     this.bubbleBg
       .clear()
-      .roundRect(0, 0, width, height, 8)
+      .roundRect(0, 0, width, this.bubbleHeight, 8)
       .fill({ color: 0x0b0d12, alpha: 0.92 })
-      .roundRect(0, 0, width, height, 8)
+      .roundRect(0, 0, width, this.bubbleHeight, 8)
       .stroke({ width: 1, color: this.color, alpha: 0.6 })
-    this.bubble.position.set(this.radius + 8, -height - this.radius)
+    this.placeBubble()
     this.bubble.visible = true
     this.bubbleUntil = performance.now() + ms
+  }
+
+  /**
+   * Debajo del actor cuando está en la parte alta del escenario, para no tapar el cartel de
+   * la estación en la que trabaja; encima en el resto de los casos.
+   */
+  setBubbleBelow(below: boolean): void {
+    if (below === this.bubbleBelow) return
+    this.bubbleBelow = below
+    this.placeBubble()
+  }
+
+  private placeBubble(): void {
+    const y = this.bubbleBelow
+      ? this.radius + this.label.height + 8
+      : -this.bubbleHeight - this.radius
+    this.bubble.position.set(this.radius + 8, y)
   }
 
   hide(): void {
