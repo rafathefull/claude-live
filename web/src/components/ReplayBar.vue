@@ -71,10 +71,15 @@ function onScrub(event: Event): void {
       </button>
     </div>
 
-    <span class="replay-title muted" :title="selectedSession?.aiTitle">
+    <span class="replay-title" :title="selectedSession?.aiTitle">
       {{ selectedSession?.aiTitle ?? '' }}
     </span>
 
-    <button title="Salir del reproductor y volver al directo" @click="stopReplay">✕</button>
+    <button
+      title="Cerrar el reproductor (podrás volver a abrirlo con «⏵ Reproducir» en la cabecera)"
+      @click="stopReplay"
+    >
+      ✕
+    </button>
   </div>
 </template>

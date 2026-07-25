@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { liveSessions, selectedSession, state, stopReplay } from '../store'
+import { isReplaying, liveSessions, resumeReplay, selectedSession, state, stopReplay } from '../store'
 import { contextPercent, formatTokens } from '../format'
 
 const props = defineProps<{ view: 'live' | 'history' }>()
@@ -98,6 +98,14 @@ const statusLabel = computed(() => {
 
     <div class="spacer" />
 
+    <button
+      v-if="session && !session.live && !isReplaying"
+      class="reopen-replay"
+      title="Volver a reproducir esta conversación del historial"
+      @click="resumeReplay(session.sessionId)"
+    >
+      ⏵ Reproducir
+    </button>
     <button title="Qué significa cada lugar, actor y color del mundo" @click="emit('legend')">
       ❔ Leyenda
     </button>

@@ -264,6 +264,17 @@ export function startReplay(sessionId: string, total: number, play = true): void
   state.replay.seekToken++
 }
 
+/**
+ * Vuelve a abrir el reproductor de una sesión del historial. La ✕ de la barra lo cierra, así
+ * que hace falta un camino de vuelta; si los eventos ya están cargados no se vuelven a pedir.
+ */
+export async function resumeReplay(sessionId: string): Promise<void> {
+  const loaded = state.events[sessionId]?.length ?? 0
+  const total = loaded > 0 ? loaded : await loadSessionEvents(sessionId)
+  if (total === 0) return
+  startReplay(sessionId, total)
+}
+
 export function stopReplay(): void {
   state.replay.sessionId = null
   state.replay.playing = false

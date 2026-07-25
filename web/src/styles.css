@@ -321,10 +321,20 @@ button.active {
 }
 
 .replay-title {
-  max-width: 22vw;
+  /* El título de la conversación es la referencia de qué se está reproduciendo: conviene que
+     se lea entero y que destaque sobre los controles. */
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 38vw;
+  color: var(--warn);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.reopen-replay {
+  border-color: var(--warn);
+  color: var(--warn);
 }
 
 /* ---------------------------------------------------------------- timeline */
@@ -525,6 +535,12 @@ button.active {
     grid-template-columns: minmax(0, 1fr) 340px;
   }
 
+  .replay-title {
+    max-width: 26vw;
+  }
+}
+
+@media (max-width: 1024px) {
   .replay-title {
     display: none;
   }
