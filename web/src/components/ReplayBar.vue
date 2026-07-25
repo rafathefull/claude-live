@@ -12,6 +12,20 @@ import {
   togglePlay,
 } from '../store'
 import { formatTime } from '../format'
+import { tr } from '../i18n'
+
+const L = {
+  start: { es: 'Al principio', en: 'To the start' },
+  back: { es: 'Atrás 10 eventos', en: 'Back 10 events' },
+  play: { es: 'Reproducir', en: 'Play' },
+  pause: { es: 'Pausa', en: 'Pause' },
+  forward: { es: 'Adelante 10 eventos', en: 'Forward 10 events' },
+  end: { es: 'Al final', en: 'To the end' },
+  close: {
+    es: 'Cerrar el reproductor (podrás volver a abrirlo con «⏵ Reproducir» en la cabecera)',
+    en: 'Close the player (you can reopen it with "⏵ Replay" in the header)',
+  },
+}
 
 /** Salto de los botones «atrás/adelante»: un puñado de eventos, no uno solo. */
 const JUMP = 10
@@ -37,13 +51,13 @@ function onScrub(event: Event): void {
 <template>
   <div class="replay-bar">
     <div class="replay-controls">
-      <button title="Al principio" @click="seekTo(0)">⏮</button>
-      <button :title="`Atrás ${JUMP} eventos`" @click="step(-JUMP)">⏪</button>
-      <button class="play" :title="replay.playing ? 'Pausa' : 'Reproducir'" @click="togglePlay">
+      <button :title="tr(L.start)" @click="seekTo(0)">⏮</button>
+      <button :title="tr(L.back)" @click="step(-JUMP)">⏪</button>
+      <button class="play" :title="replay.playing ? tr(L.pause) : tr(L.play)" @click="togglePlay">
         {{ replay.playing ? '⏸' : '⏵' }}
       </button>
-      <button :title="`Adelante ${JUMP} eventos`" @click="step(JUMP)">⏩</button>
-      <button title="Al final" @click="seekTo(replay.total)">⏭</button>
+      <button :title="tr(L.forward)" @click="step(JUMP)">⏩</button>
+      <button :title="tr(L.end)" @click="seekTo(replay.total)">⏭</button>
     </div>
 
     <span class="replay-time">{{ currentTs }}</span>
@@ -76,7 +90,7 @@ function onScrub(event: Event): void {
     </span>
 
     <button
-      title="Cerrar el reproductor (podrás volver a abrirlo con «⏵ Reproducir» en la cabecera)"
+      :title="tr(L.close)"
       @click="stopReplay"
     >
       ✕

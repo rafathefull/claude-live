@@ -332,6 +332,12 @@ button.active {
   white-space: nowrap;
 }
 
+.lang-switch {
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  min-width: 34px;
+}
+
 .reopen-replay {
   border-color: var(--warn);
   color: var(--warn);

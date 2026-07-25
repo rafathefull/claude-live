@@ -1,3 +1,4 @@
+import type { Text } from './i18n.js'
 import type { StationId } from './types.js'
 
 /**
@@ -69,13 +70,13 @@ export function mcpServerOf(tool: string | undefined): string | null {
 
 export interface StationMeta {
   id: StationId
-  label: string
+  label: Text
   icon: string
   /** Posición relativa en el escenario, en unidades 0..1 (x, y). */
   x: number
   y: number
-  /** Qué significa este lugar. Se muestra en la leyenda. */
-  help: string
+  /** Qué significa este lugar. Se muestra en la leyenda y en el tooltip. */
+  help: Text
 }
 
 /**
@@ -85,91 +86,124 @@ export interface StationMeta {
 export const STATIONS: StationMeta[] = [
   {
     id: 'library',
-    label: 'Biblioteca',
+    label: { es: 'Biblioteca', en: 'Library' },
     icon: '📚',
     x: 0.13,
     y: 0.18,
-    help: 'Claude lee y busca: abre ficheros, busca patrones por el proyecto o rastrea qué herramientas tiene disponibles. No modifica nada.',
+    help: {
+      es: 'Claude lee y busca: abre ficheros, busca patrones por el proyecto o rastrea qué herramientas tiene disponibles. No modifica nada.',
+      en: 'Claude reads and searches: opens files, greps the project, or looks up which tools it has. Nothing is modified here.',
+    },
   },
   {
     id: 'terminal',
-    label: 'Terminal',
+    label: { es: 'Terminal', en: 'Terminal' },
     icon: '⌨️',
     x: 0.4,
     y: 0.15,
-    help: 'Ejecuta comandos de shell (tests, git, builds). Es la estación con más tráfico y la única que puede tener efectos fuera del proyecto.',
+    help: {
+      es: 'Ejecuta comandos de shell (tests, git, builds). Es la estación con más tráfico y la única que puede tener efectos fuera del proyecto.',
+      en: 'Runs shell commands (tests, git, builds). The busiest station, and the only one that can have effects outside the project.',
+    },
   },
   {
     id: 'workshop',
-    label: 'Taller',
+    label: { es: 'Taller', en: 'Workshop' },
     icon: '✏️',
     x: 0.7,
     y: 0.15,
-    help: 'Aquí se escribe: crear ficheros o editarlos. El resultado muestra las líneas añadidas y quitadas (+n / −m).',
+    help: {
+      es: 'Aquí se escribe: crear ficheros o editarlos. El resultado muestra las líneas añadidas y quitadas (+n / −m).',
+      en: 'Where writing happens: creating and editing files. The result shows added and removed lines (+n / −m).',
+    },
   },
   {
     id: 'mcp',
-    label: 'Puestos MCP',
+    label: { es: 'Puestos MCP', en: 'MCP desks' },
     icon: '🔌',
     x: 0.91,
     y: 0.42,
-    help: 'Herramientas que no son de Claude Code, servidas por tus MCP (serena, ulyses-*, Atlassian…). El detalle indica el servidor y la operación.',
+    help: {
+      es: 'Herramientas que no son de Claude Code, servidas por tus MCP (serena, ulyses-*, Atlassian…). El detalle indica el servidor y la operación.',
+      en: 'Tools that are not part of Claude Code, served by your MCP servers. The detail shows the server and the operation.',
+    },
   },
   {
     id: 'outside',
-    label: 'Exterior',
+    label: { es: 'Exterior', en: 'Outdoors' },
     icon: '🌐',
     x: 0.9,
     y: 0.66,
-    help: 'Salidas a internet: búsquedas web y descarga de páginas. Útil para saber cuándo Claude está mirando fuera y no tu código.',
+    help: {
+      es: 'Salidas a internet: búsquedas web y descarga de páginas. Útil para saber cuándo Claude está mirando fuera y no tu código.',
+      en: 'Trips to the internet: web searches and page fetches. Handy for spotting when Claude is looking outside instead of at your code.',
+    },
   },
   {
     id: 'board',
-    label: 'Tablón',
+    label: { es: 'Tablón', en: 'Task board' },
     icon: '📋',
     x: 0.12,
     y: 0.66,
-    help: 'La lista de tareas de la sesión: se crean, se marcan en curso y se completan. Sirve para seguir el plan que Claude se ha trazado.',
+    help: {
+      es: 'La lista de tareas de la sesión: se crean, se marcan en curso y se completan. Sirve para seguir el plan que Claude se ha trazado.',
+      en: 'The session\'s task list: created, marked in progress and completed. Useful for following the plan Claude set for itself.',
+    },
   },
   {
     id: 'skills',
-    label: 'Skills',
+    label: { es: 'Skills', en: 'Skills' },
     icon: '📖',
     x: 0.11,
     y: 0.42,
-    help: 'Manuales que Claude consulta para una tarea concreta (los tuyos incluidos: openspec-propose, langfuse, review-pr…). El detalle muestra el nombre y los argumentos.',
+    help: {
+      es: 'Manuales que Claude consulta para una tarea concreta (los tuyos incluidos: openspec-propose, langfuse, review-pr…). El detalle muestra el nombre y los argumentos.',
+      en: 'Manuals Claude opens for a specific task, yours included. The detail shows the skill name and its arguments.',
+    },
   },
   {
     id: 'worktree',
-    label: 'Worktrees',
+    label: { es: 'Worktrees', en: 'Worktrees' },
     icon: '🌿',
     x: 0.3,
     y: 0.9,
-    help: 'Entradas y salidas de un worktree de git: una copia aislada del repo donde trabajar sin tocar tu directorio.',
+    help: {
+      es: 'Entradas y salidas de un worktree de git: una copia aislada del repo donde trabajar sin tocar tu directorio.',
+      en: 'Entering and leaving a git worktree: an isolated copy of the repo to work in without touching your directory.',
+    },
   },
   {
     id: 'showcase',
-    label: 'Vitrina',
+    label: { es: 'Vitrina', en: 'Showcase' },
     icon: '🎨',
     x: 0.8,
     y: 0.9,
-    help: 'Lo que Claude te devuelve a ti: preguntas con opciones, planes que pide aprobar y páginas publicadas. Si hay actividad aquí, probablemente te esté esperando.',
+    help: {
+      es: 'Lo que Claude te devuelve a ti: preguntas con opciones, planes que pide aprobar y páginas publicadas. Si hay actividad aquí, probablemente te esté esperando.',
+      en: 'What Claude hands back to you: questions, plans awaiting approval, published pages. Activity here usually means it is waiting on you.',
+    },
   },
   {
     id: 'unknown',
-    label: 'Trastero',
+    label: { es: 'Trastero', en: 'Junk room' },
     icon: '❓',
     x: 0.9,
     y: 0.2,
-    help: 'Herramientas que todavía no tienen sitio propio en el mundo. Si ves mucho tráfico aquí, toca añadir esa herramienta a la tabla de estaciones (shared/mapping.ts) — y a partir de cuatro visitas el Trastero deja de parecer inofensivo, como el conejo de Caerbannog.',
+    help: {
+      es: 'Herramientas que todavía no tienen sitio propio en el mundo. Si ves mucho tráfico aquí, toca añadir esa herramienta a la tabla de estaciones (shared/mapping.ts) — y a partir de cuatro visitas el Trastero deja de parecer inofensivo, como el conejo de Caerbannog.',
+      en: 'Tools that do not have a place of their own yet. Heavy traffic here means it is time to add them to the station table (shared/mapping.ts) — and after four visits the junk room stops looking harmless, much like the rabbit of Caerbannog.',
+    },
   },
   {
     id: 'desk',
-    label: 'Mesa',
+    label: { es: 'Mesa', en: 'The table' },
     icon: '🪑',
     x: 0.5,
     y: 0.52,
-    help: 'No es una estación, sino la zona central —el tablero cuadrado— donde estás tú, donde Claude piensa y habla, y donde nacen los subagentes esperando su primera tarea. Lleva grabado «aquí están reunidos los caballeros de la mesa cuadrada», que es lo que en el fondo son. No tiene cartel para no tapar a quien la cruza.',
+    help: {
+      es: 'No es una estación, sino la zona central —el tablero cuadrado— donde estás tú, donde Claude piensa y habla, y donde nacen los subagentes esperando su primera tarea. Lleva grabado «aquí están reunidos los caballeros de la mesa cuadrada», que es lo que en el fondo son. No tiene cartel para no tapar a quien la cruza.',
+      en: 'Not a station but the central area —the square board— where you sit, where Claude thinks and talks, and where subagents are born waiting for their first task. It is engraved with "here are gathered the knights of the square table", which is what they are, really. No signpost, so it never covers whoever walks across.',
+    },
   },
 ]
 

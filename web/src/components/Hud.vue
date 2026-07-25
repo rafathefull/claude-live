@@ -2,6 +2,38 @@
 import { computed } from 'vue'
 import { isReplaying, liveSessions, resumeReplay, selectedSession, state, stopReplay } from '../store'
 import { contextPercent, formatTokens } from '../format'
+import { lang, setLang, tr } from '../i18n'
+
+/** Textos de la cabecera, con sus dos versiones juntas. */
+const L = {
+  live: { es: 'En vivo', en: 'Live' },
+  history: { es: 'Historial', en: 'History' },
+  noSession: { es: 'ninguna sesión de Claude abierta', en: 'no Claude session open' },
+  branch: { es: 'rama', en: 'branch' },
+  model: { es: 'modelo', en: 'model' },
+  mode: { es: 'modo', en: 'mode' },
+  context: { es: 'contexto', en: 'context' },
+  tokens: { es: 'tokens', en: 'tokens' },
+  state: { es: 'estado', en: 'state' },
+  busy: { es: 'trabajando', en: 'working' },
+  idle: { es: 'esperándote', en: 'waiting for you' },
+  dead: { es: 'cerrada', en: 'closed' },
+  replay: { es: '⏵ Reproducir', en: '⏵ Replay' },
+  replayTitle: {
+    es: 'Volver a reproducir esta conversación del historial',
+    en: 'Replay this conversation from the history again',
+  },
+  legend: { es: '❔ Leyenda', en: '❔ Legend' },
+  legendTitle: {
+    es: 'Qué significa cada lugar, actor y color del mundo',
+    en: 'What every place, actor and colour in the world means',
+  },
+  sober: { es: 'Modo sobrio', en: 'Plain mode' },
+  world: { es: 'Mundo', en: 'World' },
+  connected: { es: 'conectado al servidor', en: 'connected to the server' },
+  reconnecting: { es: 'reconectando…', en: 'reconnecting…' },
+  langTitle: { es: 'Cambiar a inglés', en: 'Switch to Spanish' },
+}
 
 const props = defineProps<{ view: 'live' | 'history' }>()
 const emit = defineEmits<{
@@ -20,11 +52,11 @@ function selectLive(sessionId: string): void {
 const statusLabel = computed(() => {
   switch (session.value?.status) {
     case 'busy':
-      return 'trabajando'
+      return tr(L.busy)
     case 'idle':
-      return 'esperándote'
+      return tr(L.idle)
     case 'dead':
-      return 'cerrada'
+      return tr(L.dead)
     default:
       return '—'
   }
@@ -37,10 +69,10 @@ const statusLabel = computed(() => {
 
     <div class="tabs">
       <button :class="{ active: props.view === 'live' }" @click="emit('view', 'live')">
-        En vivo
+        {{ tr(L.live) }}
       </button>
       <button :class="{ active: props.view === 'history' }" @click="emit('view', 'history')">
-        Historial
+        {{ tr(L.history) }}
       </button>
     </div>
 
@@ -48,7 +80,7 @@ const statusLabel = computed(() => {
 
     <div class="session-picker">
       <span v-if="liveSessions.length === 0" class="muted">
-        ninguna sesión de Claude abierta
+        {{ tr(L.noSession) }}
       </span>
       <span
         v-for="s in liveSessions"
@@ -67,19 +99,19 @@ const statusLabel = computed(() => {
     <template v-if="session">
       <span class="sep">│</span>
       <div class="metric" :title="session.cwd">
-        <span class="label">rama</span>
+        <span class="label">{{ tr(L.branch) }}</span>
         <span>{{ session.gitBranch ?? '—' }}</span>
       </div>
       <div class="metric">
-        <span class="label">modelo</span>
+        <span class="label">{{ tr(L.model) }}</span>
         <span>{{ session.model ?? '—' }}</span>
       </div>
       <div class="metric">
-        <span class="label">modo</span>
+        <span class="label">{{ tr(L.mode) }}</span>
         <span>{{ session.permissionMode ?? session.mode ?? '—' }}</span>
       </div>
       <div class="metric" :title="`${session.lastContextTokens ?? 0} tokens en la última petición`">
-        <span class="label">contexto</span>
+        <span class="label">{{ tr(L.context) }}</span>
         <span class="bar"><span :style="{ width: `${ctx}%` }" /></span>
         <span>{{ ctx }}%</span>
       </div>
@@ -87,11 +119,11 @@ const statusLabel = computed(() => {
         class="metric"
         :title="`entrada ${session.tokens?.input ?? 0} · salida ${session.tokens?.output ?? 0} · caché ${session.tokens?.cacheRead ?? 0}`"
       >
-        <span class="label">tokens</span>
+        <span class="label">{{ tr(L.tokens) }}</span>
         <span>{{ formatTokens((session.tokens?.input ?? 0) + (session.tokens?.output ?? 0)) }}</span>
       </div>
       <div class="metric">
-        <span class="label">estado</span>
+        <span class="label">{{ tr(L.state) }}</span>
         <span>{{ statusLabel }}</span>
       </div>
     </template>
@@ -101,18 +133,25 @@ const statusLabel = computed(() => {
     <button
       v-if="session && !session.live && !isReplaying"
       class="reopen-replay"
-      title="Volver a reproducir esta conversación del historial"
+      :title="tr(L.replayTitle)"
       @click="resumeReplay(session.sessionId)"
     >
-      ⏵ Reproducir
+      {{ tr(L.replay) }}
     </button>
-    <button title="Qué significa cada lugar, actor y color del mundo" @click="emit('legend')">
-      ❔ Leyenda
+    <button :title="tr(L.legendTitle)" @click="emit('legend')">
+      {{ tr(L.legend) }}
+    </button>
+    <button
+      class="lang-switch"
+      :title="tr(L.langTitle)"
+      @click="setLang(lang === 'es' ? 'en' : 'es')"
+    >
+      {{ lang === 'es' ? 'EN' : 'ES' }}
     </button>
     <button :class="{ active: state.soberMode }" @click="state.soberMode = !state.soberMode">
-      {{ state.soberMode ? 'Modo sobrio' : 'Mundo' }}
+      {{ state.soberMode ? tr(L.sober) : tr(L.world) }}
     </button>
-    <span class="metric" :title="state.connected ? 'conectado al servidor' : 'reconectando…'">
+    <span class="metric" :title="state.connected ? tr(L.connected) : tr(L.reconnecting)">
       <i class="dot" :class="state.connected ? 'busy' : 'dead'" />
     </span>
   </header>

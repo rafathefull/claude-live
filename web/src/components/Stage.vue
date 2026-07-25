@@ -4,6 +4,15 @@ import { isReplaying, onEvent, selectedSession, state } from '../store'
 import { Scene, type HoverInfo } from '../world/Scene'
 import { Director } from '../world/director'
 import type { TimelineEvent } from '@shared/types'
+import { lang, tr } from '../i18n'
+
+const L = {
+  noSession: { es: 'No hay ninguna sesión de Claude abierta.', en: 'No Claude session is open.' },
+  hint: {
+    es: 'Abre claude en cualquier directorio y aparecerá aquí sola: no hay que configurar nada en el proyecto.',
+    en: 'Run claude in any directory and it will show up on its own: nothing to configure in the project.',
+  },
+}
 
 const host = ref<HTMLElement | null>(null)
 /** Ayuda contextual del elemento bajo el cursor, para no tener que abrir la leyenda. */
@@ -26,7 +35,8 @@ function feed(event: TimelineEvent): void {
   director.handle(event)
 }
 
-onMounted(async () => {
+/** Monta la escena. Se rehace al cambiar de idioma: los rótulos viven dentro del canvas. */
+async function mountWorld(): Promise<void> {
   if (!host.value) return
   scene = new Scene()
   await scene.mount(host.value)
@@ -39,6 +49,24 @@ onMounted(async () => {
   })
   unsubscribe = onEvent(feed)
   primeWorld()
+}
+
+function unmountWorld(): void {
+  unsubscribe?.()
+  unsubscribe = null
+  scene?.destroy()
+  scene = null
+  director = null
+}
+
+onMounted(mountWorld)
+
+// El mundo se reconstruye al cambiar de idioma: los nombres de las estaciones, el grabado de
+// la mesa y las etiquetas de los actores son texto dibujado en el canvas.
+watch(lang, async () => {
+  hover.value = null
+  unmountWorld()
+  await mountWorld()
 })
 
 /**
@@ -78,23 +106,15 @@ const tooltipStyle = computed(() => {
   return { left: `${x}px`, top: `${y}px` }
 })
 
-onBeforeUnmount(() => {
-  unsubscribe?.()
-  scene?.destroy()
-  scene = null
-  director = null
-})
+onBeforeUnmount(unmountWorld)
 </script>
 
 <template>
   <div class="stage" ref="host">
     <div v-if="!state.selectedSessionId" class="stage-empty">
       <div>
-        <p>No hay ninguna sesión de Claude abierta.</p>
-        <p class="muted">
-          Abre <code>claude</code> en cualquier directorio y aparecerá aquí sola: no hay que
-          configurar nada en el proyecto.
-        </p>
+        <p>{{ tr(L.noSession) }}</p>
+        <p class="muted">{{ tr(L.hint) }}</p>
       </div>
     </div>
     <aside v-if="hover" class="world-tip" :style="tooltipStyle">

@@ -2,6 +2,7 @@ import type { EventKind, StationId, TimelineEvent } from '@shared/types'
 import type { Scene } from './Scene'
 import type { ActorMood } from './Actor'
 import { shouldMerge } from './grouping'
+import { tr } from '../i18n'
 
 /**
  * El reloj del mundo.
@@ -17,7 +18,11 @@ import { shouldMerge } from './grouping'
  * Lo que suelta un actor cuando le falla una herramienta. Informar del error es lo primero
  * —el resumen va detrás—, pero las tres primeras veces las cuenta el Caballero Negro.
  */
-const BLACK_KNIGHT = ['Solo es un rasguño', 'He tenido peores', 'Es una herida superficial']
+const BLACK_KNIGHT = [
+  { es: 'Solo es un rasguño', en: "'Tis but a scratch" },
+  { es: 'He tenido peores', en: "I've had worse" },
+  { es: 'Es una herida superficial', en: 'Just a flesh wound' },
+]
 
 const HOLD_BASE_MS = 420
 const HOLD_MIN_MS = 90
@@ -38,7 +43,7 @@ interface Action {
  * que lo distingue («Explore 2»). Coincide con la etiqueta de la timeline.
  */
 function agentLabel(info: TimelineEvent['actor']): string {
-  if (!info?.agentType) return 'agente'
+  if (!info?.agentType) return tr({ es: 'agente', en: 'agent' })
   return info.variant ? `${info.agentType} ${info.variant + 1}` : info.agentType
 }
 
@@ -58,8 +63,8 @@ export class Director {
       id: USER_ID,
       emoji: '🧑',
       color: 0xfacc15,
-      label: 'tú',
-      subLabel: 'quien pide las cosas',
+      label: tr({ es: 'tú', en: 'you' }),
+      subLabel: tr({ es: 'quien pide las cosas', en: 'the one who asks' }),
       at: 'desk',
     })
     this.scene.placeAtFraction(USER_ID, 0.5, 0.9)
@@ -69,7 +74,7 @@ export class Director {
       emoji: '🤖',
       color: 0xe5e7eb,
       label: sessionLabel,
-      subLabel: 'el agente principal',
+      subLabel: tr({ es: 'el agente principal', en: 'the main agent' }),
       radius: 28,
       at: 'desk',
     })
@@ -218,7 +223,7 @@ export class Director {
               const quip = BLACK_KNIGHT[failed - 1]
               scene
                 .actor(actorId)
-                ?.say(quip ? `⚠ ${quip} — ${event.summary}` : `⚠ ${event.summary}`, 4500)
+                ?.say(quip ? `⚠ ${tr(quip)} — ${event.summary}` : `⚠ ${event.summary}`, 4500)
             }
             scene.flashStation(event.station, `${event.tool ?? ''}\n${event.summary}`)
           },

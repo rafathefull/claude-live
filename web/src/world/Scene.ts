@@ -8,6 +8,9 @@ import {
   type FederatedPointerEvent,
 } from 'pixi.js'
 import { STATIONS, colorForAgent, toolsForStation, type StationMeta } from '@shared/mapping'
+// `Text` ya es la clase de texto de Pixi: el tipo de i18n entra con alias.
+import type { Text as Localized } from '@shared/i18n'
+import { tr } from '../i18n'
 import type { StationId } from '@shared/types'
 import { Actor, MOOD_EMOJI, MOOD_RING } from './Actor'
 
@@ -21,12 +24,12 @@ export interface HoverInfo {
 }
 
 /** Estado del actor en palabras, para el tooltip. */
-const MOOD_TEXT: Record<keyof typeof MOOD_RING, string> = {
-  idle: 'quieto',
-  thinking: 'pensando',
-  working: 'trabajando',
-  waiting: 'esperando',
-  talking: 'hablando',
+const MOOD_TEXT: Record<keyof typeof MOOD_RING, Localized> = {
+  idle: { es: 'quieto', en: 'idle' },
+  thinking: { es: 'pensando', en: 'thinking' },
+  working: { es: 'trabajando', en: 'working' },
+  waiting: { es: 'esperando', en: 'waiting' },
+  talking: { es: 'hablando', en: 'talking' },
 }
 
 /**
@@ -39,7 +42,10 @@ const PLATE_W = 116
 const PLATE_H = 68
 
 /** Grabado de la Mesa. «Los caballeros de la mesa cuadrada», por supuesto. */
-const DESK_MOTTO = 'Aquí están reunidos los caballeros de la mesa cuadrada'
+const DESK_MOTTO: Localized = {
+  es: 'Aquí están reunidos los caballeros de la mesa cuadrada',
+  en: 'Here are gathered the knights of the square table',
+}
 
 /**
  * Los doce asientos, en el orden en que se dibujan (lado a lado). Los nombres no se escriben
@@ -73,19 +79,91 @@ type Helmet =
   | 'sidefeather'
   | 'ghost'
 
-const KNIGHTS: { name: string; quip: string; crest: Crest; emblem: string; helmet: Helmet }[] = [
-  { name: 'Arturo, rey de los britanos', quip: 'Elegido por la Dama del Lago, según él. Sin caballo, pero con Patsy.', crest: 'crown', emblem: 'una corona de tres puntas', helmet: 'crowned' },
-  { name: 'Sir Lancelot el Valiente', quip: 'Entusiasta hasta el exceso. No le encargues rescates delicados.', crest: 'sword', emblem: 'una espada', helmet: 'plumed' },
-  { name: 'Sir Galahad el Puro', quip: 'Sobrevivió al castillo de Anthrax. A duras penas, y a su pesar.', crest: 'grail', emblem: 'el grial', helmet: 'crossed' },
-  { name: 'Sir Bedevere el Sabio', quip: 'Autoridad en el peso de las brujas y en la carga de las golondrinas.', crest: 'moon', emblem: 'una luna de sabio', helmet: 'raised' },
-  { name: 'Sir Robin el No-tan-valiente', quip: 'Huyó del pollo gigante de Bristol. Dos veces.', crest: 'flag', emblem: 'una bandera de retirada', helmet: 'droopy' },
-  { name: 'Sir Gawain', quip: 'Sobrino del rey. Cortés hasta con quien va a decapitarlo.', crest: 'sun', emblem: 'un sol', helmet: 'corinthian' },
-  { name: 'Sir Percival', quip: 'El que pregunta lo que nadie se atreve a preguntar.', crest: 'question', emblem: 'una pregunta', helmet: 'beaked' },
-  { name: 'Sir Bors', quip: 'Se acercó al conejo. Que sirva de aviso: mira el Trastero.', crest: 'ears', emblem: 'dos orejas muy poco tranquilizadoras', helmet: 'eared' },
-  { name: 'Sir Ector', quip: 'Crió al rey sin saberlo, que es más de lo que puede decir cualquiera.', crest: 'scales', emblem: 'una balanza', helmet: 'bearded' },
-  { name: 'Sir Kay', quip: 'Hermano de leche del rey y quejica oficial de la mesa.', crest: 'frown', emblem: 'un ceño fruncido', helmet: 'grim' },
-  { name: 'Sir Tristán', quip: 'Mejor arpista que espadachín, y eso ya es decir algo.', crest: 'harp', emblem: 'un arpa', helmet: 'sidefeather' },
-  { name: 'Sir No-Sale-en-esta-Película', quip: 'Su única aparición son los títulos de crédito.', crest: 'dots', emblem: 'tres puntos y poco más', helmet: 'ghost' },
+const KNIGHTS: { name: Localized; quip: Localized; emblem: Localized; crest: Crest; helmet: Helmet }[] = [
+  {
+    name: { es: 'Arturo, rey de los britanos', en: 'Arthur, King of the Britons' },
+    quip: { es: 'Elegido por la Dama del Lago, según él. Sin caballo, pero con Patsy.', en: 'Chosen by the Lady of the Lake, so he says. No horse, but he has Patsy.' },
+    emblem: { es: 'una corona de tres puntas', en: 'a three-pointed crown' },
+    crest: 'crown',
+    helmet: 'crowned',
+  },
+  {
+    name: { es: 'Sir Lancelot el Valiente', en: 'Sir Lancelot the Brave' },
+    quip: { es: 'Entusiasta hasta el exceso. No le encargues rescates delicados.', en: 'Enthusiastic to a fault. Do not send him on delicate rescues.' },
+    emblem: { es: 'una espada', en: 'a sword' },
+    crest: 'sword',
+    helmet: 'plumed',
+  },
+  {
+    name: { es: 'Sir Galahad el Puro', en: 'Sir Galahad the Pure' },
+    quip: { es: 'Sobrevivió al castillo de Anthrax. A duras penas, y a su pesar.', en: 'Survived Castle Anthrax. Barely, and much to his regret.' },
+    emblem: { es: 'el grial', en: 'the grail' },
+    crest: 'grail',
+    helmet: 'crossed',
+  },
+  {
+    name: { es: 'Sir Bedevere el Sabio', en: 'Sir Bedevere the Wise' },
+    quip: { es: 'Autoridad en el peso de las brujas y en la carga de las golondrinas.', en: 'An authority on the weight of witches and the load of swallows.' },
+    emblem: { es: 'una luna de sabio', en: 'a scholar\'s moon' },
+    crest: 'moon',
+    helmet: 'raised',
+  },
+  {
+    name: { es: 'Sir Robin el No-tan-valiente', en: 'Sir Robin the Not-quite-so-brave' },
+    quip: { es: 'Huyó del pollo gigante de Bristol. Dos veces.', en: 'Fled the giant chicken of Bristol. Twice.' },
+    emblem: { es: 'una bandera de retirada', en: 'a retreating flag' },
+    crest: 'flag',
+    helmet: 'droopy',
+  },
+  {
+    name: { es: 'Sir Gawain', en: 'Sir Gawain' },
+    quip: { es: 'Sobrino del rey. Cortés hasta con quien va a decapitarlo.', en: 'The king\'s nephew. Courteous even to whoever is about to behead him.' },
+    emblem: { es: 'un sol', en: 'a sun' },
+    crest: 'sun',
+    helmet: 'corinthian',
+  },
+  {
+    name: { es: 'Sir Percival', en: 'Sir Percival' },
+    quip: { es: 'El que pregunta lo que nadie se atreve a preguntar.', en: 'The one who asks what nobody else dares to ask.' },
+    emblem: { es: 'una pregunta', en: 'a question' },
+    crest: 'question',
+    helmet: 'beaked',
+  },
+  {
+    name: { es: 'Sir Bors', en: 'Sir Bors' },
+    quip: { es: 'Se acercó al conejo. Que sirva de aviso: mira el Trastero.', en: 'He approached the rabbit. Take it as a warning: look at the junk room.' },
+    emblem: { es: 'dos orejas muy poco tranquilizadoras', en: 'two deeply unreassuring ears' },
+    crest: 'ears',
+    helmet: 'eared',
+  },
+  {
+    name: { es: 'Sir Ector', en: 'Sir Ector' },
+    quip: { es: 'Crió al rey sin saberlo, que es más de lo que puede decir cualquiera.', en: 'Raised the king without knowing it, which is more than most can claim.' },
+    emblem: { es: 'una balanza', en: 'a set of scales' },
+    crest: 'scales',
+    helmet: 'bearded',
+  },
+  {
+    name: { es: 'Sir Kay', en: 'Sir Kay' },
+    quip: { es: 'Hermano de leche del rey y quejica oficial de la mesa.', en: 'The king\'s foster brother and the table\'s official complainer.' },
+    emblem: { es: 'un ceño fruncido', en: 'a frown' },
+    crest: 'frown',
+    helmet: 'grim',
+  },
+  {
+    name: { es: 'Sir Tristán', en: 'Sir Tristan' },
+    quip: { es: 'Mejor arpista que espadachín, y eso ya es decir algo.', en: 'A better harpist than swordsman, which is saying something.' },
+    emblem: { es: 'un arpa', en: 'a harp' },
+    crest: 'harp',
+    helmet: 'sidefeather',
+  },
+  {
+    name: { es: 'Sir No-Sale-en-esta-Película', en: 'Sir Not-Appearing-in-this-Film' },
+    quip: { es: 'Su única aparición son los títulos de crédito.', en: 'His only appearance is in the closing credits.' },
+    emblem: { es: 'tres puntos y poco más', en: 'three dots and little else' },
+    crest: 'dots',
+    helmet: 'ghost',
+  },
 ]
 
 interface StationView {
@@ -150,7 +228,7 @@ export class Scene {
     // La Mesa se dibuja detrás de todo: un cartel en el centro taparía a los actores y sus
     // burbujas. Es cuadrada y lleva su rótulo grabado, en homenaje a Monty Python.
     this.deskLabel = new Text({
-      text: DESK_MOTTO,
+      text: tr(DESK_MOTTO),
       style: {
         fontFamily: 'ui-monospace, monospace',
         fontSize: 26,
@@ -170,9 +248,12 @@ export class Scene {
       hit.on('pointerout', () => this.highlightKnight(null))
       this.makeHoverable(hit, new Circle(0, 0, 26), () => ({
         icon: '🛡️',
-        title: knight.name,
-        body: knight.quip,
-        extra: `en el escudo, ${knight.emblem} · asiento ${index + 1} de ${KNIGHTS.length}`,
+        title: tr(knight.name),
+        body: tr(knight.quip),
+        extra: tr({
+          es: `en el escudo, ${knight.emblem.es} · asiento ${index + 1} de ${KNIGHTS.length}`,
+          en: `on the shield, ${knight.emblem.en} · seat ${index + 1} of ${KNIGHTS.length}`,
+        }),
         color: '#a8bcd8',
       }))
       this.deskLayer.addChild(hit)
@@ -243,7 +324,7 @@ export class Scene {
     icon.y = -12
 
     const name = new Text({
-      text: meta.label,
+      text: tr(meta.label),
       style: { fontFamily: 'ui-monospace, monospace', fontSize: 12, fill: 0x8b95a8 },
     })
     name.anchor.set(0.5)
@@ -293,12 +374,20 @@ export class Scene {
       new Rectangle(-PLATE_W / 2 - 8, -PLATE_H / 2 - 8, PLATE_W + 16, PLATE_H + 16),
       () => ({
         icon: station.beastly ? '🐰' : meta.icon,
-        title: station.beastly ? 'Caerbannog' : meta.label,
+        title: station.beastly ? 'Caerbannog' : tr(meta.label),
         body: station.beastly
-          ? 'Sigue siendo el Trastero: herramientas que no tienen sitio propio en el mundo. Pero ya van unas cuantas, y ese conejo de aspecto inofensivo es en realidad una bestia de dientes afilados. Añádelas a shared/mapping.ts antes de que salte.'
-          : meta.help,
+          ? tr({
+              es: 'Sigue siendo el Trastero: herramientas que no tienen sitio propio en el mundo. Pero ya van unas cuantas, y ese conejo de aspecto inofensivo es en realidad una bestia de dientes afilados. Añádelas a shared/mapping.ts antes de que salte.',
+              en: 'Still the junk room: tools with no place of their own. But there have been a few now, and that harmless-looking rabbit is in fact a beast with nasty, big, pointy teeth. Add them to shared/mapping.ts before it leaps.',
+            })
+          : tr(meta.help),
         extra: [
-          station.uses > 0 ? `usada ${station.uses} ${station.uses === 1 ? 'vez' : 'veces'}` : '',
+          station.uses > 0
+            ? tr({
+                es: `usada ${station.uses} ${station.uses === 1 ? 'vez' : 'veces'}`,
+                en: `used ${station.uses} time${station.uses === 1 ? '' : 's'}`,
+              })
+            : '',
           toolsForStation(meta.id).join(' · '),
         ]
           .filter(Boolean)
@@ -720,7 +809,10 @@ export class Scene {
       icon: opts.emoji,
       title: actor.tooltipTitle,
       body: actor.tooltipBody || 'Sin tarea asignada.',
-      extra: `estado: ${MOOD_EMOJI[actor.mood]} ${MOOD_TEXT[actor.mood]}`.trim(),
+      extra: tr({
+        es: `estado: ${MOOD_EMOJI[actor.mood]} ${MOOD_TEXT[actor.mood].es}`,
+        en: `state: ${MOOD_EMOJI[actor.mood]} ${MOOD_TEXT[actor.mood].en}`,
+      }).trim(),
       color: `#${opts.color.toString(16).padStart(6, '0')}`,
     }))
     this.actors.set(opts.id, actor)

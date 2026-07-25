@@ -3,6 +3,23 @@ import { computed, onMounted, ref } from 'vue'
 import { loadAllSessions, loadSessionEvents, startReplay, state, stopReplay } from '../store'
 import { formatDate, formatTokens } from '../format'
 import type { SessionInfo } from '@shared/types'
+import { tr } from '../i18n'
+
+const L = {
+  search: {
+    es: 'Buscar por proyecto, título, rama o modelo…',
+    en: 'Search by project, title, branch or model…',
+  },
+  indexing: { es: 'Indexando transcripts…', en: 'Indexing transcripts…' },
+  lastActivity: { es: 'Última actividad', en: 'Last activity' },
+  project: { es: 'Proyecto', en: 'Project' },
+  title: { es: 'Título', en: 'Title' },
+  branch: { es: 'Rama', en: 'Branch' },
+  model: { es: 'Modelo', en: 'Model' },
+  context: { es: 'Contexto', en: 'Context' },
+  size: { es: 'Tamaño', en: 'Size' },
+  none: { es: 'Ninguna sesión coincide.', en: 'No session matches.' },
+}
 
 const emit = defineEmits<{ (e: 'open'): void }>()
 
@@ -44,18 +61,18 @@ async function open(session: SessionInfo): Promise<void> {
 
 <template>
   <div class="history">
-    <input v-model="query" class="search" placeholder="Buscar por proyecto, título, rama o modelo…" />
-    <p v-if="loading" class="muted">Indexando transcripts…</p>
+    <input v-model="query" class="search" :placeholder="tr(L.search)" />
+    <p v-if="loading" class="muted">{{ tr(L.indexing) }}</p>
     <table v-else>
       <thead>
         <tr>
-          <th>Última actividad</th>
-          <th>Proyecto</th>
-          <th>Título</th>
-          <th>Rama</th>
-          <th>Modelo</th>
-          <th>Contexto</th>
-          <th>Tamaño</th>
+          <th>{{ tr(L.lastActivity) }}</th>
+          <th>{{ tr(L.project) }}</th>
+          <th>{{ tr(L.title) }}</th>
+          <th>{{ tr(L.branch) }}</th>
+          <th>{{ tr(L.model) }}</th>
+          <th>{{ tr(L.context) }}</th>
+          <th>{{ tr(L.size) }}</th>
         </tr>
       </thead>
       <tbody>
@@ -73,6 +90,6 @@ async function open(session: SessionInfo): Promise<void> {
         </tr>
       </tbody>
     </table>
-    <p v-if="!loading && filtered.length === 0" class="muted">Ninguna sesión coincide.</p>
+    <p v-if="!loading && filtered.length === 0" class="muted">{{ tr(L.none) }}</p>
   </div>
 </template>

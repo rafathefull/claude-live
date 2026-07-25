@@ -3,6 +3,20 @@ import { nextTick, ref, watch } from 'vue'
 import { currentAgents, currentEvents, state } from '../store'
 import { agentColorCss, formatDuration, formatTime, iconFor, shortTool } from '../format'
 import type { TimelineEvent } from '@shared/types'
+import { tr } from '../i18n'
+
+const L = {
+  title: { es: 'Timeline', en: 'Timeline' },
+  thinking: { es: '💭 pensamiento', en: '💭 thinking' },
+  autoscroll: { es: 'auto-scroll', en: 'auto-scroll' },
+  events: { es: 'eventos', en: 'events' },
+  empty: {
+    es: 'Sin actividad todavía. Escribe algo en tu sesión de Claude y aparecerá aquí.',
+    en: 'Nothing yet. Type something in your Claude session and it will show up here.',
+  },
+  all: { es: 'todo', en: 'all' },
+  agent: { es: 'agente', en: 'agent' },
+}
 
 const list = ref<HTMLElement | null>(null)
 const autoScroll = ref(true)
@@ -48,12 +62,14 @@ function agentLabel(agentId: string | null): string {
 <template>
   <section class="timeline">
     <div class="timeline-head">
-      <span class="title">Timeline</span>
+      <span class="title">{{ tr(L.title) }}</span>
       <button :class="{ active: state.showThinking }" @click="state.showThinking = !state.showThinking">
-        💭 pensamiento
+        {{ tr(L.thinking) }}
       </button>
-      <button :class="{ active: autoScroll }" @click="autoScroll = !autoScroll">auto-scroll</button>
-      <span class="muted">{{ currentEvents.length }} eventos</span>
+      <button :class="{ active: autoScroll }" @click="autoScroll = !autoScroll">
+        {{ tr(L.autoscroll) }}
+      </button>
+      <span class="muted">{{ currentEvents.length }} {{ tr(L.events) }}</span>
     </div>
 
     <div ref="list" class="timeline-list" @scroll="onScroll">
@@ -97,7 +113,7 @@ function agentLabel(agentId: string | null): string {
         <span class="time" />
         <span class="icon">·</span>
         <span class="main muted">
-          Sin actividad todavía. Escribe algo en tu sesión de Claude y aparecerá aquí.
+          {{ tr(L.empty) }}
         </span>
       </div>
     </div>
@@ -108,7 +124,7 @@ function agentLabel(agentId: string | null): string {
         :class="{ selected: state.focusActor === null }"
         @click="state.focusActor = null"
       >
-        todo
+        {{ tr(L.all) }}
       </span>
       <span
         class="agent-pill"
@@ -126,7 +142,7 @@ function agentLabel(agentId: string | null): string {
         @click="toggleActor(agent.id)"
       >
         <i class="swatch" :style="{ background: agentColorCss(agent.agentType, agent.variant) }" />
-        {{ agent.agentType ?? 'agente' }}
+        {{ agent.agentType ?? tr(L.agent) }}
         <span v-if="agent.description" class="pill-task">{{ agent.description }}</span>
         <span class="muted">{{ agent.events }}</span>
       </span>
