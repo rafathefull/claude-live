@@ -1,5 +1,7 @@
 # claude-live
 
+🇪🇸 Castellano · [🇬🇧 English](README.en.md)
+
 Un mundo vivo para ver, en tiempo real, qué está haciendo Claude Code por debajo.
 
 Tú eres un avatar que pide cosas. Claude es otro que piensa, camina y trabaja. Los
@@ -48,6 +50,9 @@ la cuenta de las veces que se ha usado y muestra lo último que pasó por ella.*
 
 - **Modo sobrio**: apaga la escena y deja solo la timeline, para cuando quieras leer en vez
   de mirar.
+- **Castellano e inglés**, con el conmutador 🇪🇸 ES / 🇬🇧 EN junto a la leyenda. La elección se
+  recuerda entre visitas y traduce también el mundo: nombres de las estaciones, el grabado de
+  la mesa y los caballeros.
 
 ## Requisitos
 
@@ -336,6 +341,9 @@ Pendiente:
 - No se muestra coste en dinero, solo tokens y porcentaje de contexto: habría que fijar las
   tarifas de cada modelo a mano.
 - Empaquetado como app de escritorio.
+- Los resúmenes que compone el servidor («74 línea(s)», «12 coincidencia(s)») siguen en
+  castellano: esas palabras las pone el parser, así que traducirlas pasa por emitir el dato
+  estructurado y darle formato en el front.
 
 ## Licencia
 
