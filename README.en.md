@@ -12,12 +12,12 @@ the stage. Next to it, a timeline with the exact detail of every event.
 Nothing has to be started inside the directory you want to watch, and Claude does not have to
 be launched in any special way: **any Claude Code session you open shows up on its own**.
 
-![The claude-live world in motion](docs/preview.png)
+![The claude-live world in motion](docs/demo.gif)
 
-*Claude has just wrapped up its answer while three subagents work in the Library. Each one
-shows its task underneath, and the two `Explore` agents carry different shades of blue —plus
-numbers, "Explore 1" and "Explore 2"— so they can be followed separately. Every station keeps
-a count of how many times it has been used and shows the last thing that went through it.*
+*An invented session, start to finish: Claude reads the listing, launches three subagents —two
+`Explore` and one `Plan`, in different shades of blue and with their task written underneath—
+and each walks off to the station it needs while the timeline fills up. Everything you see
+comes from the files Claude Code writes under `~/.claude`.*
 
 ## What it shows
 
@@ -325,8 +325,11 @@ Requires the front end built (`npm run build`) and Playwright's Chromium binarie
 ```bash
 npx playwright install chromium   # once
 npm run demo                      # generates this README's screenshots
-npm run demo -- --keep            # leaves the demo server running (port 7318)
+npm run gif                       # records the header GIF (needs ffmpeg)
 ```
+
+The GIF is tuned with `--width`, `--fps` and `--colors`: the scene uses very few colours, so
+trimming the palette shrinks the file a lot. The one above is 760 px, 8 fps and 64 colours.
 
 It fabricates a fake `~/.claude` in a temporary directory —an invented session about a
 `tienda-api` project, with three subagents— and starts a separate server pointed at it via

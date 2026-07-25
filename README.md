@@ -13,12 +13,12 @@ evento.
 No hay que arrancar nada en el directorio que quieras vigilar, ni lanzar Claude de forma
 especial: **cualquier sesión de Claude Code que abras aparece sola**.
 
-![El mundo de claude-live en marcha](docs/preview.png)
+![El mundo de claude-live en marcha](docs/demo.gif)
 
-*Claude acaba de cerrar su respuesta mientras tres subagentes trabajan en la Biblioteca. Bajo
-cada uno se lee su cometido, y los dos `Explore` llevan matices distintos del azul —además de
-numerarse, «Explore 1» y «Explore 2»— para poder seguirlos por separado. Cada estación lleva
-la cuenta de las veces que se ha usado y muestra lo último que pasó por ella.*
+*Una sesión inventada, de principio a fin: Claude lee el listado, lanza tres subagentes —dos
+`Explore` y un `Plan`, con matices distintos del azul y su cometido escrito debajo—, y cada uno
+se va a la estación que le toca mientras la timeline se llena. Todo lo que se ve sale de los
+ficheros que Claude Code escribe en `~/.claude`.*
 
 ## Qué muestra
 
@@ -320,8 +320,11 @@ Requiere el front construido (`npm run build`) y los binarios de Chromium para P
 ```bash
 npx playwright install chromium   # una vez
 npm run demo                      # genera las capturas de este README
-npm run demo -- --keep            # deja el servidor de demostración vivo (puerto 7318)
+npm run gif                       # graba el GIF de la cabecera (necesita ffmpeg)
 ```
+
+El GIF se ajusta con `--width`, `--fps` y `--colors`: la escena usa pocos colores, así que
+recortar la paleta adelgaza mucho el fichero. El de arriba son 760 px, 8 fps y 64 colores.
 
 Fabrica un `~/.claude` ficticio en un directorio temporal —una sesión inventada sobre un
 proyecto `tienda-api`, con dos subagentes— y arranca un servidor aparte apuntando a él con
