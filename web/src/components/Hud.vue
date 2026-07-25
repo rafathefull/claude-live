@@ -32,7 +32,8 @@ const L = {
   world: { es: 'Mundo', en: 'World' },
   connected: { es: 'conectado al servidor', en: 'connected to the server' },
   reconnecting: { es: 'reconectando…', en: 'reconnecting…' },
-  langTitle: { es: 'Cambiar a inglés', en: 'Switch to Spanish' },
+  toSpanish: { es: 'Interfaz en castellano', en: 'Switch the interface to Spanish' },
+  toEnglish: { es: 'Cambiar la interfaz a inglés', en: 'Interface in English' },
 }
 
 const props = defineProps<{ view: 'live' | 'history' }>()
@@ -141,13 +142,24 @@ const statusLabel = computed(() => {
     <button :title="tr(L.legendTitle)" @click="emit('legend')">
       {{ tr(L.legend) }}
     </button>
-    <button
-      class="lang-switch"
-      :title="tr(L.langTitle)"
-      @click="setLang(lang === 'es' ? 'en' : 'es')"
-    >
-      {{ lang === 'es' ? 'EN' : 'ES' }}
-    </button>
+    <div class="lang-switch" role="group" aria-label="idioma / language">
+      <button
+        :class="{ active: lang === 'es' }"
+        :title="tr(L.toSpanish)"
+        lang="es"
+        @click="setLang('es')"
+      >
+        <span class="flag" aria-hidden="true">🇪🇸</span> ES
+      </button>
+      <button
+        :class="{ active: lang === 'en' }"
+        :title="tr(L.toEnglish)"
+        lang="en"
+        @click="setLang('en')"
+      >
+        <span class="flag" aria-hidden="true">🇬🇧</span> EN
+      </button>
+    </div>
     <button :class="{ active: state.soberMode }" @click="state.soberMode = !state.soberMode">
       {{ state.soberMode ? tr(L.sober) : tr(L.world) }}
     </button>

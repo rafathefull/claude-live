@@ -462,7 +462,17 @@ export class Scene {
         const y = cy + ny * inset + nx * offset
         const index = side * perSide + seat
         const knight = KNIGHTS[index]
-        this.drawKnight(x, y, knight?.helmet, knight?.crest, index === this.hoveredKnight)
+        // El escudo se apoya hacia el interior del tablero: si fuese siempre a la derecha,
+        // los caballeros del lado derecho lo dejarían fuera de la mesa.
+        const shieldDir = x <= cx ? 1 : -1
+        this.drawKnight(
+          x,
+          y,
+          knight?.helmet,
+          knight?.crest,
+          index === this.hoveredKnight,
+          shieldDir,
+        )
         this.knightHits[index]?.position.set(x, y)
       }
     }
@@ -482,6 +492,7 @@ export class Scene {
     helmet?: Helmet,
     crest?: Crest,
     highlighted = false,
+    shieldDir: 1 | -1 = 1,
   ): void {
     const g = this.deskZone
     const ink = {
@@ -540,13 +551,17 @@ export class Scene {
         g.moveTo(x - 4, y - 8).lineTo(x, y - 14).lineTo(x + 4, y - 8).stroke(ink)
         g.moveTo(x + 4, y - 8).lineTo(x + 8, y - 12).lineTo(x + 8, y - 7).stroke(ink)
         break
-      case 'plumed':
-        // Penacho alto y airoso.
+      case 'plumed': {
+        // Penacho alto y airoso, cayendo hacia el interior de la mesa.
+        const d = shieldDir
         g.moveTo(x, y - 7)
-          .quadraticCurveTo(x + 5, y - 17, x + 13, y - 20)
+          .quadraticCurveTo(x + 5 * d, y - 17, x + 13 * d, y - 20)
           .stroke(ink)
-        g.moveTo(x, y - 7).quadraticCurveTo(x + 2, y - 15, x + 8, y - 19).stroke(soft)
+        g.moveTo(x, y - 7)
+          .quadraticCurveTo(x + 2 * d, y - 15, x + 8 * d, y - 19)
+          .stroke(soft)
         break
+      }
       case 'crossed':
         // Cruz sobre la visera: el puro.
         g.moveTo(x, y - 4).lineTo(x, y + 9).stroke(ink)
@@ -557,12 +572,14 @@ export class Scene {
         g.moveTo(x - 8, y - 2).lineTo(x + 6, y - 9).stroke(ink)
         g.moveTo(x + 6, y - 9).lineTo(x + 8, y - 5).stroke(soft)
         break
-      case 'droopy':
+      case 'droopy': {
         // Pluma caída: la valentía justa.
-        g.moveTo(x + 1, y - 7)
-          .quadraticCurveTo(x + 12, y - 9, x + 15, y + 2)
+        const d = shieldDir
+        g.moveTo(x + 1 * d, y - 7)
+          .quadraticCurveTo(x + 12 * d, y - 9, x + 15 * d, y + 2)
           .stroke(soft)
         break
+      }
       case 'corinthian':
         // Cresta alta, de lado a lado.
         g.moveTo(x - 7, y - 5)
@@ -571,7 +588,7 @@ export class Scene {
         g.moveTo(x - 4, y - 7).quadraticCurveTo(x, y - 15, x + 4, y - 7).stroke(soft)
         break
       case 'beaked':
-        g.moveTo(x - 2, y - 8).lineTo(x + 4, y - 13).stroke(soft)
+        g.moveTo(x - 2 * shieldDir, y - 8).lineTo(x + 4 * shieldDir, y - 13).stroke(soft)
         break
       case 'eared':
         // Dos orejas largas. Nadie ha querido preguntarle por qué.
@@ -589,11 +606,17 @@ export class Scene {
         g.moveTo(x - 7, y - 2).lineTo(x - 1, y + 1).stroke(ink)
         g.moveTo(x + 7, y - 2).lineTo(x + 1, y + 1).stroke(ink)
         break
-      case 'sidefeather':
+      case 'sidefeather': {
         // Plumas laterales, de músico.
-        g.moveTo(x + 8, y - 3).quadraticCurveTo(x + 16, y - 8, x + 19, y - 1).stroke(soft)
-        g.moveTo(x + 8, y - 1).quadraticCurveTo(x + 15, y - 4, x + 17, y + 2).stroke(soft)
+        const d = shieldDir
+        g.moveTo(x + 8 * d, y - 3)
+          .quadraticCurveTo(x + 16 * d, y - 8, x + 19 * d, y - 1)
+          .stroke(soft)
+        g.moveTo(x + 8 * d, y - 1)
+          .quadraticCurveTo(x + 15 * d, y - 4, x + 17 * d, y + 2)
+          .stroke(soft)
         break
+      }
       case 'ghost':
         // Yelmo insinuado: solo sale en los créditos.
         for (const dy of [-2, 2, 6]) {
@@ -603,14 +626,20 @@ export class Scene {
         break
     }
 
-    if (crest) this.drawCrest(crest, x + 27, y + 7, highlighted)
+    if (crest) this.drawCrest(crest, x + 27 * shieldDir, y + 7, highlighted, shieldDir)
   }
 
   /**
    * Escudo con el emblema del caballero. Vertical, apoyado junto al yelmo; el emblema se
    * dibuja dentro en coordenadas locales (`a` a lo alto, `b` a lo ancho).
    */
-  private drawCrest(crest: Crest, x: number, y: number, highlighted = false): void {
+  private drawCrest(
+    crest: Crest,
+    x: number,
+    y: number,
+    highlighted = false,
+    flip: 1 | -1 = 1,
+  ): void {
     const g = this.deskZone
     const k = highlighted ? 1.9 : 1.25
     const ink = {
@@ -618,7 +647,9 @@ export class Scene {
       color: highlighted ? 0xffe6a3 : 0xc3d3ea,
       alpha: highlighted ? 0.95 : 0.4,
     } as const
-    const at = (b: number, a: number): [number, number] => [x + b * k, y + a * k]
+    // `flip` espeja el emblema cuando el escudo está al otro lado, para que las figuras
+    // asimétricas (la bandera, la luna) sigan mirando hacia el tablero.
+    const at = (b: number, a: number): [number, number] => [x + b * k * flip, y + a * k]
 
     // Contorno del escudo: recto arriba, en punta abajo.
     g.moveTo(...at(-7, -8))
