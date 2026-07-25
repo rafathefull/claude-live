@@ -59,19 +59,33 @@ type Crest =
   | 'harp'
   | 'dots'
 
-const KNIGHTS: { name: string; quip: string; crest: Crest; emblem: string }[] = [
-  { name: 'Arturo, rey de los britanos', quip: 'Elegido por la Dama del Lago, según él. Sin caballo, pero con Patsy.', crest: 'crown', emblem: 'una corona de tres puntas' },
-  { name: 'Sir Lancelot el Valiente', quip: 'Entusiasta hasta el exceso. No le encargues rescates delicados.', crest: 'sword', emblem: 'una espada' },
-  { name: 'Sir Galahad el Puro', quip: 'Sobrevivió al castillo de Anthrax. A duras penas, y a su pesar.', crest: 'grail', emblem: 'el grial' },
-  { name: 'Sir Bedevere el Sabio', quip: 'Autoridad en el peso de las brujas y en la carga de las golondrinas.', crest: 'moon', emblem: 'una luna de sabio' },
-  { name: 'Sir Robin el No-tan-valiente', quip: 'Huyó del pollo gigante de Bristol. Dos veces.', crest: 'flag', emblem: 'una bandera de retirada' },
-  { name: 'Sir Gawain', quip: 'Sobrino del rey. Cortés hasta con quien va a decapitarlo.', crest: 'sun', emblem: 'un sol' },
-  { name: 'Sir Percival', quip: 'El que pregunta lo que nadie se atreve a preguntar.', crest: 'question', emblem: 'una pregunta' },
-  { name: 'Sir Bors', quip: 'Se acercó al conejo. Que sirva de aviso: mira el Trastero.', crest: 'ears', emblem: 'dos orejas muy poco tranquilizadoras' },
-  { name: 'Sir Ector', quip: 'Crió al rey sin saberlo, que es más de lo que puede decir cualquiera.', crest: 'scales', emblem: 'una balanza' },
-  { name: 'Sir Kay', quip: 'Hermano de leche del rey y quejica oficial de la mesa.', crest: 'frown', emblem: 'un ceño fruncido' },
-  { name: 'Sir Tristán', quip: 'Mejor arpista que espadachín, y eso ya es decir algo.', crest: 'harp', emblem: 'un arpa' },
-  { name: 'Sir No-Sale-en-esta-Película', quip: 'Su única aparición son los títulos de crédito.', crest: 'dots', emblem: 'tres puntos y poco más' },
+type Helmet =
+  | 'crowned'
+  | 'plumed'
+  | 'crossed'
+  | 'raised'
+  | 'droopy'
+  | 'corinthian'
+  | 'beaked'
+  | 'eared'
+  | 'bearded'
+  | 'grim'
+  | 'sidefeather'
+  | 'ghost'
+
+const KNIGHTS: { name: string; quip: string; crest: Crest; emblem: string; helmet: Helmet }[] = [
+  { name: 'Arturo, rey de los britanos', quip: 'Elegido por la Dama del Lago, según él. Sin caballo, pero con Patsy.', crest: 'crown', emblem: 'una corona de tres puntas', helmet: 'crowned' },
+  { name: 'Sir Lancelot el Valiente', quip: 'Entusiasta hasta el exceso. No le encargues rescates delicados.', crest: 'sword', emblem: 'una espada', helmet: 'plumed' },
+  { name: 'Sir Galahad el Puro', quip: 'Sobrevivió al castillo de Anthrax. A duras penas, y a su pesar.', crest: 'grail', emblem: 'el grial', helmet: 'crossed' },
+  { name: 'Sir Bedevere el Sabio', quip: 'Autoridad en el peso de las brujas y en la carga de las golondrinas.', crest: 'moon', emblem: 'una luna de sabio', helmet: 'raised' },
+  { name: 'Sir Robin el No-tan-valiente', quip: 'Huyó del pollo gigante de Bristol. Dos veces.', crest: 'flag', emblem: 'una bandera de retirada', helmet: 'droopy' },
+  { name: 'Sir Gawain', quip: 'Sobrino del rey. Cortés hasta con quien va a decapitarlo.', crest: 'sun', emblem: 'un sol', helmet: 'corinthian' },
+  { name: 'Sir Percival', quip: 'El que pregunta lo que nadie se atreve a preguntar.', crest: 'question', emblem: 'una pregunta', helmet: 'beaked' },
+  { name: 'Sir Bors', quip: 'Se acercó al conejo. Que sirva de aviso: mira el Trastero.', crest: 'ears', emblem: 'dos orejas muy poco tranquilizadoras', helmet: 'eared' },
+  { name: 'Sir Ector', quip: 'Crió al rey sin saberlo, que es más de lo que puede decir cualquiera.', crest: 'scales', emblem: 'una balanza', helmet: 'bearded' },
+  { name: 'Sir Kay', quip: 'Hermano de leche del rey y quejica oficial de la mesa.', crest: 'frown', emblem: 'un ceño fruncido', helmet: 'grim' },
+  { name: 'Sir Tristán', quip: 'Mejor arpista que espadachín, y eso ya es decir algo.', crest: 'harp', emblem: 'un arpa', helmet: 'sidefeather' },
+  { name: 'Sir No-Sale-en-esta-Película', quip: 'Su única aparición son los títulos de crédito.', crest: 'dots', emblem: 'tres puntos y poco más', helmet: 'ghost' },
 ]
 
 interface StationView {
@@ -90,6 +104,11 @@ interface StationView {
 
 /** A partir de estos usos, el Trastero deja de parecer inofensivo. */
 const BEAST_THRESHOLD = 4
+
+/** Misma tinta, más tenue: para los trazos secundarios de los emblemas. */
+function soften(ink: { width: number; color: number; alpha: number }) {
+  return { ...ink, alpha: ink.alpha * 0.7 }
+}
 
 export class Scene {
   readonly app = new Application()
@@ -338,14 +357,13 @@ export class Scene {
     }
   }
 
-  /** Caballeros sentados a los cuatro lados, mirando al centro. Tres por lado. */
+  /** Caballeros sentados a los cuatro lados del tablero. Tres por lado. */
   private drawKnights(cx: number, cy: number, half: number): void {
     const perSide = 3
-    const inset = half - 24
+    const inset = half - 26
     const spread = half * 0.6
 
     for (let side = 0; side < 4; side++) {
-      // 0 arriba, 1 derecha, 2 abajo, 3 izquierda. `toCentre` es hacia dónde miran.
       const angle = (side * Math.PI) / 2
       const nx = Math.sin(angle)
       const ny = -Math.cos(angle)
@@ -354,157 +372,230 @@ export class Scene {
         const x = cx + nx * inset - ny * offset
         const y = cy + ny * inset + nx * offset
         const index = side * perSide + seat
-        this.drawKnight(x, y, Math.atan2(-ny, -nx), KNIGHTS[index]?.crest, index === this.hoveredKnight)
+        const knight = KNIGHTS[index]
+        this.drawKnight(x, y, knight?.helmet, knight?.crest, index === this.hoveredKnight)
         this.knightHits[index]?.position.set(x, y)
       }
     }
   }
 
   /**
-   * Un caballero visto desde arriba: la espalda es un semicírculo abierto hacia el centro, con
-   * el casco dentro y una lanza corta apoyada. `toCentre` en radianes.
+   * Un caballero: yelmo de frente con su visera y respiraderos, hombreras, y el escudo
+   * apoyado al lado.
    *
-   * Cada trazo empieza con su propio `moveTo`: `arc` enlaza con una línea desde el punto
-   * anterior, así que sin eso los caballeros salían cosidos unos a otros con lanzas kilométricas.
+   * Se dibujan siempre verticales, sin girarlos hacia el centro. La versión anterior los
+   * ponía en planta, mirando al tablero, y no se reconocía nada: parecían ganchos. Un yelmo
+   * de frente se lee igual en los cuatro lados, como las figuras de un tablero de juego.
    */
   private drawKnight(
     x: number,
     y: number,
-    toCentre: number,
+    helmet?: Helmet,
     crest?: Crest,
-    highlighted = false,
-  ): void {
-    const g = this.deskZone
-    const line = {
-      width: highlighted ? 2.2 : 1.7,
-      color: highlighted ? 0xdde3ee : 0xb8c9e2,
-      alpha: highlighted ? 0.9 : 0.5,
-    } as const
-    const ox = Math.cos(toCentre)
-    const oy = Math.sin(toCentre)
-    const px = -oy
-    const py = ox
-    const back = toCentre + Math.PI
-    const from = back - Math.PI / 2
-    const to = back + Math.PI / 2
-
-    // Espalda y hombros.
-    g.moveTo(x + Math.cos(from) * 17, y + Math.sin(from) * 17)
-      .arc(x, y, 17, from, to)
-      .stroke(line)
-    // Casco y cimera, mirando al tablero.
-    g.circle(x + ox * 2, y + oy * 2, 9).stroke({ ...line, alpha: highlighted ? 1 : 0.62 })
-    g.moveTo(x + ox * 11, y + oy * 11)
-      .lineTo(x + ox * 15.5, y + oy * 15.5)
-      .stroke({ ...line, alpha: highlighted ? 1 : 0.62 })
-    // Lanza apoyada en el hombro.
-    g.moveTo(x + px * 18 + ox * 3, y + py * 18 + oy * 3)
-      .lineTo(x + px * 21 - ox * 20, y + py * 21 - oy * 20)
-      .stroke({ ...line, alpha: highlighted ? 0.8 : 0.38 })
-
-    // Escudo con su emblema, sobre el tablero.
-    if (crest) {
-      this.drawCrest(crest, x - px * 25 + ox * 6, y - py * 25 + oy * 6, toCentre, highlighted)
-    }
-  }
-
-  /**
-   * Emblema de un caballero, dibujado a trazo dentro de un escudo. Son diez píxeles: la idea
-   * es que se reconozca al acercarse, no que compita con lo que pasa en la escena.
-   */
-  private drawCrest(
-    crest: Crest,
-    x: number,
-    y: number,
-    toCentre: number,
     highlighted = false,
   ): void {
     const g = this.deskZone
     const ink = {
       width: highlighted ? 2 : 1.5,
-      color: highlighted ? 0xffe6a3 : 0xc3d3ea,
-      alpha: highlighted ? 0.98 : 0.62,
+      color: highlighted ? 0xf2f6ff : 0xb8c9e2,
+      alpha: highlighted ? 0.88 : 0.24,
     } as const
-    const ox = Math.cos(toCentre)
-    const oy = Math.sin(toCentre)
-    const px = -oy
-    const py = ox
-    // Grande de serie —diez píxeles no se veían— y todavía más al pasar el ratón.
-    const k = highlighted ? 3.1 : 2.2
-    /** Punto local del emblema: `a` hacia el centro, `b` a lo ancho. */
-    const at = (a: number, b: number): [number, number] => [
-      x + ox * a * k + px * b * k,
-      y + oy * a * k + py * b * k,
-    ]
+    const soft = { ...ink, alpha: highlighted ? 0.68 : 0.16 } as const
+    const dashed = helmet === 'ghost'
 
-    // El escudo: un rombo con la punta hacia el centro.
-    g.moveTo(...at(6, 0))
-      .lineTo(...at(0, 5))
-      .lineTo(...at(-6, 0))
-      .lineTo(...at(0, -5))
-      .lineTo(...at(6, 0))
-      .stroke({ ...ink, alpha: highlighted ? 0.8 : 0.4 })
+    // Hombreras: el yelmo se apoya en unos hombros, o parece flotar.
+    g.moveTo(x - 8, y + 13).lineTo(x - 18, y + 18).stroke(soft)
+    g.moveTo(x + 8, y + 13).lineTo(x + 18, y + 18).stroke(soft)
+
+    // Silueta base: bóveda, laterales y mentonera. El corintio y el bacinete la cambian.
+    if (helmet === 'corinthian') {
+      // Casco corintio: nasal larga y aberturas de los ojos a los lados.
+      g.moveTo(x - 9, y + 4)
+        .arc(x, y + 2, 9, Math.PI, 0)
+        .stroke(ink)
+      g.moveTo(x - 9, y + 4).lineTo(x - 8, y + 14).stroke(ink)
+      g.moveTo(x + 9, y + 4).lineTo(x + 8, y + 14).stroke(ink)
+      g.moveTo(x, y + 1).lineTo(x, y + 14).stroke(ink)
+      g.moveTo(x - 6, y + 4).lineTo(x - 2, y + 4).stroke(soft)
+      g.moveTo(x + 2, y + 4).lineTo(x + 6, y + 4).stroke(soft)
+    } else if (helmet === 'beaked') {
+      // Bacinete de pico: la visera sale hacia delante.
+      g.moveTo(x - 9, y + 2)
+        .arc(x, y + 2, 9, Math.PI, 0)
+        .stroke(ink)
+      g.moveTo(x - 9, y + 2).lineTo(x - 7, y + 13).stroke(ink)
+      g.moveTo(x + 9, y + 2).lineTo(x + 7, y + 13).stroke(ink)
+      g.moveTo(x - 7, y + 13).lineTo(x + 7, y + 13).stroke(ink)
+      g.moveTo(x - 8, y + 2).lineTo(x + 2, y + 7).lineTo(x - 8, y + 9).stroke(ink)
+    } else {
+      g.moveTo(x - 9, y + 2)
+        .arc(x, y + 2, 9, Math.PI, 0)
+        .stroke(dashed ? soft : ink)
+      g.moveTo(x - 9, y + 2).lineTo(x - 7, y + 13).stroke(dashed ? soft : ink)
+      g.moveTo(x + 9, y + 2).lineTo(x + 7, y + 13).stroke(dashed ? soft : ink)
+      g.moveTo(x - 7, y + 13).lineTo(x + 7, y + 13).stroke(dashed ? soft : ink)
+      // Visera: ranura de los ojos.
+      const visor = helmet === 'grim' ? y + 4 : y + 2
+      g.moveTo(x - 8, visor).lineTo(x + 8, visor).stroke({ ...ink, alpha: highlighted ? 1 : 0.34 })
+      // Respiraderos.
+      for (const dx of [-4, 0, 4]) {
+        g.moveTo(x + dx, y + 6).lineTo(x + dx, y + 10).stroke(soft)
+      }
+    }
+
+    // Y el adorno que distingue a cada uno.
+    switch (helmet) {
+      case 'crowned':
+        // Corona de tres puntas sobre el yelmo: el rey.
+        g.moveTo(x - 8, y - 7).lineTo(x - 8, y - 12).lineTo(x - 4, y - 8).stroke(ink)
+        g.moveTo(x - 4, y - 8).lineTo(x, y - 14).lineTo(x + 4, y - 8).stroke(ink)
+        g.moveTo(x + 4, y - 8).lineTo(x + 8, y - 12).lineTo(x + 8, y - 7).stroke(ink)
+        break
+      case 'plumed':
+        // Penacho alto y airoso.
+        g.moveTo(x, y - 7)
+          .quadraticCurveTo(x + 5, y - 17, x + 13, y - 20)
+          .stroke(ink)
+        g.moveTo(x, y - 7).quadraticCurveTo(x + 2, y - 15, x + 8, y - 19).stroke(soft)
+        break
+      case 'crossed':
+        // Cruz sobre la visera: el puro.
+        g.moveTo(x, y - 4).lineTo(x, y + 9).stroke(ink)
+        g.moveTo(x - 5, y + 1).lineTo(x + 5, y + 1).stroke(ink)
+        break
+      case 'raised':
+        // Visera levantada, para poder pensar mejor.
+        g.moveTo(x - 8, y - 2).lineTo(x + 6, y - 9).stroke(ink)
+        g.moveTo(x + 6, y - 9).lineTo(x + 8, y - 5).stroke(soft)
+        break
+      case 'droopy':
+        // Pluma caída: la valentía justa.
+        g.moveTo(x + 1, y - 7)
+          .quadraticCurveTo(x + 12, y - 9, x + 15, y + 2)
+          .stroke(soft)
+        break
+      case 'corinthian':
+        // Cresta alta, de lado a lado.
+        g.moveTo(x - 7, y - 5)
+          .quadraticCurveTo(x, y - 18, x + 7, y - 5)
+          .stroke(ink)
+        g.moveTo(x - 4, y - 7).quadraticCurveTo(x, y - 15, x + 4, y - 7).stroke(soft)
+        break
+      case 'beaked':
+        g.moveTo(x - 2, y - 8).lineTo(x + 4, y - 13).stroke(soft)
+        break
+      case 'eared':
+        // Dos orejas largas. Nadie ha querido preguntarle por qué.
+        g.moveTo(x - 4, y - 6).quadraticCurveTo(x - 9, y - 18, x - 4, y - 20).stroke(ink)
+        g.moveTo(x + 4, y - 6).quadraticCurveTo(x + 9, y - 18, x + 4, y - 20).stroke(ink)
+        break
+      case 'bearded':
+        // Carrilleras y barba asomando por la mentonera.
+        g.moveTo(x - 6, y + 13).quadraticCurveTo(x, y + 20, x + 6, y + 13).stroke(soft)
+        g.moveTo(x - 3, y + 13).lineTo(x - 3, y + 17).stroke(soft)
+        g.moveTo(x + 3, y + 13).lineTo(x + 3, y + 17).stroke(soft)
+        break
+      case 'grim':
+        // Visera baja y ceja fruncida: el quejica.
+        g.moveTo(x - 7, y - 2).lineTo(x - 1, y + 1).stroke(ink)
+        g.moveTo(x + 7, y - 2).lineTo(x + 1, y + 1).stroke(ink)
+        break
+      case 'sidefeather':
+        // Plumas laterales, de músico.
+        g.moveTo(x + 8, y - 3).quadraticCurveTo(x + 16, y - 8, x + 19, y - 1).stroke(soft)
+        g.moveTo(x + 8, y - 1).quadraticCurveTo(x + 15, y - 4, x + 17, y + 2).stroke(soft)
+        break
+      case 'ghost':
+        // Yelmo insinuado: solo sale en los créditos.
+        for (const dy of [-2, 2, 6]) {
+          g.moveTo(x - 6, y + dy).lineTo(x - 2, y + dy).stroke(soft)
+          g.moveTo(x + 2, y + dy).lineTo(x + 6, y + dy).stroke(soft)
+        }
+        break
+    }
+
+    if (crest) this.drawCrest(crest, x + 27, y + 7, highlighted)
+  }
+
+  /**
+   * Escudo con el emblema del caballero. Vertical, apoyado junto al yelmo; el emblema se
+   * dibuja dentro en coordenadas locales (`a` a lo alto, `b` a lo ancho).
+   */
+  private drawCrest(crest: Crest, x: number, y: number, highlighted = false): void {
+    const g = this.deskZone
+    const k = highlighted ? 1.9 : 1.25
+    const ink = {
+      width: highlighted ? 2 : 1.4,
+      color: highlighted ? 0xffe6a3 : 0xc3d3ea,
+      alpha: highlighted ? 0.95 : 0.4,
+    } as const
+    const at = (b: number, a: number): [number, number] => [x + b * k, y + a * k]
+
+    // Contorno del escudo: recto arriba, en punta abajo.
+    g.moveTo(...at(-7, -8))
+      .lineTo(...at(7, -8))
+      .lineTo(...at(7, 2))
+      .quadraticCurveTo(...at(0, 11), ...at(-7, 2))
+      .lineTo(...at(-7, -8))
+      .stroke({ ...ink, alpha: highlighted ? 0.85 : 0.3 })
 
     switch (crest) {
       case 'crown':
-        g.moveTo(...at(-3, -3)).lineTo(...at(0, -3)).lineTo(...at(-2, -1)).stroke(ink)
-        g.moveTo(...at(-3, 0)).lineTo(...at(1, 0)).stroke(ink)
-        g.moveTo(...at(-3, 3)).lineTo(...at(0, 3)).lineTo(...at(-2, 1)).stroke(ink)
+        g.moveTo(...at(-4, -1)).lineTo(...at(-4, -4)).lineTo(...at(-2, -2)).stroke(ink)
+        g.moveTo(...at(-2, -2)).lineTo(...at(0, -5)).lineTo(...at(2, -2)).stroke(ink)
+        g.moveTo(...at(2, -2)).lineTo(...at(4, -4)).lineTo(...at(4, -1)).stroke(ink)
+        g.moveTo(...at(-4, -1)).lineTo(...at(4, -1)).stroke(ink)
         break
       case 'sword':
-        g.moveTo(...at(4, 0)).lineTo(...at(-4, 0)).stroke(ink)
-        g.moveTo(...at(-1, -2.5)).lineTo(...at(-1, 2.5)).stroke(ink)
+        g.moveTo(...at(0, -5)).lineTo(...at(0, 6)).stroke(ink)
+        g.moveTo(...at(-3, -2)).lineTo(...at(3, -2)).stroke(ink)
         break
       case 'grail':
-        g.moveTo(...at(2, -2.5)).lineTo(...at(-1, -1.5)).lineTo(...at(-1, 1.5)).lineTo(...at(2, 2.5)).stroke(ink)
-        g.moveTo(...at(-1, 0)).lineTo(...at(-4, 0)).stroke(ink)
+        g.moveTo(...at(-3, -4)).lineTo(...at(-2, 0)).lineTo(...at(2, 0)).lineTo(...at(3, -4)).stroke(ink)
+        g.moveTo(...at(0, 0)).lineTo(...at(0, 4)).stroke(ink)
+        g.moveTo(...at(-2, 5)).lineTo(...at(2, 5)).stroke(ink)
         break
       case 'moon':
-        g.moveTo(...at(3, -1)).quadraticCurveTo(...at(-1, -3.5), ...at(-3, 0)).stroke(ink)
-        g.moveTo(...at(3, -1)).quadraticCurveTo(...at(0, 0), ...at(-3, 0)).stroke(ink)
+        g.moveTo(...at(2, -5)).quadraticCurveTo(...at(-4, 0), ...at(2, 5)).stroke(ink)
+        g.moveTo(...at(2, -5)).quadraticCurveTo(...at(-1, 0), ...at(2, 5)).stroke(soften(ink))
         break
       case 'flag':
-        g.moveTo(...at(4, -2)).lineTo(...at(-4, -2)).stroke(ink)
-        g.moveTo(...at(3, -2)).lineTo(...at(1, 2.5)).lineTo(...at(-1, -2)).stroke(ink)
+        g.moveTo(...at(-3, -5)).lineTo(...at(-3, 6)).stroke(ink)
+        g.moveTo(...at(-3, -5)).lineTo(...at(4, -2)).lineTo(...at(-3, 1)).stroke(ink)
         break
       case 'sun':
-        g.circle(...at(0, 0), 2).stroke(ink)
-        for (const [a, b] of [
-          [4, 0],
-          [-4, 0],
-          [0, 4],
-          [0, -4],
-        ] as const) {
-          g.moveTo(...at(a * 0.7, b * 0.7)).lineTo(...at(a, b)).stroke({ ...ink, alpha: 0.22 })
+        g.circle(...at(0, 0), 2.4 * k).stroke(ink)
+        for (const [b, a] of [[0, -6], [0, 6], [-6, 0], [6, 0]] as const) {
+          g.moveTo(...at(b * 0.7, a * 0.7)).lineTo(...at(b, a)).stroke(soften(ink))
         }
         break
       case 'question':
-        g.moveTo(...at(3, -2)).quadraticCurveTo(...at(4, 2), ...at(0, 1)).stroke(ink)
-        g.moveTo(...at(0, 1)).lineTo(...at(-2, 1)).stroke(ink)
-        g.circle(...at(-4, 1), 0.9).stroke(ink)
+        g.moveTo(...at(-2, -4)).quadraticCurveTo(...at(3, -5), ...at(1, -1)).stroke(ink)
+        g.moveTo(...at(1, -1)).lineTo(...at(0, 2)).stroke(ink)
+        g.circle(...at(0, 5), 0.9 * k).stroke(ink)
         break
       case 'ears':
-        g.moveTo(...at(-3, -1.5)).quadraticCurveTo(...at(2, -3.5), ...at(4, -1)).stroke(ink)
-        g.moveTo(...at(-3, 1.5)).quadraticCurveTo(...at(2, 3.5), ...at(4, 1)).stroke(ink)
+        g.moveTo(...at(-2, 5)).quadraticCurveTo(...at(-5, -2), ...at(-2, -5)).stroke(ink)
+        g.moveTo(...at(2, 5)).quadraticCurveTo(...at(5, -2), ...at(2, -5)).stroke(ink)
         break
       case 'scales':
-        g.moveTo(...at(3, 0)).lineTo(...at(-2, 0)).stroke(ink)
-        g.moveTo(...at(2, -3)).lineTo(...at(2, 3)).stroke(ink)
-        g.moveTo(...at(2, -3)).lineTo(...at(-1, -3)).stroke({ ...ink, alpha: 0.22 })
-        g.moveTo(...at(2, 3)).lineTo(...at(-1, 3)).stroke({ ...ink, alpha: 0.22 })
+        g.moveTo(...at(0, -5)).lineTo(...at(0, 4)).stroke(ink)
+        g.moveTo(...at(-5, -3)).lineTo(...at(5, -3)).stroke(ink)
+        g.moveTo(...at(-5, -3)).lineTo(...at(-5, 0)).stroke(soften(ink))
+        g.moveTo(...at(5, -3)).lineTo(...at(5, 0)).stroke(soften(ink))
         break
       case 'frown':
-        g.moveTo(...at(1, -3)).quadraticCurveTo(...at(-2, 0), ...at(1, 3)).stroke(ink)
-        g.circle(...at(3, -2), 0.9).stroke({ ...ink, alpha: 0.24 })
-        g.circle(...at(3, 2), 0.9).stroke({ ...ink, alpha: 0.24 })
+        g.moveTo(...at(-4, 3)).quadraticCurveTo(...at(0, -1), ...at(4, 3)).stroke(ink)
+        g.circle(...at(-3, -3), 0.9 * k).stroke(soften(ink))
+        g.circle(...at(3, -3), 0.9 * k).stroke(soften(ink))
         break
       case 'harp':
-        g.moveTo(...at(4, -2)).quadraticCurveTo(...at(-1, -4), ...at(-3, 2)).stroke(ink)
-        g.moveTo(...at(4, -2)).lineTo(...at(-3, 2)).stroke({ ...ink, alpha: 0.22 })
-        g.moveTo(...at(2, -1.5)).lineTo(...at(-1.5, 0.5)).stroke({ ...ink, alpha: 0.18 })
+        g.moveTo(...at(-3, 5)).lineTo(...at(-3, -4)).quadraticCurveTo(...at(3, -4), ...at(3, 5)).stroke(ink)
+        g.moveTo(...at(-1, 4)).lineTo(...at(-1, -3)).stroke(soften(ink))
+        g.moveTo(...at(1, 4)).lineTo(...at(1, -3)).stroke(soften(ink))
         break
       case 'dots':
-        for (const b of [-2.5, 0, 2.5]) g.circle(...at(0, b), 0.9).stroke({ ...ink, alpha: 0.22 })
+        for (const a of [-3, 0, 3]) g.circle(...at(0, a), 0.9 * k).stroke(soften(ink))
         break
     }
   }
