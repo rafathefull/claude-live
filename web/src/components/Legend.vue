@@ -174,6 +174,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
               sale su explicación al momento, sin abrir esta leyenda.</span>
           </li>
           <li>
+            <span><strong>Alguna cosa no se toma muy en serio.</strong> La mesa central está
+              grabada, el Trastero cría fauna si se llena y a un actor que le falla una
+              herramienta se le escapa alguna queja del Caballero Negro. El error se sigue
+              contando igual, tanto en el mundo como en la timeline.</span>
+          </li>
+          <li>
             <span><strong>Modo sobrio</strong> — el botón de arriba apaga la escena y deja solo
               la timeline, para cuando quieras leer en vez de mirar.</span>
           </li>

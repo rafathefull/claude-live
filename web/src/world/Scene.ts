@@ -45,11 +45,18 @@ interface StationView {
   meta: StationMeta
   view: Container
   glow: Graphics
+  icon: Text
+  name: Text
   counter: Text
   detail: Text
   flashUntil: number
   uses: number
+  /** El Trastero muta cuando se acumulan herramientas sin sitio. */
+  beastly?: boolean
 }
+
+/** A partir de estos usos, el Trastero deja de parecer inofensivo. */
+const BEAST_THRESHOLD = 4
 
 export class Scene {
   readonly app = new Application()
@@ -189,15 +196,27 @@ export class Scene {
     view.addChild(glow, plate, icon, name, counter, detail)
     this.stationsLayer.addChild(view)
 
-    const station: StationView = { meta, view, glow, counter, detail, flashUntil: 0, uses: 0 }
+    const station: StationView = {
+      meta,
+      view,
+      glow,
+      icon,
+      name,
+      counter,
+      detail,
+      flashUntil: 0,
+      uses: 0,
+    }
     // Ayuda contextual: lo mismo que cuenta la leyenda, sin salir del mundo.
     this.makeHoverable(
       view,
       new Rectangle(-PLATE_W / 2 - 8, -PLATE_H / 2 - 8, PLATE_W + 16, PLATE_H + 16),
       () => ({
-        icon: meta.icon,
-        title: meta.label,
-        body: meta.help,
+        icon: station.beastly ? '🐰' : meta.icon,
+        title: station.beastly ? 'Caerbannog' : meta.label,
+        body: station.beastly
+          ? 'Sigue siendo el Trastero: herramientas que no tienen sitio propio en el mundo. Pero ya van unas cuantas, y ese conejo de aspecto inofensivo es en realidad una bestia de dientes afilados. Añádelas a shared/mapping.ts antes de que salte.'
+          : meta.help,
         extra: [
           station.uses > 0 ? `usada ${station.uses} ${station.uses === 1 ? 'vez' : 'veces'}` : '',
           toolsForStation(meta.id).join(' · '),
@@ -272,6 +291,14 @@ export class Scene {
     if (!station) return
     station.uses++
     station.counter.text = `×${station.uses}`
+
+    // Guiño: un Trastero que se llena es un problema real (herramientas sin mapear), así que
+    // se hace notar. El de Caerbannog parecía inofensivo también.
+    if (id === 'unknown' && !station.beastly && station.uses >= BEAST_THRESHOLD) {
+      station.beastly = true
+      station.icon.text = '🐰'
+      station.name.text = 'Caerbannog'
+    }
     station.flashUntil = performance.now() + 900
     if (detail !== undefined) {
       // Corto: el cartel es un rótulo, no un visor de logs. El detalle completo está en la

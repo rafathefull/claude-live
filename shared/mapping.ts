@@ -161,7 +161,7 @@ export const STATIONS: StationMeta[] = [
     icon: '❓',
     x: 0.9,
     y: 0.2,
-    help: 'Herramientas que todavía no tienen sitio propio en el mundo. Si ves mucho tráfico aquí, toca añadir esa herramienta a la tabla de estaciones (shared/mapping.ts).',
+    help: 'Herramientas que todavía no tienen sitio propio en el mundo. Si ves mucho tráfico aquí, toca añadir esa herramienta a la tabla de estaciones (shared/mapping.ts) — y a partir de cuatro visitas el Trastero deja de parecer inofensivo, como el conejo de Caerbannog.',
   },
   {
     id: 'desk',

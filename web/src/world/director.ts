@@ -13,6 +13,12 @@ import { shouldMerge } from './grouping'
  * («Read ×7»). Nunca se descarta un evento: la timeline sigue mostrándolos todos.
  */
 
+/**
+ * Lo que suelta un actor cuando le falla una herramienta. Informar del error es lo primero
+ * —el resumen va detrás—, pero las tres primeras veces las cuenta el Caballero Negro.
+ */
+const BLACK_KNIGHT = ['Solo es un rasguño', 'He tenido peores', 'Es una herida superficial']
+
 const HOLD_BASE_MS = 420
 const HOLD_MIN_MS = 90
 const USER_ID = 'user'
@@ -41,6 +47,8 @@ export class Director {
   private busyUntil = new Map<string, number>()
   /** agentType → ids de sus avatares, para numerarlos solo cuando hay más de uno. */
   private agentsByType = new Map<string, string[]>()
+  /** Errores por actor, para ir gastando las réplicas del Caballero Negro. */
+  private failures = new Map<string, number>()
 
   constructor(private scene: Scene) {}
 
@@ -87,6 +95,7 @@ export class Director {
     this.queues.clear()
     this.busyUntil.clear()
     this.agentsByType.clear()
+    this.failures.clear()
     this.setMainLabel(sessionLabel)
   }
 
@@ -204,7 +213,12 @@ export class Director {
           run: () => {
             if (event.isError) {
               mood('waiting')
-              scene.actor(actorId)?.say(`⚠ ${event.summary}`, 4000)
+              const failed = (this.failures.get(actorId) ?? 0) + 1
+              this.failures.set(actorId, failed)
+              const quip = BLACK_KNIGHT[failed - 1]
+              scene
+                .actor(actorId)
+                ?.say(quip ? `⚠ ${quip} — ${event.summary}` : `⚠ ${event.summary}`, 4500)
             }
             scene.flashStation(event.station, `${event.tool ?? ''}\n${event.summary}`)
           },
