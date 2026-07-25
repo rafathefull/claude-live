@@ -169,7 +169,7 @@ export const STATIONS: StationMeta[] = [
     icon: '🪑',
     x: 0.5,
     y: 0.52,
-    help: 'No es una estación, sino la zona central marcada con la alfombra tenue: donde estás tú, donde Claude piensa y habla, y desde donde nacen los subagentes. No tiene cartel a propósito, para no tapar a los actores que la cruzan.',
+    help: 'No es una estación, sino la zona central —el tablero cuadrado— donde estás tú, donde Claude piensa y habla, y donde nacen los subagentes esperando su primera tarea. Lleva grabado «aquí están reunidos los caballeros de la mesa cuadrada», que es lo que en el fondo son. No tiene cartel para no tapar a quien la cruza.',
   },
 ]
 

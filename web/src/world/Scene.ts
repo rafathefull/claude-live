@@ -38,6 +38,9 @@ const MOOD_TEXT: Record<keyof typeof MOOD_RING, string> = {
 const PLATE_W = 116
 const PLATE_H = 68
 
+/** Grabado de la Mesa. «Los caballeros de la mesa cuadrada», por supuesto. */
+const DESK_MOTTO = 'Aquí están reunidos los caballeros de la mesa cuadrada'
+
 interface StationView {
   meta: StationMeta
   view: Container
@@ -79,17 +82,22 @@ export class Scene {
     host.appendChild(this.app.canvas)
     this.app.stage.addChild(this.deskZone, this.linksLayer, this.stationsLayer, this.actorsLayer)
 
-    // La Mesa se dibuja como una alfombra tenue detrás de todo: marcar el centro con un
-    // cartel volvería a tapar a los actores y sus burbujas, que es justo lo que pasa ahí.
-    const desk = STATIONS.find((meta) => meta.id === 'desk')
-    if (desk) {
-      this.deskLabel = new Text({
-        text: `${desk.icon} ${desk.label}`,
-        style: { fontFamily: 'ui-monospace, monospace', fontSize: 11, fill: 0x3a4356 },
-      })
-      this.deskLabel.anchor.set(0.5, 1)
-      this.app.stage.addChild(this.deskLabel)
-    }
+    // La Mesa se dibuja detrás de todo: un cartel en el centro taparía a los actores y sus
+    // burbujas. Es cuadrada y lleva su rótulo grabado, en homenaje a Monty Python.
+    this.deskLabel = new Text({
+      text: DESK_MOTTO,
+      style: {
+        fontFamily: 'ui-monospace, monospace',
+        fontSize: 26,
+        fill: 0x2b3448,
+        align: 'center',
+        wordWrap: true,
+        wordWrapWidth: 300,
+        lineHeight: 32,
+      },
+    })
+    this.deskLabel.anchor.set(0.5)
+    this.app.stage.addChild(this.deskLabel)
 
     for (const meta of STATIONS) {
       if (meta.id === 'desk') continue
@@ -230,18 +238,26 @@ export class Scene {
     }
   }
 
-  /** Alfombra de la zona central, con su nombre pegado al borde para no estorbar. */
+  /** La mesa cuadrada de la zona central, con su rótulo grabado en el tablero. */
   private drawDeskZone(): void {
     const { x, y } = this.positionOf('desk')
-    const rx = this.width * 0.19
-    const ry = this.height * 0.24
+    const half = Math.min(this.width * 0.19, this.height * 0.26)
+    const size = half * 2
     this.deskZone
       .clear()
-      .ellipse(x, y, rx, ry)
+      .roundRect(x - half, y - half, size, size, 10)
       .fill({ color: 0x7dd3fc, alpha: 0.016 })
-      .ellipse(x, y, rx, ry)
+      .roundRect(x - half, y - half, size, size, 10)
       .stroke({ width: 1, color: 0x1c2230, alpha: 0.55 })
-    this.deskLabel?.position.set(x - rx + 40, y + ry + 14)
+
+    if (!this.deskLabel) return
+    // El rótulo se encoge con la mesa y desaparece cuando ya no cabe con dignidad.
+    const fontSize = Math.max(13, Math.min(26, half * 0.16))
+    this.deskLabel.style.fontSize = fontSize
+    this.deskLabel.style.lineHeight = fontSize * 1.25
+    this.deskLabel.style.wordWrapWidth = size * 0.82
+    this.deskLabel.visible = half > 110
+    this.deskLabel.position.set(x, y)
   }
 
   /** Punto del escenario para una estación (o la mesa si no existe). */
