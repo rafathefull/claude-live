@@ -15,9 +15,10 @@
     "screenshot": "tsx tools/screenshot.ts",
     "test:parser": "tsx server/test/parser.smoke.ts",
     "test:grouping": "tsx server/test/grouping.smoke.ts",
-    "test": "npm run test:parser && npm run test:grouping && npm run test:store",
+    "test": "npm run test:parser && npm run test:grouping && npm run test:store && npm run test:stats",
     "test:store": "tsx web/test/store.smoke.ts",
-    "server": "bash scripts/claude-live.sh"
+    "server": "bash scripts/claude-live.sh",
+    "test:stats": "tsx server/test/stats.smoke.ts"
   },
   "dependencies": {
     "@fastify/static": "^8.0.4",

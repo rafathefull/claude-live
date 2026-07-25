@@ -3,6 +3,7 @@ import type { Scene } from './Scene'
 import type { ActorMood } from './Actor'
 import { shouldMerge } from './grouping'
 import { tr } from '../i18n'
+import { summaryOf } from '../format'
 
 /**
  * El reloj del mundo.
@@ -171,7 +172,7 @@ export class Director {
           kind: event.kind,
           count: 1,
           run: () => {
-            scene.actor(USER_ID)?.say(event.summary, 6000)
+            scene.actor(USER_ID)?.say(summaryOf(event), 6000)
             scene.drawLink(USER_ID, MAIN_ID, 0xfacc15, 1200)
             scene.actor(MAIN_ID)?.setMood('thinking')
           },
@@ -182,7 +183,7 @@ export class Director {
           count: 1,
           run: () => {
             mood('thinking')
-            scene.actor(actorId)?.say(`💭 ${event.summary}`, 5000)
+            scene.actor(actorId)?.say(`💭 ${summaryOf(event)}`, 5000)
           },
         }
       case 'text':
@@ -191,7 +192,7 @@ export class Director {
           count: 1,
           run: () => {
             mood('talking')
-            scene.actor(actorId)?.say(event.summary, 5000)
+            scene.actor(actorId)?.say(summaryOf(event), 5000)
           },
         }
       case 'skill':
@@ -206,7 +207,7 @@ export class Director {
             scene.sendActorTo(actorId, event.station)
             scene.drawLink(actorId, event.station, 0x7dd3fc, 900)
             const suffix = repeats > 1 ? ` ×${repeats}` : ''
-            scene.flashStation(event.station, `${event.tool ?? ''}${suffix}\n${event.summary}`)
+            scene.flashStation(event.station, `${event.tool ?? ''}${suffix}\n${summaryOf(event)}`)
           },
         }
       case 'tool_result':
@@ -223,9 +224,9 @@ export class Director {
               const quip = BLACK_KNIGHT[failed - 1]
               scene
                 .actor(actorId)
-                ?.say(quip ? `⚠ ${tr(quip)} — ${event.summary}` : `⚠ ${event.summary}`, 4500)
+                ?.say(quip ? `⚠ ${tr(quip)} — ${summaryOf(event)}` : `⚠ ${summaryOf(event)}`, 4500)
             }
-            scene.flashStation(event.station, `${event.tool ?? ''}\n${event.summary}`)
+            scene.flashStation(event.station, `${event.tool ?? ''}\n${summaryOf(event)}`)
           },
         }
       case 'agent_spawn':
@@ -271,7 +272,7 @@ export class Director {
           count: 1,
           run: () => {
             mood('waiting')
-            scene.actor(actorId)?.say(`❗ ${event.summary}`, 8000)
+            scene.actor(actorId)?.say(`❗ ${summaryOf(event)}`, 8000)
           },
         }
       default:

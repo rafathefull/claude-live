@@ -307,6 +307,11 @@ export class LiveRegistry extends EventEmitter {
       kind: 'agent_spawn',
       station: 'desk',
       summary: `${info.agentType ?? 'agente'}: ${info.description ?? 'arranca'}`,
+      stat: {
+        kind: 'agentState',
+        agentType: info.agentType ?? 'agent',
+        started: true,
+      },
       actor: info,
     })
   }
@@ -325,6 +330,11 @@ export class LiveRegistry extends EventEmitter {
       kind: 'agent_done',
       station: 'desk',
       summary: `${agent.info.agentType ?? 'agente'} terminó`,
+      stat: {
+        kind: 'agentState',
+        agentType: agent.info.agentType ?? 'agent',
+        started: false,
+      },
       actor: agent.info,
     })
   }

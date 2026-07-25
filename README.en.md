@@ -49,8 +49,10 @@ a count of how many times it has been used and shows the last thing that went th
 - **Plain mode**: turns the stage off and leaves only the timeline, for when you would rather
   read than watch.
 - **Castilian and English**, with the 🇪🇸 ES / 🇬🇧 EN switch next to the legend. The choice is
-  remembered between visits and it also translates the world: station names, the table
-  engraving and the knights.
+  remembered between visits and everything is translated: the world (station names, the table
+  engraving, the knights) and the timeline summaries too, because the server emits the raw
+  value ("74 lines" comes from `{ kind: 'lines', n: 74 }`) and the language is decided when it
+  is drawn.
 
 ## Requirements
 
@@ -313,7 +315,8 @@ npm run typecheck  # vue-tsc
 come out trimmed. `test:grouping` feeds the real merging rule with whole sessions and verifies
 the representation does not eat steps. `test:store` applies server messages to the front end
 store without a browser, covering what breaks silently: duplicated events on SSE reconnect and
-subagents attributed to the wrong session when two are open.
+subagents attributed to the wrong session when two are open. `test:stats` checks that summaries
+with units read correctly in both languages, using the results tools actually return.
 
 ### Demo world
 
@@ -346,9 +349,6 @@ Pending:
 - No cost in money is shown, only tokens and context percentage: that would mean pinning each
   model's pricing by hand.
 - Packaging as a desktop app.
-- The summaries the server composes ("74 line(s)", "12 match(es)") are still written in
-  Castilian: those words come from the parser, so translating them means emitting the
-  structured value and formatting it in the front end.
 
 ## Licence
 

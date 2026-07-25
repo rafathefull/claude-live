@@ -34,6 +34,31 @@ export type EventKind =
   | 'session_end'
   | 'meta' // cambios de modo, títulos, etc.
 
+/**
+ * Dato medible de un evento, aparte de su resumen en texto.
+ *
+ * El parser vive en el servidor, así que cualquier palabra que ponga ahí queda fijada en un
+ * idioma. Emitiendo el dato en crudo, el front lo formatea en el idioma activo: «74 líneas» o
+ * «74 lines» salen de `{ kind: 'lines', n: 74 }`.
+ */
+export type Stat =
+  | { kind: 'lines'; n: number; total?: number }
+  | { kind: 'matches'; n: number }
+  | { kind: 'files'; n: number }
+  | { kind: 'tasks'; n: number }
+  | { kind: 'questions'; n: number }
+  | { kind: 'diff'; added: number; removed: number }
+  | { kind: 'empty' }
+  | { kind: 'stdout'; head: string; extra: number }
+  | { kind: 'stderr'; text: string }
+  | { kind: 'launched'; id: string }
+  | { kind: 'chosen'; value: string }
+  | { kind: 'taskUpdated'; id: string }
+  | { kind: 'fileOp'; op: string; path: string }
+  | { kind: 'waitingPermission'; tool: string; detail: string }
+  | { kind: 'agentState'; agentType: string; started: boolean }
+  | { kind: 'turnEnded' }
+
 export interface TokenUsage {
   input: number
   output: number
@@ -54,8 +79,13 @@ export interface TimelineEvent {
   /** Nombre crudo de la herramienta (Bash, Edit, mcp__serena__find_symbol…). */
   tool?: string
   station: StationId
-  /** Una línea legible, ya recortada, lista para pintar. */
+  /** Una línea legible, ya recortada, lista para pintar (en castellano). */
   summary: string
+  /**
+   * El mismo dato en crudo, cuando el resumen incluye palabras: el front lo formatea en el
+   * idioma activo y solo cae en `summary` si no hay `stat`.
+   */
+  stat?: Stat
   /** Payload truncado (ver MAX_PAYLOAD_BYTES). El íntegro: GET /api/event/:uuid/raw */
   payload?: unknown
   /** true si el payload venía recortado. */

@@ -51,8 +51,9 @@ la cuenta de las veces que se ha usado y muestra lo último que pasó por ella.*
 - **Modo sobrio**: apaga la escena y deja solo la timeline, para cuando quieras leer en vez
   de mirar.
 - **Castellano e inglés**, con el conmutador 🇪🇸 ES / 🇬🇧 EN junto a la leyenda. La elección se
-  recuerda entre visitas y traduce también el mundo: nombres de las estaciones, el grabado de
-  la mesa y los caballeros.
+  recuerda entre visitas y traduce todo: el mundo (nombres de las estaciones, el grabado de la
+  mesa, los caballeros) y también los resúmenes de la timeline, porque el servidor emite el
+  dato («74 líneas» sale de `{ kind: 'lines', n: 74 }`) y el idioma se decide al pintarlo.
 
 ## Requisitos
 
@@ -309,7 +310,8 @@ los payloads salen recortados. `test:grouping` alimenta la regla de agrupación 
 sesiones enteras y verifica que la representación no se come pasos. `test:store` aplica
 mensajes del servidor al store del front sin navegador, para cubrir lo que se rompe en
 silencio: eventos duplicados al reconectar el SSE y subagentes atribuidos a la sesión
-equivocada cuando hay dos abiertas.
+equivocada cuando hay dos abiertas. `test:stats` comprueba que los resúmenes con unidades se
+leen bien en los dos idiomas, con los resultados tal como los devuelven las herramientas.
 
 ### Mundo de demostración
 
@@ -341,9 +343,6 @@ Pendiente:
 - No se muestra coste en dinero, solo tokens y porcentaje de contexto: habría que fijar las
   tarifas de cada modelo a mano.
 - Empaquetado como app de escritorio.
-- Los resúmenes que compone el servidor («74 línea(s)», «12 coincidencia(s)») siguen en
-  castellano: esas palabras las pone el parser, así que traducirlas pasa por emitir el dato
-  estructurado y darle formato en el front.
 
 ## Licencia
 

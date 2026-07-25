@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue'
 import { currentAgents, currentEvents, state } from '../store'
-import { agentColorCss, formatDuration, formatTime, iconFor, shortTool } from '../format'
+import { agentColorCss, formatDuration, formatTime, iconFor, shortTool, summaryOf } from '../format'
 import type { TimelineEvent } from '@shared/types'
 import { tr } from '../i18n'
 
@@ -105,7 +105,7 @@ function agentLabel(agentId: string | null): string {
           </span>
           <span v-if="event.tool" class="tool">{{ shortTool(event.tool) }}</span>
           <span v-if="event.durationMs !== undefined" class="dur">{{ formatDuration(event.durationMs) }}</span>
-          <span class="summary">{{ event.summary }}</span>
+          <span class="summary">{{ summaryOf(event) }}</span>
         </span>
       </div>
 

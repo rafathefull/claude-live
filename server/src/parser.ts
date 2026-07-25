@@ -1,6 +1,6 @@
 import { MAX_PAYLOAD_BYTES, MAX_SUMMARY_CHARS } from './config.js'
 import { mcpServerOf, stationForTool } from '../../shared/mapping.js'
-import type { EventKind, TimelineEvent, TokenUsage } from '../../shared/types.js'
+import type { EventKind, Stat, TimelineEvent, TokenUsage } from '../../shared/types.js'
 
 /**
  * Traduce las líneas crudas de un transcript de Claude Code a eventos del mundo.
@@ -105,6 +105,27 @@ function textOf(content: unknown): string {
 }
 
 /** Resumen de una línea para la entrada de una herramienta. */
+export function describeToolInput(
+  tool: string,
+  input: unknown,
+  cwd?: string,
+): { summary: string; stat?: Stat } {
+  const i = asRecord(input)
+  if (tool === 'TaskUpdate' && !str(i.status)) {
+    const id = String(i.taskId ?? '?')
+    return { summary: `#${id} → actualizada`, stat: { kind: 'taskUpdated', id } }
+  }
+  if (tool === 'AskUserQuestion') {
+    const questions = Array.isArray(i.questions) ? i.questions : []
+    const first = asRecord(questions[0])
+    const asked = str(first.question)
+    if (!asked) {
+      return { summary: `${questions.length} pregunta(s)`, stat: { kind: 'questions', n: questions.length } }
+    }
+  }
+  return { summary: summarizeToolInput(tool, input, cwd) }
+}
+
 export function summarizeToolInput(tool: string, input: unknown, cwd?: string): string {
   const i = asRecord(input)
   switch (tool) {
@@ -157,30 +178,44 @@ export function summarizeToolInput(tool: string, input: unknown, cwd?: string): 
   }
 }
 
-/** Resumen de una línea para el resultado de una herramienta. */
-export function summarizeToolResult(tool: string | undefined, result: unknown): string {
-  if (result === undefined || result === null) return ''
-  if (typeof result === 'string') return clip(result, 120)
+/**
+ * Describe el resultado de una herramienta: una línea de texto y, cuando el resumen incluye
+ * palabras traducibles, el dato en crudo para que el front lo formatee en su idioma.
+ */
+export function describeToolResult(
+  tool: string | undefined,
+  result: unknown,
+): { summary: string; stat?: Stat } {
+  if (result === undefined || result === null) return { summary: '' }
+  if (typeof result === 'string') return { summary: clip(result, 120) }
   const r = asRecord(result)
 
   if (typeof r.stdout === 'string' || typeof r.stderr === 'string') {
     const stdout = (str(r.stdout) ?? '').trim()
     const stderr = (str(r.stderr) ?? '').trim()
-    if (stderr && !stdout) return clip(`stderr: ${stderr}`, 120)
-    const lines = stdout ? stdout.split('\n').length : 0
-    return stdout ? clip(`${stdout.split('\n')[0]}${lines > 1 ? ` (+${lines - 1} líneas)` : ''}`, 120) : 'sin salida'
+    if (stderr && !stdout) {
+      return { summary: clip(`stderr: ${stderr}`, 120), stat: { kind: 'stderr', text: clip(stderr, 110) } }
+    }
+    if (!stdout) return { summary: 'sin salida', stat: { kind: 'empty' } }
+    const lines = stdout.split('\n')
+    const head = clip(lines[0], 110)
+    const extra = lines.length - 1
+    return {
+      summary: clip(`${head}${extra > 0 ? ` (+${extra} líneas)` : ''}`, 120),
+      stat: { kind: 'stdout', head, extra },
+    }
   }
 
   if (Array.isArray(r.structuredPatch)) {
     let added = 0
     let removed = 0
     for (const hunk of r.structuredPatch) {
-      for (const line of asRecord(hunk).lines as string[] | undefined ?? []) {
+      for (const line of (asRecord(hunk).lines as string[] | undefined) ?? []) {
         if (line.startsWith('+')) added++
         else if (line.startsWith('-')) removed++
       }
     }
-    return `+${added} / −${removed}`
+    return { summary: `+${added} / −${removed}`, stat: { kind: 'diff', added, removed } }
   }
 
   // AskUserQuestion: interesa lo que respondió el usuario, no el JSON de las preguntas.
@@ -188,27 +223,49 @@ export function summarizeToolResult(tool: string | undefined, result: unknown): 
     const chosen = Object.values(r.answers as Record<string, unknown>)
       .filter((value): value is string => typeof value === 'string')
       .join(' · ')
-    if (chosen) return clip(`elegido: ${chosen}`, 120)
+    if (chosen) {
+      return { summary: clip(`elegido: ${chosen}`, 120), stat: { kind: 'chosen', value: clip(chosen, 100) } }
+    }
   }
 
-  if (Array.isArray(r.matches)) return `${r.matches.length} coincidencia(s)`
-  if (typeof r.numFiles === 'number') return `${r.numFiles} fichero(s)`
-  if (typeof r.numLines === 'number') return `${r.numLines} línea(s)`
+  if (Array.isArray(r.matches)) {
+    return { summary: `${r.matches.length} coincidencia(s)`, stat: { kind: 'matches', n: r.matches.length } }
+  }
+  if (typeof r.numFiles === 'number') {
+    return { summary: `${r.numFiles} fichero(s)`, stat: { kind: 'files', n: r.numFiles } }
+  }
+  if (typeof r.numLines === 'number') {
+    return { summary: `${r.numLines} línea(s)`, stat: { kind: 'lines', n: r.numLines } }
+  }
   // Read devuelve el fichero anidado: {type:'text', file:{numLines, totalLines, …}}
   const file = asRecord(r.file)
   if (typeof file.numLines === 'number') {
-    const total = typeof file.totalLines === 'number' ? ` de ${file.totalLines}` : ''
-    return `${file.numLines} línea(s)${total}`
+    const total = typeof file.totalLines === 'number' ? file.totalLines : undefined
+    return {
+      summary: `${file.numLines} línea(s)${total ? ` de ${total}` : ''}`,
+      stat: { kind: 'lines', n: file.numLines, total },
+    }
   }
-  if (str(r.status) === 'async_launched') return `lanzado (${str(r.agentId) ?? '?'})`
-  if (Array.isArray(r.tasks)) return `${r.tasks.length} tarea(s)`
+  if (str(r.status) === 'async_launched') {
+    const id = str(r.agentId) ?? '?'
+    return { summary: `lanzado (${id})`, stat: { kind: 'launched', id } }
+  }
+  if (Array.isArray(r.tasks)) {
+    return { summary: `${r.tasks.length} tarea(s)`, stat: { kind: 'tasks', n: r.tasks.length } }
+  }
   if (typeof r.type === 'string' && typeof r.filePath === 'string') {
-    return clip(`${r.type} ${relPath(r.filePath)}`)
+    const path = relPath(r.filePath)
+    return { summary: clip(`${r.type} ${path}`), stat: { kind: 'fileOp', op: r.type, path } }
   }
 
   const text = textOf(r.content)
-  if (text) return clip(text, 120)
-  return clip(JSON.stringify(r) ?? '', 120)
+  if (text) return { summary: clip(text, 120) }
+  return { summary: clip(JSON.stringify(r) ?? '', 120) }
+}
+
+/** Compatibilidad: el resumen a secas, en castellano. */
+export function summarizeToolResult(tool: string | undefined, result: unknown): string {
+  return describeToolResult(tool, result).summary
 }
 
 function usageOf(message: Record<string, unknown>): TokenUsage | undefined {
@@ -317,13 +374,15 @@ export class TranscriptParser {
           }
 
           const { payload, truncated } = safePayload(raw.toolUseResult ?? b.content)
+          const described = describeToolResult(tool, raw.toolUseResult ?? b.content)
           events.push({
             ...base,
             uuid: toolResults.length > 1 && toolUseId ? `${uuid}:${toolUseId}` : uuid,
             kind: 'tool_result',
             tool,
             station: stationForTool(tool),
-            summary: summarizeToolResult(tool, raw.toolUseResult ?? b.content),
+            summary: described.summary,
+            stat: described.stat,
             payload,
             truncated,
             toolUseId,
@@ -384,7 +443,8 @@ export class TranscriptParser {
           const toolUseId = str(b.id)
           if (toolUseId) this.pending.set(toolUseId, { ts: Date.parse(ts), tool })
           kind = tool === 'Skill' ? 'skill' : 'tool_call'
-          summary = summarizeToolInput(tool, b.input, this.ctx.cwd ?? hints.cwd)
+          const described = describeToolInput(tool, b.input, this.ctx.cwd ?? hints.cwd)
+          summary = described.summary
           payloadSource = b.input
           const { payload, truncated } = safePayload(payloadSource)
           events.push({
@@ -394,6 +454,7 @@ export class TranscriptParser {
             tool,
             station: stationForTool(tool),
             summary,
+            stat: described.stat,
             payload,
             truncated,
             toolUseId,

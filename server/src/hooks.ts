@@ -1,5 +1,5 @@
 import { stationForTool } from '../../shared/mapping.js'
-import { summarizeToolInput, summarizeToolResult } from './parser.js'
+import { describeToolInput, describeToolResult } from './parser.js'
 import type { ActorInfo, TimelineEvent } from '../../shared/types.js'
 
 /**
@@ -56,7 +56,7 @@ export function normalizeHook(payload: HookPayload): HookResult {
             ...base,
             uuid: `hook:${payload.tool_use_id ?? ts}`,
             kind: tool === 'Skill' ? 'skill' : 'tool_call',
-            summary: summarizeToolInput(tool ?? '?', payload.tool_input, payload.cwd),
+            ...describeToolInput(tool ?? '?', payload.tool_input, payload.cwd),
             payload: payload.tool_input,
           },
         ],
@@ -70,7 +70,7 @@ export function normalizeHook(payload: HookPayload): HookResult {
             ...base,
             uuid: `hook:${payload.tool_use_id ?? ts}:done`,
             kind: 'tool_result',
-            summary: summarizeToolResult(tool, payload.tool_response),
+            ...describeToolResult(tool, payload.tool_response),
             payload: payload.tool_response,
             isError: payload.hook_event_name === 'PostToolUseFailure',
           },
@@ -84,7 +84,12 @@ export function normalizeHook(payload: HookPayload): HookResult {
             ...base,
             uuid: `hook:perm:${payload.tool_use_id ?? ts}`,
             kind: 'permission',
-            summary: `esperando permiso: ${tool ?? '?'} ${summarizeToolInput(tool ?? '?', payload.tool_input, payload.cwd)}`,
+            summary: `esperando permiso: ${tool ?? '?'} ${describeToolInput(tool ?? '?', payload.tool_input, payload.cwd).summary}`,
+            stat: {
+              kind: 'waitingPermission',
+              tool: tool ?? '?',
+              detail: describeToolInput(tool ?? '?', payload.tool_input, payload.cwd).summary,
+            },
             payload: payload.tool_input,
           },
         ],
@@ -109,6 +114,11 @@ export function normalizeHook(payload: HookPayload): HookResult {
             kind: spawning ? 'agent_spawn' : 'agent_done',
             station: 'desk',
             summary: `${payload.agent_type ?? 'agente'} ${spawning ? 'arranca' : 'termina'}`,
+            stat: {
+              kind: 'agentState',
+              agentType: payload.agent_type ?? 'agent',
+              started: spawning,
+            },
             actor: agent,
           },
         ],
@@ -125,6 +135,7 @@ export function normalizeHook(payload: HookPayload): HookResult {
             kind: 'meta',
             station: 'desk',
             summary: 'turno terminado',
+            stat: { kind: 'turnEnded' },
           },
         ],
         agents: [],

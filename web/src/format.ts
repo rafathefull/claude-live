@@ -1,5 +1,7 @@
 import { STATION_BY_ID, colorForAgent } from '@shared/mapping'
-import type { EventKind, TimelineEvent } from '@shared/types'
+import type { EventKind, Stat, TimelineEvent } from '@shared/types'
+import { formatStat as formatStatIn } from '@shared/stats'
+import { lang } from './i18n'
 
 /**
  * Límite de contexto. Los modelos con sufijo `[1m]` llevan ventana de 1M, pero el
@@ -84,4 +86,14 @@ export function shortTool(tool: string | undefined): string {
   const rest = tool.slice(5)
   const sep = rest.indexOf('__')
   return sep === -1 ? rest : `${rest.slice(0, sep)}·${rest.slice(sep + 2)}`
+}
+
+/** Da formato a un dato del servidor en el idioma activo. La tabla vive en `shared/stats.ts`. */
+export function formatStat(stat: Stat): string {
+  return formatStatIn(stat, lang.value)
+}
+
+/** Lo que se muestra de un evento: el dato formateado si existe, o el resumen del servidor. */
+export function summaryOf(event: Pick<TimelineEvent, 'summary' | 'stat'>): string {
+  return event.stat ? formatStat(event.stat) : event.summary
 }
