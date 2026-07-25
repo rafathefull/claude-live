@@ -1,4 +1,4 @@
-import { STATION_BY_ID, colorForAgentType } from '@shared/mapping'
+import { STATION_BY_ID, colorForAgent } from '@shared/mapping'
 import type { EventKind, TimelineEvent } from '@shared/types'
 
 /**
@@ -72,8 +72,9 @@ export function iconFor(event: TimelineEvent): string {
   return KIND_ICON[event.kind] ?? '·'
 }
 
-export function agentColorCss(agentType: string | undefined): string {
-  return `#${colorForAgentType(agentType).toString(16).padStart(6, '0')}`
+/** Color de un subagente: tono base por tipo, matiz propio por `variant`. */
+export function agentColorCss(agentType: string | undefined, variant = 0): string {
+  return `#${colorForAgent(agentType, variant).toString(16).padStart(6, '0')}`
 }
 
 /** Nombre corto de la herramienta: mcp__serena__find_symbol → serena·find_symbol */

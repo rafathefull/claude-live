@@ -87,6 +87,11 @@ export interface ActorInfo {
   /** Profundidad de anidamiento (0 = sesión principal). */
   depth: number
   parentAgentId?: string | null
+  /**
+   * Orden entre los hermanos del mismo `agentType`, para darle un tono propio: dos `Explore`
+   * simultáneos serían indistinguibles con el color del tipo a secas.
+   */
+  variant?: number
 }
 
 export type SessionStatus = 'busy' | 'idle' | 'unknown' | 'dead'

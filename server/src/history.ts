@@ -140,9 +140,15 @@ export async function readSessionEvents(
   })
 
   if (opts.includeAgents) {
+    // Los hermanos del mismo tipo se numeran por orden de aparición, igual que en vivo, para
+    // que en el replay tampoco salgan dos `Explore` del mismo color.
+    const seenByType = new Map<string, number>()
     for (const ref of await scanSubagents(sessionId, resolved.slug)) {
       const meta = await readAgentMeta(ref.path)
       const agentParser = new TranscriptParser({ sessionId, agentId: ref.agentId })
+      const typeKey = meta.agentType ?? 'sin-tipo'
+      const variant = seenByType.get(typeKey) ?? 0
+      seenByType.set(typeKey, variant + 1)
       const actor = {
         id: ref.agentId as string,
         sessionId,
@@ -150,6 +156,7 @@ export async function readSessionEvents(
         agentType: meta.agentType,
         description: meta.description,
         depth: meta.spawnDepth ?? 1,
+        variant,
       }
       await forEachLine(ref.path, (line) => {
         for (const event of agentParser.parse(line).events) {

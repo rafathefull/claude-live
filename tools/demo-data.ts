@@ -14,11 +14,12 @@ const CWD = '/home/demo/proyectos/tienda-api'
 const SLUG = CWD.replace(/[^a-zA-Z0-9]/g, '-')
 const MODEL = 'claude-opus-5'
 const AGENT_EXPLORE = 'a11ce00explore01'
+const AGENT_EXPLORE2 = 'c33ef00explore03'
 const AGENT_PLAN = 'b22df00plan00002'
 
 /** Un paso del guion: en qué fichero cae y qué línea se escribe. */
 export interface DemoStep {
-  target: 'main' | typeof AGENT_EXPLORE | typeof AGENT_PLAN
+  target: 'main' | typeof AGENT_EXPLORE | typeof AGENT_EXPLORE2 | typeof AGENT_PLAN
   line: Record<string, unknown>
 }
 
@@ -217,6 +218,19 @@ export function buildDemoScript(startedAt: number): { past: DemoStep[]; live: De
       resolvedModel: MODEL,
     }),
 
+    call(ctx, 'main', 'toolu_d13', 'Agent', {
+      subagent_type: 'Explore',
+      description: 'Revisar los tests de pedidos',
+      prompt: 'Mira qué cubren hoy los tests de pedidos y qué convención siguen.',
+    }),
+    result(ctx, 'main', 'toolu_d13', {
+      isAsync: true,
+      status: 'async_launched',
+      agentId: AGENT_EXPLORE2,
+      description: 'Revisar los tests de pedidos',
+      resolvedModel: MODEL,
+    }),
+
     prompt(ctx, AGENT_EXPLORE, 'Busca si el proyecto ya pagina en algún endpoint.', 0.5),
     thinking(ctx, AGENT_EXPLORE, 'Rastreo por «cursor», «take» y «skip» en las rutas.', 1),
     call(ctx, AGENT_EXPLORE, 'toolu_e01', 'Grep', { pattern: 'cursor|take|skip', path: 'src' }, 1),
@@ -229,6 +243,12 @@ export function buildDemoScript(startedAt: number): { past: DemoStep[]; live: De
     call(ctx, AGENT_EXPLORE, 'toolu_e02', 'Read', { file_path: `${CWD}/src/routes/items.ts` }, 1),
     result(ctx, AGENT_PLAN, 'toolu_p01', { type: 'text', file: { numLines: 96 } }, 1),
 
+    prompt(ctx, AGENT_EXPLORE2, 'Mira qué cubren hoy los tests de pedidos.', 0.5),
+    thinking(ctx, AGENT_EXPLORE2, 'Busco los ficheros de test y qué casos tocan.', 1),
+    call(ctx, AGENT_EXPLORE2, 'toolu_x01', 'Glob', { pattern: 'test/**/*orders*' }, 1),
+    result(ctx, AGENT_EXPLORE2, 'toolu_x01', { numFiles: 3 }, 1),
+    call(ctx, AGENT_EXPLORE2, 'toolu_x02', 'Read', { file_path: `${CWD}/test/orders.test.ts` }, 1),
+
     call(ctx, 'main', 'toolu_d07', 'mcp__postgres__query', {
       sql: 'select count(*) from orders',
     }, 1),
@@ -237,6 +257,8 @@ export function buildDemoScript(startedAt: number): { past: DemoStep[]; live: De
     result(ctx, AGENT_EXPLORE, 'toolu_e02', { type: 'text', file: { numLines: 74 } }, 1),
     say(ctx, AGENT_EXPLORE, 'items.ts ya pagina con `?cursor=` y `?limit=`; conviene copiar esa forma.', 1),
     say(ctx, AGENT_PLAN, 'Cursor opcional y `limit` con techo de 100: compatible con los clientes de hoy.', 1),
+    result(ctx, AGENT_EXPLORE2, 'toolu_x02', { type: 'text', file: { numLines: 132 } }, 1),
+    say(ctx, AGENT_EXPLORE2, 'Los tests cubren el listado completo, pero ninguno prueba la página vacía.', 1),
 
     call(ctx, 'main', 'toolu_d08', 'Edit', {
       file_path: `${CWD}/src/routes/orders.ts`,
@@ -344,16 +366,23 @@ export async function playStep(world: DemoWorld, step: DemoStep): Promise<void> 
   const agentId = step.target
   const meta = join(world.subagentDir, `agent-${agentId}.meta.json`)
   const path = join(world.subagentDir, `agent-${agentId}.jsonl`)
-  const isExplore = agentId === AGENT_EXPLORE
-  await writeFile(
-    meta,
-    JSON.stringify({
-      agentType: isExplore ? 'Explore' : 'Plan',
-      description: isExplore ? 'Buscar convenciones de paginación' : 'Diseñar el contrato del endpoint',
-      toolUseId: isExplore ? 'toolu_d05' : 'toolu_d06',
-      spawnDepth: 1,
-    }),
-    'utf8',
-  )
+  const perAgent: Record<string, { agentType: string; description: string; toolUseId: string }> = {
+    [AGENT_EXPLORE]: {
+      agentType: 'Explore',
+      description: 'Buscar convenciones de paginación',
+      toolUseId: 'toolu_d05',
+    },
+    [AGENT_EXPLORE2]: {
+      agentType: 'Explore',
+      description: 'Revisar los tests de pedidos',
+      toolUseId: 'toolu_d13',
+    },
+    [AGENT_PLAN]: {
+      agentType: 'Plan',
+      description: 'Diseñar el contrato del endpoint',
+      toolUseId: 'toolu_d06',
+    },
+  }
+  await writeFile(meta, JSON.stringify({ ...perAgent[agentId], spawnDepth: 1 }), 'utf8')
   await appendFile(path, `${JSON.stringify(step.line)}\n`, 'utf8')
 }

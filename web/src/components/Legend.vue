@@ -87,7 +87,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
               <strong>Subagentes</strong>
             </div>
             <p>Nacen junto a Claude cuando él los lanza, trabajan por su cuenta y al terminar
-              le entregan su informe (línea verde) antes de desaparecer. El color indica el tipo:</p>
+              le entregan su informe (línea verde) antes de desaparecer. Bajo cada uno se lee
+              <strong>su cometido</strong>, y si hay varios del mismo tipo cada uno recibe un
+              matiz distinto del color y se numeran en la timeline («Explore 1», «Explore 2»),
+              para poder seguirlos por separado. El color base indica el tipo:</p>
             <ul class="agent-types">
               <li v-for="entry in AGENT_TYPES" :key="entry.type ?? 'x'">
                 <i class="swatch" :style="{ background: agentColorCss(entry.type) }" />

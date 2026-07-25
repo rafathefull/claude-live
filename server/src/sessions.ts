@@ -195,6 +195,8 @@ export class LiveRegistry extends EventEmitter {
       if (meta.spawnDepth !== undefined) existing.info.depth = meta.spawnDepth
       if (meta.toolUseId) state.agentByToolUse.set(meta.toolUseId, agentId)
       if (wasIncomplete && meta.agentType) {
+        // Con el tipo ya conocido se puede repartir el tono entre los hermanos.
+        this.assignVariant(state, existing.info)
         this.emit('agent', { agent: existing.info, state: 'spawn' })
       }
       return existing
@@ -222,6 +224,7 @@ export class LiveRegistry extends EventEmitter {
       done: false,
     }
     state.agents.set(agentId, agent)
+    this.assignVariant(state, info)
     if (meta.toolUseId) state.agentByToolUse.set(meta.toolUseId, agentId)
 
     if (opts.backfill) {
@@ -270,9 +273,23 @@ export class LiveRegistry extends EventEmitter {
       lastActivity: Date.now(),
       done: false,
     })
+    this.assignVariant(state, info)
     if (spawn.toolUseId) state.agentByToolUse.set(spawn.toolUseId, spawn.agentId)
     this.emit('agent', { agent: info, state: 'spawn' })
     this.announceSpawnEvent(state, info)
+  }
+
+  /**
+   * Orden de este agente entre los hermanos de su mismo tipo, para que el mundo le dé un
+   * tono propio. Dos `Explore` a la vez son indistinguibles si comparten color.
+   */
+  private assignVariant(state: SessionState, info: ActorInfo): void {
+    let variant = 0
+    for (const other of state.agents.values()) {
+      if (other.info.id === info.id) continue
+      if (other.info.agentType === info.agentType) variant++
+    }
+    info.variant = variant
   }
 
   /**

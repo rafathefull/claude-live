@@ -14,6 +14,16 @@ const LABEL_STYLE: TextStyleOptions = {
   align: 'center',
 }
 
+const SUBLABEL_STYLE: TextStyleOptions = {
+  fontFamily: 'ui-monospace, monospace',
+  fontSize: 10,
+  fill: 0x6b7688,
+  align: 'center',
+  wordWrap: true,
+  wordWrapWidth: 96,
+  breakWords: true,
+}
+
 const BUBBLE_STYLE: TextStyleOptions = {
   fontFamily: 'ui-monospace, monospace',
   fontSize: 12,
@@ -46,6 +56,7 @@ export class Actor {
   private ring = new Graphics()
   private face: Text
   private label: Text
+  private subLabel: Text
   private bubble = new Container()
   private bubbleBg = new Graphics()
   private bubbleText: Text
@@ -64,9 +75,15 @@ export class Actor {
   ) {
     this.face = new Text({ text: emoji, style: { fontSize: radius * 1.15, fill: 0xffffff } })
     this.face.anchor.set(0.5)
-    this.label = new Text({ text: labelText, style: LABEL_STYLE })
+    this.label = new Text({ text: labelText, style: { ...LABEL_STYLE, fill: color } })
     this.label.anchor.set(0.5, 0)
     this.label.y = radius + 7
+
+    // Segunda línea: el cometido del actor. Sin ella, dos subagentes del mismo tipo son
+    // dos círculos iguales y no hay forma de saber cuál hace qué.
+    this.subLabel = new Text({ text: '', style: SUBLABEL_STYLE })
+    this.subLabel.anchor.set(0.5, 0)
+    this.subLabel.y = radius + 21
 
     this.bubbleText = new Text({ text: '', style: BUBBLE_STYLE })
     this.bubbleText.position.set(8, 6)
@@ -74,7 +91,7 @@ export class Actor {
     this.bubble.visible = false
 
     this.draw()
-    this.view.addChild(this.ring, this.body, this.face, this.label, this.bubble)
+    this.view.addChild(this.ring, this.body, this.face, this.label, this.subLabel, this.bubble)
     this.view.scale.set(0)
   }
 
@@ -85,6 +102,19 @@ export class Actor {
 
   setLabel(text: string): void {
     this.label.text = text
+  }
+
+  /** El tipo del subagente llega después de su nacimiento: hay que poder recolorearlo. */
+  setColor(color: number): void {
+    if (color === this.color) return
+    this.color = color
+    this.label.style.fill = color
+    this.draw()
+  }
+
+  /** Segunda línea con el cometido del actor (la descripción con la que se lanzó). */
+  setSubLabel(text: string): void {
+    this.subLabel.text = text.length > 38 ? `${text.slice(0, 37)}…` : text
   }
 
   setMood(mood: ActorMood): void {
@@ -130,7 +160,7 @@ export class Actor {
 
   private placeBubble(): void {
     const y = this.bubbleBelow
-      ? this.radius + this.label.height + 8
+      ? this.radius + this.label.height + this.subLabel.height + 12
       : -this.bubbleHeight - this.radius
     this.bubble.position.set(this.radius + 8, y)
   }

@@ -27,9 +27,20 @@ interface Action {
   run: (repeats: number) => void
 }
 
+/**
+ * Nombre del avatar de un subagente: su tipo y, si tiene hermanos del mismo tipo, el número
+ * que lo distingue («Explore 2»). Coincide con la etiqueta de la timeline.
+ */
+function agentLabel(info: TimelineEvent['actor']): string {
+  if (!info?.agentType) return 'agente'
+  return info.variant ? `${info.agentType} ${info.variant + 1}` : info.agentType
+}
+
 export class Director {
   private queues = new Map<string, Action[]>()
   private busyUntil = new Map<string, number>()
+  /** agentType → ids de sus avatares, para numerarlos solo cuando hay más de uno. */
+  private agentsByType = new Map<string, string[]>()
 
   constructor(private scene: Scene) {}
 
@@ -63,6 +74,7 @@ export class Director {
   reset(sessionLabel: string): void {
     for (const id of [...this.queues.keys()]) this.queues.delete(id)
     this.busyUntil.clear()
+    this.agentsByType.clear()
     for (const actorId of this.knownActors()) {
       if (actorId !== USER_ID && actorId !== MAIN_ID) this.scene.removeActor(actorId)
     }
@@ -101,17 +113,35 @@ export class Director {
     queue.push(action)
   }
 
+  /**
+   * Lleva la cuenta de los avatares por tipo. Mientras hay uno solo se llama «Explore»; en
+   * cuanto nace un hermano, todos pasan a numerarse para poder seguirlos por separado.
+   */
+  private registerAgentActor(actorId: string, info: TimelineEvent['actor']): void {
+    const type = info?.agentType
+    if (!type) return
+    const siblings = this.agentsByType.get(type) ?? []
+    if (!this.agentsByType.has(type)) this.agentsByType.set(type, siblings)
+    if (!siblings.includes(actorId)) siblings.push(actorId)
+    if (siblings.length < 2) return
+    for (const [index, id] of siblings.entries()) {
+      this.scene.actor(id)?.setLabel(`${type} ${index + 1}`)
+    }
+  }
+
   private ensureActorFor(event: TimelineEvent, actorId: string): void {
     if (actorId === USER_ID || actorId === MAIN_ID) return
     const info = event.actor
     this.scene.ensureActor({
       id: actorId,
       emoji: '👤',
-      color: this.scene.colorForAgent(info?.agentType),
-      label: info?.agentType ?? 'agente',
+      color: this.scene.colorForAgent(info?.agentType, info?.variant),
+      label: agentLabel(info),
+      subLabel: info?.description,
       radius: 20,
       nearActorId: MAIN_ID,
     })
+    this.registerAgentActor(actorId, info)
   }
 
   private actionFor(event: TimelineEvent, actorId: string): Action | null {
@@ -183,15 +213,18 @@ export class Director {
           run: () => {
             const id = event.actor?.id ?? event.agentId
             if (!id) return
+            const color = scene.colorForAgent(event.actor?.agentType, event.actor?.variant)
             scene.ensureActor({
               id,
               emoji: '👤',
-              color: scene.colorForAgent(event.actor?.agentType),
-              label: event.actor?.agentType ?? 'agente',
+              color,
+              label: agentLabel(event.actor),
+              subLabel: event.actor?.description,
               radius: 20,
               nearActorId: MAIN_ID,
             })
-            scene.drawLink(MAIN_ID, id, scene.colorForAgent(event.actor?.agentType), 1400)
+            this.registerAgentActor(id, event.actor)
+            scene.drawLink(MAIN_ID, id, color, 1400)
             if (event.actor?.description) {
               scene.actor(id)?.say(event.actor.description, 5000)
             }

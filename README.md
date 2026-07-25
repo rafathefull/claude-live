@@ -13,15 +13,17 @@ especial: **cualquier sesión de Claude Code que abras aparece sola**.
 
 ![El mundo de claude-live en marcha](docs/preview.png)
 
-*Claude acaba de terminar en la Terminal mientras dos subagentes —`Explore` en azul y `Plan`
-en morado— trabajan en la Biblioteca. Cada estación lleva la cuenta de las veces que se ha
-usado y muestra lo último que pasó por ella.*
+*Claude acaba de cerrar su respuesta mientras tres subagentes trabajan en la Biblioteca. Bajo
+cada uno se lee su cometido, y los dos `Explore` llevan matices distintos del azul —además de
+numerarse, «Explore 1» y «Explore 2»— para poder seguirlos por separado. Cada estación lleva
+la cuenta de las veces que se ha usado y muestra lo último que pasó por ella.*
 
 ## Qué muestra
 
 - **Sesiones vivas**, con su directorio, rama de git, modelo, modo de permisos, tokens
   acumulados, porcentaje de contexto usado y si Claude está trabajando o esperándote.
-  Varias sesiones a la vez, cada una en su propia habitación.
+  Si tienes varias sesiones abiertas, cada una es una habitación y se cambia entre ellas
+  desde la cabecera (todavía no se ven las dos a la vez).
 - **El razonamiento**: los bloques de pensamiento aparecen en la burbuja del avatar.
 - **Subagentes**: nacen junto a quien los lanza, con su tipo (`Explore`, `Plan`,
   `general-purpose`, los tuyos) y la descripción con la que se lanzaron. Se anidan por
@@ -30,8 +32,10 @@ usado y muestra lo último que pasó por ella.*
   skills, worktrees y lo que vuelve hacia ti (preguntas, planes, artifacts).
 - **Timeline sincronizada**: filtrable por actor, con duraciones, errores y un inspector que
   muestra el payload completo de cualquier evento.
-- **Reproductor del historial**: abre cualquier conversación pasada y reprodúcela como una
-  película, con `⏮ ⏪ ⏵ ⏩ ⏭`, velocidades de 0,5× a 16× y barra para saltar a cualquier punto.
+- **Reproductor del historial**: abre una conversación pasada y reprodúcela como una película,
+  con `⏮ ⏪ ⏵ ⏩ ⏭`, velocidades de 0,5× a 16× y barra para saltar a cualquier punto. De momento
+  carga los primeros 2000 eventos de la sesión: las conversaciones más largas se reproducen
+  hasta ahí.
 - **Leyenda** (botón `❔`) que explica cada lugar, cada habitante y cada color. La lista de
   herramientas de cada estación sale de la tabla de mapeo, así que nunca se queda desfasada.
 
@@ -72,6 +76,10 @@ Variables de entorno:
 |---|---|---|
 | `CLAUDE_LIVE_PORT` | `7317` | Puerto del servidor |
 | `CLAUDE_CONFIG_DIR` | `~/.claude` | Dónde vive la configuración de Claude Code |
+| `XDG_DATA_HOME` | `~/.local/share` | Dónde se guarda la caché del índice del historial |
+
+Si cambias `CLAUDE_LIVE_PORT`, recuerda que `npm run dev` proxya al 7317 fijo en
+`vite.config.ts`, y que la URL del hook también apunta ahí.
 
 ## Cómo se engancha a las sesiones
 
@@ -86,75 +94,158 @@ el visor en cualquier momento sin afectar a ninguna sesión.
 | `<sessionId>/subagents/agent-<id>.jsonl` + `.meta.json` | El trabajo de cada subagente y su `agentType`, `description`, `toolUseId` y `spawnDepth`: de ahí sale el árbol padre → hijos. |
 | `~/.claude/daemon/roster.json` | Sesiones lanzadas en segundo plano. |
 
-### Hooks HTTP (opcional)
+## Hooks HTTP (opcional, muy recomendable)
 
-Sin hooks todo funciona, con menos de un segundo de latencia. Con ellos la latencia baja a
-cero y además se ve cuándo Claude está **esperando un permiso tuyo**. En
-`~/.claude/settings.json`, para los eventos `PreToolUse`, `PostToolUse`, `SubagentStart`,
-`SubagentStop`, `PermissionRequest`, `Notification` y `Stop`:
+**Sin hooks todo funciona**, leyendo ficheros, con menos de un segundo de latencia. Los hooks
+son la diferencia entre ver lo que Claude *ha hecho* y ver lo que *está haciendo*, porque
+Claude Code te avisa por HTTP en el momento exacto en que ocurre. Lo que añade cada uno:
+
+| Evento | Qué aporta que el fichero no da |
+|---|---|
+| `PreToolUse` | El aviso **antes** de ejecutar: el avatar se pone en marcha en el instante en que Claude decide usar la herramienta, no cuando el resultado ya está escrito. |
+| `PostToolUse` | El resultado en cuanto se resuelve, sin esperar al volcado del transcript. |
+| `PostToolUseFailure` | El fallo de una herramienta marcado como error, en rojo, sin esperar al fichero. |
+| `PermissionRequest` | **Que Claude te está esperando.** No existe en el transcript: sin este hook, el estado ámbar `❗` nunca aparece. |
+| `SubagentStart` | El nacimiento exacto de un subagente, con su tipo. |
+| `SubagentStop` | La muerte exacta. Sin él hay que deducirla: un subagente sin escribir nada durante 25 s se da por terminado, lo que con un agente lento significa darlo por muerto y luego «revivirlo». |
+| `Notification` | Avisos de Claude Code (permisos, inactividad, autenticación). |
+| `Stop` | Fin de turno, para que el avatar pase a reposo sin esperar al roster. |
+
+### Cómo configurarlos
+
+En `~/.claude/settings.json` (tus *user settings*), cada evento lleva el mismo manejador.
+Este bloque va dentro de `"hooks"`, junto a los que ya tengas — **no los reemplaces**:
 
 ```json
 {
-  "type": "http",
-  "url": "http://127.0.0.1:7317/hook",
-  "async": true,
-  "timeout": 2
+  "hooks": {
+    "PreToolUse":        [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:7317/hook", "async": true, "timeout": 2 }] }],
+    "PostToolUse":        [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:7317/hook", "async": true, "timeout": 2 }] }],
+    "PostToolUseFailure": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:7317/hook", "async": true, "timeout": 2 }] }],
+    "SubagentStart":     [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:7317/hook", "async": true, "timeout": 2 }] }],
+    "SubagentStop":      [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:7317/hook", "async": true, "timeout": 2 }] }],
+    "PermissionRequest": [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:7317/hook", "async": true, "timeout": 2 }] }],
+    "Notification":      [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:7317/hook", "async": true, "timeout": 2 }] }],
+    "Stop":              [{ "hooks": [{ "type": "http", "url": "http://127.0.0.1:7317/hook", "async": true, "timeout": 2 }] }]
+  }
 }
 ```
 
-`"async": true` es importante: así, si el visor no está levantado, Claude Code no espera por
-él. Como son *user settings*, se aplican a todas tus sesiones en todos los directorios sin
-configurar nada por proyecto, y se recargan en caliente: no hay que reiniciar la sesión.
+Tres cosas que conviene saber:
 
-Para comprobar que están llegando, `GET /api/health` cuenta los hooks recibidos por evento:
+- **`"async": true` no es opcional.** Es lo que garantiza que, si el visor no está levantado,
+  Claude Code no se quede esperando una respuesta. Puedes matar el servidor cuando quieras.
+- **Se aplican a todas tus sesiones** en todos los directorios, sin configurar nada por
+  proyecto, porque son *user settings*.
+- **Se recargan en caliente**: no hace falta reiniciar la sesión en marcha.
 
-```json
+Haz una copia antes de editar (`cp ~/.claude/settings.json ~/.claude/settings.json.bak`) y
+comprueba que el fichero sigue siendo JSON válido: si se rompe, Claude Code ignora en
+silencio **todos** los ajustes de ese fichero.
+
+```bash
+jq -e '.hooks | keys' ~/.claude/settings.json
+```
+
+### Cómo saber si están llegando
+
+`GET /api/health` cuenta los hooks recibidos por evento:
+
+```bash
+curl -s http://127.0.0.1:7317/api/health
 { "ok": true, "sessions": 1, "clients": 2, "hooks": { "PreToolUse": 4, "PostToolUse": 2 } }
 ```
 
+Si el contador se queda vacío mientras Claude trabaja: revisa el JSON con el `jq` de arriba,
+confirma que el puerto coincide con el del servidor y prueba a abrir `/hooks` en Claude Code
+para forzar una recarga de la configuración.
+
 Cada hook trae el `tool_use_id` que después aparecerá en el transcript, así que la llamada
-se ve una sola vez aunque llegue por las dos vías.
+**se ve una sola vez** aunque llegue por las dos vías: es el front el que las cruza por ese
+id (el servidor reenvía ambas sin deduplicar).
+
+Para quitarlos, borra esas siete entradas de `"hooks"` (o restaura tu copia). El visor sigue
+funcionando igual, solo con algo más de latencia y sin avisos de permisos.
+
+## Ciclo de vida de un subagente
+
+Es lo más vistoso del mundo y lo que más piezas cruza, así que merece explicarse:
+
+1. **Nace.** Claude usa la herramienta `Agent`; su resultado trae el `agentId` y la
+   descripción de la tarea. El visor emite un evento de nacimiento en la cola de *Claude*
+   —no del hijo, porque es Claude quien lo lanza—, y el mundo dibuja la línea de padre a
+   hijo mientras el nuevo avatar aparece con su cometido en una burbuja.
+2. **Se identifica.** El `tool_result` dice el `agentId` pero no de qué tipo es. El tipo llega
+   con su `agent-<id>.meta.json` (`Explore`, `Plan`, `general-purpose`, los tuyos), y en ese
+   momento el actor se completa y toma su color. Con el hook `SubagentStart`, el tipo se sabe
+   desde el primer instante.
+3. **Trabaja.** Escribe en su propio transcript, `subagents/agent-<id>.jsonl`, que el visor
+   sigue igual que el de la sesión principal. Sus eventos van sangrados en la timeline con
+   una etiqueta de su color, y se pueden aislar pinchando su píldora.
+4. **Entrega y muere.** Al terminar, sale una línea verde hacia Claude —el informe— y el
+   avatar se desvanece. Con `SubagentStop` el momento es exacto; sin hooks se deduce por
+   inactividad, o por el `tool_result` que cierra su `toolUseId` en la sesión padre.
+
+Varios subagentes a la vez se reparten el sitio alrededor de la estación en la que trabajan,
+y la profundidad de anidamiento (`spawnDepth`) los coloca junto a quien los lanzó.
 
 ## Privacidad
 
 Los transcripts contienen **tu código y tus prompts**. Por eso:
 
 - el servidor escucha solo en `127.0.0.1`; no lo expongas en `0.0.0.0` ni detrás de un túnel,
-- no hay telemetría ni ninguna llamada saliente,
-- nada se copia a otro sitio: se leen los ficheros que ya tienes y se sirven a tu navegador.
+- no hay telemetría ni ninguna llamada saliente: nada sale de tu máquina,
+- el contenido de las conversaciones no se copia a ningún sitio; se lee de los ficheros que ya
+  tienes y se sirve a tu navegador.
+
+Con una excepción que conviene conocer: **el índice del historial se guarda en disco**, en
+`~/.local/share/claude-live/index.json` (o `$XDG_DATA_HOME/claude-live/`). No contiene el
+cuerpo de las conversaciones, pero sí sus metadatos: ruta del transcript, directorio de
+trabajo, rama de git, modelo, modo de permisos y el título de cada sesión. Es una caché para
+no reescanear decenas de MB en cada arranque; se puede borrar en cualquier momento y se
+reconstruye sola.
 
 ## Arquitectura
 
 ```
 server/src
+  config.ts     rutas de ~/.claude, puerto, límites y caché
   roster.ts     sesiones vivas (~/.claude/sessions + daemon/roster.json)
   watcher.ts    fs.watch recursivo + lectura incremental por offset
+  lines.ts      lectura por líneas: cabeza, cola y recorrido sin cargar el fichero
   parser.ts     línea de JSONL → evento normalizado del mundo
   discover.ts   rutas de transcripts y metadatos de subagentes
   sessions.ts   une roster + transcripts + subagentes en un estado vivo
   history.ts    índice del historial cacheado y lectura paginada
   hooks.ts      normaliza los eventos que llegan por POST /hook
   index.ts      Fastify: SSE, API REST y estáticos
+server/test     regresión del parser y del ritmo, con transcripts reales
 web/src
+  main.ts, App.vue, styles.css
   world/        escena Pixi: escenario, actores, agrupación y reloj del mundo
   components/   HUD, timeline, inspector, historial, reproductor y leyenda
   store.ts      estado reactivo alimentado por SSE
   replay.ts     motor del reproductor, independiente de la escena
+  format.ts     formato de tokens, duraciones, contexto y colores
+web/test        pruebas del store sin navegador
 shared/         tipos y tabla herramienta → lugar, compartidos por servidor y front
+tools/          mundo de demostración y capturas con Chromium
 ```
 
 Dos decisiones que explican el resto:
 
 **El reloj del mundo** (`world/director.ts`). Los eventos llegan a ráfagas, pero una escena
 solo es legible si cada acción dura un mínimo. Hay una cola por actor: cuanto más larga,
-más rápido camina y menos se sostiene cada acción. En atascos, las llamadas repetidas a la
-misma estación se agrupan («Read ×7»). Nunca se descarta un evento: la timeline los muestra
-todos.
+más rápido camina y menos se sostiene cada acción. En atascos —tres o más acciones en cola— las llamadas
+consecutivas a la **misma herramienta** se agrupan («Read ×7»); dos `Read` con un `Grep` en
+medio no se juntan, y un resultado nunca se fusiona con su llamada. Nunca se descarta un
+evento: la timeline los muestra todos.
 
 **Tolerancia a los cambios de formato.** Los ficheros de `~/.claude` no son una API pública.
 El parser ignora los tipos que no conoce, una línea corrupta no tumba el watcher, y los
-payloads se recortan a 8 KB para el stream (hay líneas de más de 700 KB en transcripts
-reales; el íntegro se pide aparte).
+payloads se recortan a 8 KB (hay líneas de más de 700 KB en transcripts reales). El recorte
+lo hace el parser, así que afecta tanto al stream como a la timeline paginada; el contenido
+íntegro se pide aparte con `/raw/:uuid`.
 
 ### API
 
@@ -162,8 +253,8 @@ reales; el íntegro se pide aparte).
 |---|---|
 | `GET /api/stream` | SSE con los eventos normalizados |
 | `GET /api/sessions?active=1` | Sesiones vivas; sin `active`, también el historial |
-| `GET /api/sessions/:id/events?from=&limit=&agents=1` | Timeline paginada con subagentes |
-| `GET /api/sessions/:id/raw/:uuid` | Línea cruda de un evento, sin recortar |
+| `GET /api/sessions/:id/events?from=&limit=&agents=0` | Timeline paginada. Los subagentes vienen intercalados salvo que se pase `agents=0`; `limit` es 500 por defecto y está topado a 2000 |
+| `GET /api/sessions/:id/raw/:uuid` | Línea cruda de un evento, sin recortar (solo para eventos del transcript: los que nacen de un hook no están en ningún fichero) |
 | `POST /hook` | Ingesta de los hooks de Claude Code |
 | `GET /api/health` | Sesiones detectadas y clientes conectados |
 
@@ -173,7 +264,7 @@ Las pruebas usan **tus propios transcripts**, no mocks, porque el riesgo real de
 proyecto es que el formato cambie o que aparezca un caso hostil:
 
 ```bash
-npm test           # parser + agrupación
+npm test           # parser + agrupación + store
 npm run typecheck  # vue-tsc
 ```
 
@@ -186,9 +277,12 @@ equivocada cuando hay dos abiertas.
 
 ### Mundo de demostración
 
+Requiere el front construido (`npm run build`) y los binarios de Chromium para Playwright:
+
 ```bash
-npm run demo          # genera las capturas de este README
-npm run demo -- --keep   # deja el servidor de demostración vivo para mirarlo
+npx playwright install chromium   # una vez
+npm run demo                      # genera las capturas de este README
+npm run demo -- --keep            # deja el servidor de demostración vivo (puerto 7318)
 ```
 
 Fabrica un `~/.claude` ficticio en un directorio temporal —una sesión inventada sobre un

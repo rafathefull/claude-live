@@ -115,6 +115,20 @@ export function normalizeHook(payload: HookPayload): HookResult {
         agents: [{ agent, state: spawning ? 'spawn' : 'done' }],
       }
     }
+    case 'Stop':
+      // Fin de turno: el avatar puede pasar a reposo sin esperar a que el roster cambie.
+      return {
+        events: [
+          {
+            ...base,
+            uuid: `hook:stop:${ts}`,
+            kind: 'meta',
+            station: 'desk',
+            summary: 'turno terminado',
+          },
+        ],
+        agents: [],
+      }
     case 'Notification':
       return {
         events: [

@@ -31,11 +31,17 @@ function toggleActor(id: string): void {
   state.focusActor = state.focusActor === id ? null : id
 }
 
+/**
+ * Etiqueta del badge. Con varios subagentes del mismo tipo, el tipo a secas no distingue
+ * nada, así que se numeran: «Explore 2».
+ */
 function agentLabel(agentId: string | null): string {
   if (!agentId) return ''
   const agent = state.agents[agentId]
   if (!agent) return agentId.slice(0, 6)
-  return agent.agentType ?? agentId.slice(0, 6)
+  const type = agent.agentType ?? agentId.slice(0, 6)
+  const siblings = currentAgents.value.filter((a) => a.agentType === agent.agentType)
+  return siblings.length > 1 ? `${type} ${(agent.variant ?? 0) + 1}` : type
 }
 </script>
 
@@ -67,7 +73,17 @@ function agentLabel(agentId: string | null): string {
           <span
             v-if="event.agentId"
             class="badge"
-            :style="{ borderColor: agentColorCss(state.agents[event.agentId]?.agentType), color: agentColorCss(state.agents[event.agentId]?.agentType) }"
+            :title="state.agents[event.agentId]?.description"
+            :style="{
+              borderColor: agentColorCss(
+                state.agents[event.agentId]?.agentType,
+                state.agents[event.agentId]?.variant,
+              ),
+              color: agentColorCss(
+                state.agents[event.agentId]?.agentType,
+                state.agents[event.agentId]?.variant,
+              ),
+            }"
           >
             {{ agentLabel(event.agentId) }}
           </span>
@@ -106,11 +122,12 @@ function agentLabel(agentId: string | null): string {
         :key="agent.id"
         class="agent-pill"
         :class="{ selected: state.focusActor === agent.id, done: !agent.active }"
-        :title="agent.description"
+        :title="agent.description ?? agent.id"
         @click="toggleActor(agent.id)"
       >
-        <i class="swatch" :style="{ background: agentColorCss(agent.agentType) }" />
+        <i class="swatch" :style="{ background: agentColorCss(agent.agentType, agent.variant) }" />
         {{ agent.agentType ?? 'agente' }}
+        <span v-if="agent.description" class="pill-task">{{ agent.description }}</span>
         <span class="muted">{{ agent.events }}</span>
       </span>
     </div>

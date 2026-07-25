@@ -433,6 +433,15 @@ button.active {
   opacity: 0.5;
 }
 
+/* El cometido del subagente: es lo que distingue a dos agentes del mismo tipo. */
+.agent-pill .pill-task {
+  color: var(--text-faint);
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ---------------------------------------------------------------- inspector */
 
 .inspector {

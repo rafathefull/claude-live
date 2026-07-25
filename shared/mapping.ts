@@ -180,7 +180,33 @@ export function toolsForStation(id: StationId): string[] {
     .map(([tool]) => tool)
 }
 
-/** Color por tipo de subagente, para que se distingan de un vistazo. */
+/**
+ * Color de un subagente concreto: el tono base lo da su tipo y `variant` lo separa de sus
+ * hermanos. Sin esto, dos `Explore` a la vez son dos círculos azules idénticos y no hay
+ * forma de saber cuál está haciendo qué.
+ */
+export function colorForAgent(agentType: string | undefined, variant = 0): number {
+  const base = colorForAgentType(agentType)
+  if (!variant) return base
+  return shiftLightness(base, variant)
+}
+
+/** Aclara u oscurece un color de forma escalonada y estable. */
+function shiftLightness(color: number, variant: number): number {
+  // Secuencia: +22%, −22%, +40%, −40%, … siempre el mismo tono para el mismo índice.
+  const step = Math.ceil(variant / 2)
+  const sign = variant % 2 === 1 ? 1 : -1
+  const factor = Math.min(0.62, step * 0.22) * sign
+
+  const channels = [(color >> 16) & 0xff, (color >> 8) & 0xff, color & 0xff]
+  const shifted = channels.map((value) => {
+    const next = factor > 0 ? value + (255 - value) * factor : value * (1 + factor)
+    return Math.max(0, Math.min(255, Math.round(next)))
+  })
+  return (shifted[0] << 16) | (shifted[1] << 8) | shifted[2]
+}
+
+/** Color base por tipo de subagente. */
 export function colorForAgentType(agentType: string | undefined): number {
   switch (agentType) {
     case 'Explore':

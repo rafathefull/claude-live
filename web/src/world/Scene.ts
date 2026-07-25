@@ -1,5 +1,5 @@
 import { Application, Container, Graphics, Text } from 'pixi.js'
-import { STATIONS, colorForAgentType, type StationMeta } from '@shared/mapping'
+import { STATIONS, colorForAgent, type StationMeta } from '@shared/mapping'
 import type { StationId } from '@shared/types'
 import { Actor } from './Actor'
 
@@ -144,6 +144,8 @@ export class Scene {
     emoji: string
     color: number
     label: string
+    /** Segunda línea: el cometido del actor. */
+    subLabel?: string
     radius?: number
     at?: StationId
     nearActorId?: string
@@ -151,9 +153,15 @@ export class Scene {
     const existing = this.actors.get(opts.id)
     if (existing) {
       existing.dying = false
+      // El tipo, el color y el cometido llegan más tarde que el actor: el tool_result que lo
+      // anuncia solo trae el id, y el tipo aparece con su .meta.json.
+      if (opts.label) existing.setLabel(opts.label)
+      existing.setColor(opts.color)
+      if (opts.subLabel) existing.setSubLabel(opts.subLabel)
       return existing
     }
-    const actor = new Actor(opts.id, opts.emoji, opts.color, opts.label, opts.radius ?? 18)
+    const actor = new Actor(opts.id, opts.emoji, opts.color, opts.label, opts.radius ?? 24)
+    if (opts.subLabel) actor.setSubLabel(opts.subLabel)
     const anchor = opts.nearActorId ? this.actors.get(opts.nearActorId) : undefined
     const start = anchor
       ? { x: anchor.view.x, y: anchor.view.y }
@@ -184,16 +192,18 @@ export class Scene {
     const taken = (x: number, y: number): boolean =>
       peers.some((peer) => Math.hypot(peer.targetX - x, peer.targetY - y) < 42)
 
-    const baseY = spot.y + PLATE_H / 2 + 28
+    // Tres huecos por fila, separados lo suficiente para que las etiquetas de dos líneas no
+    // se pisen: con 44 px de paso, tres subagentes en la misma estación eran ilegibles.
+    const baseY = spot.y + PLATE_H / 2 + 30
     for (let slot = 0; slot < 12; slot++) {
-      const x = spot.x - 20 + (slot % 4) * 44
-      const y = baseY + Math.floor(slot / 4) * 38
+      const x = spot.x + ((slot % 3) - 1) * 104
+      const y = baseY + Math.floor(slot / 3) * 74
       if (!taken(x, y)) {
         actor.moveTo(x, y)
         return
       }
     }
-    actor.moveTo(spot.x - 20, baseY)
+    actor.moveTo(spot.x, baseY)
   }
 
   /** Línea temporal entre un actor y una estación (o entre dos actores). */
@@ -201,8 +211,8 @@ export class Scene {
     this.links.push({ from: fromActorId, to, until: performance.now() + ms, color })
   }
 
-  colorForAgent(agentType: string | undefined): number {
-    return colorForAgentType(agentType)
+  colorForAgent(agentType: string | undefined, variant = 0): number {
+    return colorForAgent(agentType, variant)
   }
 
   // ------------------------------------------------------------- ticker
