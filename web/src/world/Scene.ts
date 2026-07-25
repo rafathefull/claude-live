@@ -61,6 +61,7 @@ const BEAST_THRESHOLD = 4
 export class Scene {
   readonly app = new Application()
   /** La Mesa no es una estación con cartel: es la zona central donde viven los actores. */
+  private deskLayer = new Container()
   private deskZone = new Graphics()
   private deskLabel?: Text
   private stationsLayer = new Container()
@@ -87,7 +88,8 @@ export class Scene {
     })
     this.app.ticker.maxFPS = 30
     host.appendChild(this.app.canvas)
-    this.app.stage.addChild(this.deskZone, this.linksLayer, this.stationsLayer, this.actorsLayer)
+    this.deskLayer.addChild(this.deskZone)
+    this.app.stage.addChild(this.deskLayer, this.linksLayer, this.stationsLayer, this.actorsLayer)
 
     // La Mesa se dibuja detrás de todo: un cartel en el centro taparía a los actores y sus
     // burbujas. Es cuadrada y lleva su rótulo grabado, en homenaje a Monty Python.
@@ -104,7 +106,7 @@ export class Scene {
       },
     })
     this.deskLabel.anchor.set(0.5)
-    this.app.stage.addChild(this.deskLabel)
+    this.deskLayer.addChild(this.deskLabel)
 
     for (const meta of STATIONS) {
       if (meta.id === 'desk') continue
@@ -240,6 +242,97 @@ export class Scene {
   }
 
   /**
+   * Rosetón central, al estilo de un grabado antiguo: círculos concéntricos, ocho pétalos y
+   * radios finos. Va en la capa de fondo y con muy poca opacidad, para que sea una textura y
+   * no un dibujo que compita con lo que pasa encima.
+   */
+  private drawEngraving(cx: number, cy: number, radius: number): void {
+    const g = this.deskZone
+    const ink = { width: 1, color: 0x7dd3fc, alpha: 0.05 } as const
+
+    for (const factor of [1, 0.72, 0.34, 0.12]) {
+      g.circle(cx, cy, radius * factor).stroke(ink)
+    }
+
+    // Ocho pétalos: arcos que nacen y mueren en el círculo interior.
+    const petals = 8
+    for (let index = 0; index < petals; index++) {
+      const angle = (index / petals) * Math.PI * 2
+      const inner = radius * 0.34
+      const outer = radius * 0.72
+      const x1 = cx + Math.cos(angle) * inner
+      const y1 = cy + Math.sin(angle) * inner
+      const x2 = cx + Math.cos(angle + Math.PI / petals) * outer
+      const y2 = cy + Math.sin(angle + Math.PI / petals) * outer
+      const x3 = cx + Math.cos(angle + (2 * Math.PI) / petals) * inner
+      const y3 = cy + Math.sin(angle + (2 * Math.PI) / petals) * inner
+      g.moveTo(x1, y1).quadraticCurveTo(x2, y2, x3, y3).stroke(ink)
+    }
+
+    // Radios cortos entre los dos círculos exteriores.
+    const spokes = 24
+    for (let index = 0; index < spokes; index++) {
+      const angle = (index / spokes) * Math.PI * 2
+      g.moveTo(cx + Math.cos(angle) * radius * 0.72, cy + Math.sin(angle) * radius * 0.72)
+        .lineTo(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius)
+        .stroke(ink)
+    }
+  }
+
+  /** Caballeros sentados a los cuatro lados, mirando al centro. Tres por lado. */
+  private drawKnights(cx: number, cy: number, half: number): void {
+    const perSide = 3
+    const inset = half - 16
+    const spread = half * 0.58
+
+    for (let side = 0; side < 4; side++) {
+      // 0 arriba, 1 derecha, 2 abajo, 3 izquierda. `toCentre` es hacia dónde miran.
+      const angle = (side * Math.PI) / 2
+      const nx = Math.sin(angle)
+      const ny = -Math.cos(angle)
+      for (let seat = 0; seat < perSide; seat++) {
+        const offset = (seat - (perSide - 1) / 2) * ((spread * 2) / perSide)
+        const x = cx + nx * inset - ny * offset
+        const y = cy + ny * inset + nx * offset
+        this.drawKnight(x, y, Math.atan2(-ny, -nx))
+      }
+    }
+  }
+
+  /**
+   * Un caballero visto desde arriba: la espalda es un semicírculo abierto hacia el centro, con
+   * el casco dentro y una lanza corta apoyada. `toCentre` en radianes.
+   *
+   * Cada trazo empieza con su propio `moveTo`: `arc` enlaza con una línea desde el punto
+   * anterior, así que sin eso los caballeros salían cosidos unos a otros con lanzas kilométricas.
+   */
+  private drawKnight(x: number, y: number, toCentre: number): void {
+    const g = this.deskZone
+    const line = { width: 1.4, color: 0xa8bcd8, alpha: 0.28 } as const
+    const ox = Math.cos(toCentre)
+    const oy = Math.sin(toCentre)
+    const px = -oy
+    const py = ox
+    const back = toCentre + Math.PI
+    const from = back - Math.PI / 2
+    const to = back + Math.PI / 2
+
+    // Espalda y hombros.
+    g.moveTo(x + Math.cos(from) * 12, y + Math.sin(from) * 12)
+      .arc(x, y, 12, from, to)
+      .stroke(line)
+    // Casco y cimera, mirando al tablero.
+    g.circle(x + ox * 2, y + oy * 2, 6.5).stroke({ ...line, alpha: 0.36 })
+    g.moveTo(x + ox * 8, y + oy * 8)
+      .lineTo(x + ox * 11, y + oy * 11)
+      .stroke({ ...line, alpha: 0.36 })
+    // Lanza apoyada en el hombro: corta, o se come la escena.
+    g.moveTo(x + px * 13 + ox * 2, y + py * 13 + oy * 2)
+      .lineTo(x + px * 15 - ox * 14, y + py * 15 - oy * 14)
+      .stroke({ ...line, alpha: 0.2 })
+  }
+
+  /**
    * Recoloca a los actores tras un cambio de tamaño. Las estaciones se mueven con la ventana,
    * así que un actor que conserve su píxel de antes acaba plantado en otro sitio: aquí se
    * recalcula desde su estación y hueco, o desde su fracción del escenario.
@@ -257,17 +350,23 @@ export class Scene {
     }
   }
 
-  /** La mesa cuadrada de la zona central, con su rótulo grabado en el tablero. */
+  /** La mesa cuadrada de la zona central: tablero, grabado y los caballeros sentados. */
   private drawDeskZone(): void {
     const { x, y } = this.positionOf('desk')
     const half = Math.min(this.width * 0.19, this.height * 0.26)
     const size = half * 2
-    this.deskZone
-      .clear()
+    const g = this.deskZone
+    g.clear()
       .roundRect(x - half, y - half, size, size, 10)
       .fill({ color: 0x7dd3fc, alpha: 0.016 })
       .roundRect(x - half, y - half, size, size, 10)
       .stroke({ width: 1, color: 0x1c2230, alpha: 0.55 })
+    // Filete interior, como el de un tablero labrado.
+    g.roundRect(x - half + 9, y - half + 9, size - 18, size - 18, 8)
+      .stroke({ width: 1, color: 0x1a2030, alpha: 0.5 })
+
+    this.drawEngraving(x, y, half * 0.78)
+    this.drawKnights(x, y, half)
 
     if (!this.deskLabel) return
     // El rótulo se encoge con la mesa y desaparece cuando ya no cabe con dignidad.
