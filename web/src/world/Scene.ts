@@ -45,19 +45,33 @@ const DESK_MOTTO = 'Aquí están reunidos los caballeros de la mesa cuadrada'
  * Los doce asientos, en el orden en que se dibujan (lado a lado). Los nombres no se escriben
  * en el tablero —serían doce etiquetas de ruido—: aparecen al pasar el ratón por cada uno.
  */
-const KNIGHTS: { name: string; quip: string }[] = [
-  { name: 'Arturo, rey de los britanos', quip: 'Elegido por la Dama del Lago, según él. Sin caballo, pero con Patsy.' },
-  { name: 'Sir Lancelot el Valiente', quip: 'Entusiasta hasta el exceso. No le encargues rescates delicados.' },
-  { name: 'Sir Galahad el Puro', quip: 'Sobrevivió al castillo de Anthrax. A duras penas, y a su pesar.' },
-  { name: 'Sir Bedevere el Sabio', quip: 'Autoridad en el peso de las brujas y en la carga de las golondrinas.' },
-  { name: 'Sir Robin el No-tan-valiente', quip: 'Huyó del pollo gigante de Bristol. Dos veces.' },
-  { name: 'Sir Gawain', quip: 'Sobrino del rey. Cortés hasta con quien va a decapitarlo.' },
-  { name: 'Sir Percival', quip: 'El que pregunta lo que nadie se atreve a preguntar.' },
-  { name: 'Sir Bors', quip: 'Se acercó al conejo. Que sirva de aviso: mira el Trastero.' },
-  { name: 'Sir Ector', quip: 'Crió al rey sin saberlo, que es más de lo que puede decir cualquiera.' },
-  { name: 'Sir Kay', quip: 'Hermano de leche del rey y quejica oficial de la mesa.' },
-  { name: 'Sir Tristán', quip: 'Mejor arpista que espadachín, y eso ya es decir algo.' },
-  { name: 'Sir No-Sale-en-esta-Película', quip: 'Su única aparición son los títulos de crédito.' },
+type Crest =
+  | 'crown'
+  | 'sword'
+  | 'grail'
+  | 'moon'
+  | 'flag'
+  | 'sun'
+  | 'question'
+  | 'ears'
+  | 'scales'
+  | 'frown'
+  | 'harp'
+  | 'dots'
+
+const KNIGHTS: { name: string; quip: string; crest: Crest; emblem: string }[] = [
+  { name: 'Arturo, rey de los britanos', quip: 'Elegido por la Dama del Lago, según él. Sin caballo, pero con Patsy.', crest: 'crown', emblem: 'una corona de tres puntas' },
+  { name: 'Sir Lancelot el Valiente', quip: 'Entusiasta hasta el exceso. No le encargues rescates delicados.', crest: 'sword', emblem: 'una espada' },
+  { name: 'Sir Galahad el Puro', quip: 'Sobrevivió al castillo de Anthrax. A duras penas, y a su pesar.', crest: 'grail', emblem: 'el grial' },
+  { name: 'Sir Bedevere el Sabio', quip: 'Autoridad en el peso de las brujas y en la carga de las golondrinas.', crest: 'moon', emblem: 'una luna de sabio' },
+  { name: 'Sir Robin el No-tan-valiente', quip: 'Huyó del pollo gigante de Bristol. Dos veces.', crest: 'flag', emblem: 'una bandera de retirada' },
+  { name: 'Sir Gawain', quip: 'Sobrino del rey. Cortés hasta con quien va a decapitarlo.', crest: 'sun', emblem: 'un sol' },
+  { name: 'Sir Percival', quip: 'El que pregunta lo que nadie se atreve a preguntar.', crest: 'question', emblem: 'una pregunta' },
+  { name: 'Sir Bors', quip: 'Se acercó al conejo. Que sirva de aviso: mira el Trastero.', crest: 'ears', emblem: 'dos orejas muy poco tranquilizadoras' },
+  { name: 'Sir Ector', quip: 'Crió al rey sin saberlo, que es más de lo que puede decir cualquiera.', crest: 'scales', emblem: 'una balanza' },
+  { name: 'Sir Kay', quip: 'Hermano de leche del rey y quejica oficial de la mesa.', crest: 'frown', emblem: 'un ceño fruncido' },
+  { name: 'Sir Tristán', quip: 'Mejor arpista que espadachín, y eso ya es decir algo.', crest: 'harp', emblem: 'un arpa' },
+  { name: 'Sir No-Sale-en-esta-Película', quip: 'Su única aparición son los títulos de crédito.', crest: 'dots', emblem: 'tres puntos y poco más' },
 ]
 
 interface StationView {
@@ -95,6 +109,8 @@ export class Scene {
   private onVisibility?: () => void
   /** Zonas sensibles de los doce asientos, para poder saludar a cada caballero. */
   private knightHits: Container[] = []
+  /** Asiento bajo el cursor: se dibuja más marcado, como si te acercaras a mirarlo. */
+  private hoveredKnight: number | null = null
 
   async mount(host: HTMLElement): Promise<void> {
     await this.app.init({
@@ -131,11 +147,13 @@ export class Scene {
 
     for (const [index, knight] of KNIGHTS.entries()) {
       const hit = new Container()
+      hit.on('pointerover', () => this.highlightKnight(index))
+      hit.on('pointerout', () => this.highlightKnight(null))
       this.makeHoverable(hit, new Circle(0, 0, 19), () => ({
         icon: '🛡️',
         title: knight.name,
         body: knight.quip,
-        extra: `asiento ${index + 1} de ${KNIGHTS.length} · mesa cuadrada`,
+        extra: `en el escudo, ${knight.emblem} · asiento ${index + 1} de ${KNIGHTS.length}`,
         color: '#a8bcd8',
       }))
       this.deskLayer.addChild(hit)
@@ -162,6 +180,13 @@ export class Scene {
   /** El front pinta el tooltip en HTML: aquí solo se dice qué hay bajo el cursor y dónde. */
   setHoverHandler(handler: (info: HoverInfo | null, x: number, y: number) => void): void {
     this.hoverHandler = handler
+  }
+
+  /** Marca (o desmarca) el asiento bajo el cursor y redibuja la mesa solo si cambió. */
+  private highlightKnight(index: number | null): void {
+    if (this.hoveredKnight === index) return
+    this.hoveredKnight = index
+    this.drawDeskZone()
   }
 
   private emitHover(info: HoverInfo | null, event?: FederatedPointerEvent): void {
@@ -328,8 +353,9 @@ export class Scene {
         const offset = (seat - (perSide - 1) / 2) * ((spread * 2) / perSide)
         const x = cx + nx * inset - ny * offset
         const y = cy + ny * inset + nx * offset
-        this.drawKnight(x, y, Math.atan2(-ny, -nx))
-        this.knightHits[side * perSide + seat]?.position.set(x, y)
+        const index = side * perSide + seat
+        this.drawKnight(x, y, Math.atan2(-ny, -nx), KNIGHTS[index]?.crest, index === this.hoveredKnight)
+        this.knightHits[index]?.position.set(x, y)
       }
     }
   }
@@ -341,9 +367,19 @@ export class Scene {
    * Cada trazo empieza con su propio `moveTo`: `arc` enlaza con una línea desde el punto
    * anterior, así que sin eso los caballeros salían cosidos unos a otros con lanzas kilométricas.
    */
-  private drawKnight(x: number, y: number, toCentre: number): void {
+  private drawKnight(
+    x: number,
+    y: number,
+    toCentre: number,
+    crest?: Crest,
+    highlighted = false,
+  ): void {
     const g = this.deskZone
-    const line = { width: 1.4, color: 0xa8bcd8, alpha: 0.28 } as const
+    const line = {
+      width: highlighted ? 1.8 : 1.4,
+      color: highlighted ? 0xdde3ee : 0xa8bcd8,
+      alpha: highlighted ? 0.85 : 0.28,
+    } as const
     const ox = Math.cos(toCentre)
     const oy = Math.sin(toCentre)
     const px = -oy
@@ -365,6 +401,112 @@ export class Scene {
     g.moveTo(x + px * 13 + ox * 2, y + py * 13 + oy * 2)
       .lineTo(x + px * 15 - ox * 14, y + py * 15 - oy * 14)
       .stroke({ ...line, alpha: 0.2 })
+
+    // Escudo con su emblema, sobre el tablero.
+    if (crest) {
+      this.drawCrest(crest, x - px * 16 + ox * 10, y - py * 16 + oy * 10, toCentre, highlighted)
+    }
+  }
+
+  /**
+   * Emblema de un caballero, dibujado a trazo dentro de un escudo. Son diez píxeles: la idea
+   * es que se reconozca al acercarse, no que compita con lo que pasa en la escena.
+   */
+  private drawCrest(
+    crest: Crest,
+    x: number,
+    y: number,
+    toCentre: number,
+    highlighted = false,
+  ): void {
+    const g = this.deskZone
+    const ink = {
+      width: highlighted ? 1.6 : 1.1,
+      color: highlighted ? 0xffe6a3 : 0xa8bcd8,
+      alpha: highlighted ? 0.95 : 0.34,
+    } as const
+    const ox = Math.cos(toCentre)
+    const oy = Math.sin(toCentre)
+    const px = -oy
+    const py = ox
+    // El escudo crece al pasar el ratón: a tamaño normal son diez píxeles de filigrana.
+    const k = highlighted ? 2.1 : 1.35
+    /** Punto local del emblema: `a` hacia el centro, `b` a lo ancho. */
+    const at = (a: number, b: number): [number, number] => [
+      x + ox * a * k + px * b * k,
+      y + oy * a * k + py * b * k,
+    ]
+
+    // El escudo: un rombo con la punta hacia el centro.
+    g.moveTo(...at(6, 0))
+      .lineTo(...at(0, 5))
+      .lineTo(...at(-6, 0))
+      .lineTo(...at(0, -5))
+      .lineTo(...at(6, 0))
+      .stroke({ ...ink, alpha: highlighted ? 0.7 : 0.22 })
+
+    switch (crest) {
+      case 'crown':
+        g.moveTo(...at(-3, -3)).lineTo(...at(0, -3)).lineTo(...at(-2, -1)).stroke(ink)
+        g.moveTo(...at(-3, 0)).lineTo(...at(1, 0)).stroke(ink)
+        g.moveTo(...at(-3, 3)).lineTo(...at(0, 3)).lineTo(...at(-2, 1)).stroke(ink)
+        break
+      case 'sword':
+        g.moveTo(...at(4, 0)).lineTo(...at(-4, 0)).stroke(ink)
+        g.moveTo(...at(-1, -2.5)).lineTo(...at(-1, 2.5)).stroke(ink)
+        break
+      case 'grail':
+        g.moveTo(...at(2, -2.5)).lineTo(...at(-1, -1.5)).lineTo(...at(-1, 1.5)).lineTo(...at(2, 2.5)).stroke(ink)
+        g.moveTo(...at(-1, 0)).lineTo(...at(-4, 0)).stroke(ink)
+        break
+      case 'moon':
+        g.moveTo(...at(3, -1)).quadraticCurveTo(...at(-1, -3.5), ...at(-3, 0)).stroke(ink)
+        g.moveTo(...at(3, -1)).quadraticCurveTo(...at(0, 0), ...at(-3, 0)).stroke(ink)
+        break
+      case 'flag':
+        g.moveTo(...at(4, -2)).lineTo(...at(-4, -2)).stroke(ink)
+        g.moveTo(...at(3, -2)).lineTo(...at(1, 2.5)).lineTo(...at(-1, -2)).stroke(ink)
+        break
+      case 'sun':
+        g.circle(...at(0, 0), 2).stroke(ink)
+        for (const [a, b] of [
+          [4, 0],
+          [-4, 0],
+          [0, 4],
+          [0, -4],
+        ] as const) {
+          g.moveTo(...at(a * 0.7, b * 0.7)).lineTo(...at(a, b)).stroke({ ...ink, alpha: 0.22 })
+        }
+        break
+      case 'question':
+        g.moveTo(...at(3, -2)).quadraticCurveTo(...at(4, 2), ...at(0, 1)).stroke(ink)
+        g.moveTo(...at(0, 1)).lineTo(...at(-2, 1)).stroke(ink)
+        g.circle(...at(-4, 1), 0.9).stroke(ink)
+        break
+      case 'ears':
+        g.moveTo(...at(-3, -1.5)).quadraticCurveTo(...at(2, -3.5), ...at(4, -1)).stroke(ink)
+        g.moveTo(...at(-3, 1.5)).quadraticCurveTo(...at(2, 3.5), ...at(4, 1)).stroke(ink)
+        break
+      case 'scales':
+        g.moveTo(...at(3, 0)).lineTo(...at(-2, 0)).stroke(ink)
+        g.moveTo(...at(2, -3)).lineTo(...at(2, 3)).stroke(ink)
+        g.moveTo(...at(2, -3)).lineTo(...at(-1, -3)).stroke({ ...ink, alpha: 0.22 })
+        g.moveTo(...at(2, 3)).lineTo(...at(-1, 3)).stroke({ ...ink, alpha: 0.22 })
+        break
+      case 'frown':
+        g.moveTo(...at(1, -3)).quadraticCurveTo(...at(-2, 0), ...at(1, 3)).stroke(ink)
+        g.circle(...at(3, -2), 0.9).stroke({ ...ink, alpha: 0.24 })
+        g.circle(...at(3, 2), 0.9).stroke({ ...ink, alpha: 0.24 })
+        break
+      case 'harp':
+        g.moveTo(...at(4, -2)).quadraticCurveTo(...at(-1, -4), ...at(-3, 2)).stroke(ink)
+        g.moveTo(...at(4, -2)).lineTo(...at(-3, 2)).stroke({ ...ink, alpha: 0.22 })
+        g.moveTo(...at(2, -1.5)).lineTo(...at(-1.5, 0.5)).stroke({ ...ink, alpha: 0.18 })
+        break
+      case 'dots':
+        for (const b of [-2.5, 0, 2.5]) g.circle(...at(0, b), 0.9).stroke({ ...ink, alpha: 0.22 })
+        break
+    }
   }
 
   /**
