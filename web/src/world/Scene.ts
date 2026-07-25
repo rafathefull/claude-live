@@ -1,7 +1,33 @@
-import { Application, Container, Graphics, Text } from 'pixi.js'
-import { STATIONS, colorForAgent, type StationMeta } from '@shared/mapping'
+import {
+  Application,
+  Circle,
+  Container,
+  Graphics,
+  Rectangle,
+  Text,
+  type FederatedPointerEvent,
+} from 'pixi.js'
+import { STATIONS, colorForAgent, toolsForStation, type StationMeta } from '@shared/mapping'
 import type { StationId } from '@shared/types'
-import { Actor } from './Actor'
+import { Actor, MOOD_EMOJI, MOOD_RING } from './Actor'
+
+/** Lo que se muestra al pasar el ratón por un elemento del escenario. */
+export interface HoverInfo {
+  icon: string
+  title: string
+  body: string
+  extra?: string
+  color?: string
+}
+
+/** Estado del actor en palabras, para el tooltip. */
+const MOOD_TEXT: Record<keyof typeof MOOD_RING, string> = {
+  idle: 'quieto',
+  thinking: 'pensando',
+  working: 'trabajando',
+  waiting: 'esperando',
+  talking: 'hablando',
+}
 
 /**
  * El escenario: estaciones fijas alrededor y actores que se mueven entre ellas.
@@ -24,6 +50,9 @@ interface StationView {
 
 export class Scene {
   readonly app = new Application()
+  /** La Mesa no es una estación con cartel: es la zona central donde viven los actores. */
+  private deskZone = new Graphics()
+  private deskLabel?: Text
   private stationsLayer = new Container()
   private linksLayer = new Graphics()
   private actorsLayer = new Container()
@@ -32,6 +61,7 @@ export class Scene {
   private links: { from: string; to: StationId | string; until: number; color: number }[] = []
   private width = 0
   private height = 0
+  private hoverHandler?: (info: HoverInfo | null, x: number, y: number) => void
 
   async mount(host: HTMLElement): Promise<void> {
     await this.app.init({
@@ -42,7 +72,19 @@ export class Scene {
       autoDensity: true,
     })
     host.appendChild(this.app.canvas)
-    this.app.stage.addChild(this.linksLayer, this.stationsLayer, this.actorsLayer)
+    this.app.stage.addChild(this.deskZone, this.linksLayer, this.stationsLayer, this.actorsLayer)
+
+    // La Mesa se dibuja como una alfombra tenue detrás de todo: marcar el centro con un
+    // cartel volvería a tapar a los actores y sus burbujas, que es justo lo que pasa ahí.
+    const desk = STATIONS.find((meta) => meta.id === 'desk')
+    if (desk) {
+      this.deskLabel = new Text({
+        text: `${desk.icon} ${desk.label}`,
+        style: { fontFamily: 'ui-monospace, monospace', fontSize: 11, fill: 0x3a4356 },
+      })
+      this.deskLabel.anchor.set(0.5, 1)
+      this.app.stage.addChild(this.deskLabel)
+    }
 
     for (const meta of STATIONS) {
       if (meta.id === 'desk') continue
@@ -51,6 +93,25 @@ export class Scene {
     this.layout()
     this.app.renderer.on('resize', () => this.layout())
     this.app.ticker.add((ticker) => this.tick(ticker.deltaMS))
+  }
+
+  /** El front pinta el tooltip en HTML: aquí solo se dice qué hay bajo el cursor y dónde. */
+  setHoverHandler(handler: (info: HoverInfo | null, x: number, y: number) => void): void {
+    this.hoverHandler = handler
+  }
+
+  private emitHover(info: HoverInfo | null, event?: FederatedPointerEvent): void {
+    this.hoverHandler?.(info, event?.global.x ?? 0, event?.global.y ?? 0)
+  }
+
+  /** Hace que un objeto responda al ratón y publique su ayuda al pasar por encima. */
+  private makeHoverable(target: Container, hitArea: Rectangle | Circle, info: () => HoverInfo): void {
+    target.eventMode = 'static'
+    target.cursor = 'help'
+    target.hitArea = hitArea
+    target.on('pointerover', (event: FederatedPointerEvent) => this.emitHover(info(), event))
+    target.on('pointermove', (event: FederatedPointerEvent) => this.emitHover(info(), event))
+    target.on('pointerout', () => this.emitHover(null))
   }
 
   destroy(): void {
@@ -105,7 +166,25 @@ export class Scene {
 
     view.addChild(glow, plate, icon, name, counter, detail)
     this.stationsLayer.addChild(view)
-    return { meta, view, glow, counter, detail, flashUntil: 0, uses: 0 }
+
+    const station: StationView = { meta, view, glow, counter, detail, flashUntil: 0, uses: 0 }
+    // Ayuda contextual: lo mismo que cuenta la leyenda, sin salir del mundo.
+    this.makeHoverable(
+      view,
+      new Rectangle(-PLATE_W / 2 - 8, -PLATE_H / 2 - 8, PLATE_W + 16, PLATE_H + 16),
+      () => ({
+        icon: meta.icon,
+        title: meta.label,
+        body: meta.help,
+        extra: [
+          station.uses > 0 ? `usada ${station.uses} ${station.uses === 1 ? 'vez' : 'veces'}` : '',
+          toolsForStation(meta.id).join(' · '),
+        ]
+          .filter(Boolean)
+          .join(' — '),
+      }),
+    )
+    return station
   }
 
   private layout(): void {
@@ -115,6 +194,21 @@ export class Scene {
       const { x, y } = this.positionOf(station.meta.id)
       station.view.position.set(x, y)
     }
+    this.drawDeskZone()
+  }
+
+  /** Alfombra de la zona central, con su nombre pegado al borde para no estorbar. */
+  private drawDeskZone(): void {
+    const { x, y } = this.positionOf('desk')
+    const rx = this.width * 0.19
+    const ry = this.height * 0.24
+    this.deskZone
+      .clear()
+      .ellipse(x, y, rx, ry)
+      .fill({ color: 0x7dd3fc, alpha: 0.016 })
+      .ellipse(x, y, rx, ry)
+      .stroke({ width: 1, color: 0x1c2230, alpha: 0.55 })
+    this.deskLabel?.position.set(x - rx + 40, y + ry + 14)
   }
 
   /** Punto del escenario para una estación (o la mesa si no existe). */
@@ -167,6 +261,15 @@ export class Scene {
       ? { x: anchor.view.x, y: anchor.view.y }
       : this.positionOf(opts.at ?? 'desk')
     actor.place(start.x + (Math.random() - 0.5) * 30, start.y + (Math.random() - 0.5) * 20)
+    actor.tooltipTitle = opts.label
+    actor.tooltipBody = opts.subLabel ?? ''
+    this.makeHoverable(actor.view, new Circle(0, 0, (opts.radius ?? 24) + 6), () => ({
+      icon: opts.emoji,
+      title: actor.tooltipTitle,
+      body: actor.tooltipBody || 'Sin tarea asignada.',
+      extra: `estado: ${MOOD_EMOJI[actor.mood]} ${MOOD_TEXT[actor.mood]}`.trim(),
+      color: `#${opts.color.toString(16).padStart(6, '0')}`,
+    }))
     this.actors.set(opts.id, actor)
     this.actorsLayer.addChild(actor.view)
     return actor

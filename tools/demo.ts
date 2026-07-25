@@ -118,6 +118,21 @@ await page.locator('.legend').waitFor({ state: 'visible' })
 await page.waitForTimeout(400)
 await page.screenshot({ path: join(outDir, 'leyenda.png') })
 console.log(`  captura → ${join(outDir, 'leyenda.png')}`)
+
+// La leyenda es más alta que la ventana: hay que poder llegar hasta el final.
+const scroll = await page.locator('.legend-body').evaluate((el) => ({
+  scrollHeight: el.scrollHeight,
+  clientHeight: el.clientHeight,
+}))
+await page.locator('.legend-body').evaluate((el) => el.scrollTo(0, el.scrollHeight))
+await page.waitForTimeout(300)
+const bottom = await page.locator('.legend-body').evaluate((el) => el.scrollTop + el.clientHeight)
+const reachable = bottom >= scroll.scrollHeight - 2
+console.log(
+  `  leyenda: ${scroll.clientHeight}px visibles de ${scroll.scrollHeight}px · final alcanzable: ${reachable ? 'sí' : 'NO'}`,
+)
+await page.screenshot({ path: join(outDir, 'leyenda-habitantes.png') })
+console.log(`  captura → ${join(outDir, 'leyenda-habitantes.png')}`)
 await page.keyboard.press('Escape')
 
 await page.locator('.timeline-head button', { hasText: 'pensamiento' }).waitFor()

@@ -36,6 +36,11 @@ la cuenta de las veces que se ha usado y muestra lo último que pasó por ella.*
   con `⏮ ⏪ ⏵ ⏩ ⏭`, velocidades de 0,5× a 16× y barra para saltar a cualquier punto. De momento
   carga los primeros 2000 eventos de la sesión: las conversaciones más largas se reproducen
   hasta ahí.
+- **Ayuda en el sitio**: pasa el ratón por cualquier estación o actor y sale su explicación,
+  con lo que está haciendo y su estado, sin abrir nada.
+- **Estado a dos señales**: el anillo de cada actor late cuando está activo y su color dice en
+  qué anda —azul pensando, verde trabajando, morado hablando, ámbar esperándote—, con una
+  insignia encima que repite el estado en icono (🧠 🔧 💬 ❗) para no depender solo del color.
 - **Leyenda** (botón `❔`) que explica cada lugar, cada habitante y cada color. La lista de
   herramientas de cada estación sale de la tabla de mapeo, así que nunca se queda desfasada.
 

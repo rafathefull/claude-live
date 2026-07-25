@@ -161,7 +161,7 @@ export const STATIONS: StationMeta[] = [
     icon: '🪑',
     x: 0.5,
     y: 0.52,
-    help: 'El centro de la escena: donde estás tú, donde Claude piensa y habla, y desde donde nacen los subagentes. No es una herramienta.',
+    help: 'No es una estación, sino la zona central marcada con la alfombra tenue: donde estás tú, donde Claude piensa y habla, y desde donde nacen los subagentes. No tiene cartel a propósito, para no tapar a los actores que la cruzan.',
   },
 ]
 

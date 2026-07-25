@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted } from 'vue'
 import { STATIONS, toolsForStation } from '@shared/mapping'
-import { MOOD_RING } from '../world/Actor'
+import { MOOD_EMOJI, MOOD_RING } from '../world/Actor'
 import type { ActorMood } from '../world/Actor'
 import { agentColorCss } from '../format'
 
@@ -20,12 +20,38 @@ const AGENT_TYPES: { type: string | undefined; what: string }[] = [
   { type: 'otro', what: 'Cualquier subagente propio que definas en .claude/agents.' },
 ]
 
-const MOODS: { mood: ActorMood; label: string; what: string }[] = [
-  { mood: 'thinking', label: 'pensando', what: 'Está razonando: el texto de la burbuja es su pensamiento real.' },
-  { mood: 'working', label: 'trabajando', what: 'Ha ido a una estación a ejecutar una herramienta.' },
-  { mood: 'talking', label: 'hablando', what: 'Está escribiendo su respuesta visible.' },
-  { mood: 'waiting', label: 'esperando', what: 'Error en una herramienta o permiso pendiente de que tú decidas.' },
-  { mood: 'idle', label: 'quieto', what: 'Sin nada en marcha; el turno ha terminado.' },
+/** `short` para la tarjeta de Claude, `what` para la sección de estados. */
+const MOODS: { mood: ActorMood; label: string; short: string; what: string }[] = [
+  {
+    mood: 'thinking',
+    label: 'azul',
+    short: 'pensando',
+    what: 'Está razonando: el texto de la burbuja es su pensamiento real.',
+  },
+  {
+    mood: 'working',
+    label: 'verde',
+    short: 'trabajando en una estación',
+    what: 'Ha ido a una estación a ejecutar una herramienta.',
+  },
+  {
+    mood: 'talking',
+    label: 'morado',
+    short: 'escribiendo su respuesta',
+    what: 'Está escribiendo su respuesta visible.',
+  },
+  {
+    mood: 'waiting',
+    label: 'ámbar',
+    short: 'error o esperándote a ti',
+    what: 'Error en una herramienta o permiso pendiente de que tú decidas.',
+  },
+  {
+    mood: 'idle',
+    label: 'gris, sin latido',
+    short: 'quieto, turno terminado',
+    what: 'Sin nada en marcha; el turno ha terminado.',
+  },
 ]
 
 function onKey(event: KeyboardEvent): void {
@@ -49,7 +75,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
         <h3>Lugares</h3>
         <p class="muted legend-note">
           Cada herramienta que usa Claude tiene un sitio en el escenario. El actor camina hasta
-          allí, la estación destella y su contador «×n» sube.
+          allí, la estación destella y su contador «×n» sube. La <strong>Mesa</strong> es la
+          excepción: no es una herramienta, sino la zona central —la alfombra tenue— por donde
+          se mueven los actores.
         </p>
         <div class="legend-grid">
           <article v-for="station in STATIONS" :key="station.id">
@@ -79,7 +107,20 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
               <span class="legend-icon">🤖</span>
               <strong>Claude</strong>
             </div>
-            <p>El agente principal de la sesión. Es el único que puede lanzar subagentes.</p>
+            <p>El agente principal de la sesión. Es el único que puede lanzar subagentes. El
+              <strong>anillo que lo rodea late cuando está activo</strong>, y su color dice qué
+              está haciendo:</p>
+            <ul class="moods">
+              <li v-for="entry in MOODS" :key="`claude-${entry.mood}`">
+                <i class="ring" :style="{ borderColor: hex(MOOD_RING[entry.mood]) }" />
+                <span class="mood-badge">{{ MOOD_EMOJI[entry.mood] || '—' }}</span>
+                <span><strong>{{ entry.label }}</strong> — {{ entry.short }}</span>
+              </li>
+            </ul>
+            <p class="muted legend-note" style="margin-top: 8px">
+              Los subagentes usan los mismos colores de anillo; su círculo, en cambio, lleva el
+              color de su tipo.
+            </p>
           </article>
           <article>
             <div class="legend-title">
@@ -94,40 +135,51 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
             <ul class="agent-types">
               <li v-for="entry in AGENT_TYPES" :key="entry.type ?? 'x'">
                 <i class="swatch" :style="{ background: agentColorCss(entry.type) }" />
-                <strong>{{ entry.type }}</strong> — {{ entry.what }}
+                <span><strong>{{ entry.type }}</strong> — {{ entry.what }}</span>
               </li>
             </ul>
           </article>
         </div>
 
-        <h3>Estados</h3>
-        <p class="muted legend-note">El anillo alrededor de cada actor dice qué está haciendo.</p>
+        <h3>Estados: el anillo de Claude y de los subagentes</h3>
+        <p class="muted legend-note">
+          El aro que rodea a cada actor <strong>late mientras está activo</strong> y se apaga
+          cuando no hace nada. Además, una <strong>insignia</strong> sobre el avatar repite el
+          estado en forma de icono, para no depender solo del color.
+        </p>
         <ul class="moods">
           <li v-for="entry in MOODS" :key="entry.mood">
             <i class="ring" :style="{ borderColor: hex(MOOD_RING[entry.mood]) }" />
-            <strong>{{ entry.label }}</strong> — {{ entry.what }}
+            <span class="mood-badge">{{ MOOD_EMOJI[entry.mood] || '—' }}</span>
+            <span><strong>{{ entry.label }}</strong> ({{ entry.short }}) — {{ entry.what }}</span>
           </li>
         </ul>
 
         <h3>Cómo leer el ritmo</h3>
         <ul class="moods">
           <li>
-            <strong>«×7» junto a una herramienta</strong> — siete llamadas seguidas al mismo
-            sitio se agrupan en una sola acción para que la escena siga siendo legible.
+            <span><strong>«×7» junto a una herramienta</strong> — siete llamadas seguidas al
+              mismo sitio se agrupan en una sola acción para que la escena siga siendo
+              legible.</span>
           </li>
           <li>
-            <strong>Los actores aceleran</strong> cuando hay cola: el mundo comprime las
-            animaciones en las ráfagas, pero la timeline de la derecha nunca pierde un evento.
+            <span><strong>Los actores aceleran</strong> cuando hay cola: el mundo comprime las
+              animaciones en las ráfagas, pero la timeline de la derecha nunca pierde un
+              evento.</span>
           </li>
           <li>
-            <strong>Modo sobrio</strong> — el botón de arriba apaga la escena y deja solo la
-            timeline, para cuando quieras leer en vez de mirar.
+            <span><strong>Pasa el ratón</strong> por cualquier estación o actor del escenario y
+              sale su explicación al momento, sin abrir esta leyenda.</span>
           </li>
           <li>
-            <strong>Reproductor</strong> — al abrir una conversación del historial aparece una
-            barra con ⏮ ⏪ ⏵ ⏩ ⏭, velocidades de 0,5× a 16× y una barra para saltar a
-            cualquier punto. El ritmo respeta los tiempos reales de la conversación, acotados
-            para que los huecos largos no la congelen.
+            <span><strong>Modo sobrio</strong> — el botón de arriba apaga la escena y deja solo
+              la timeline, para cuando quieras leer en vez de mirar.</span>
+          </li>
+          <li>
+            <span><strong>Reproductor</strong> — al abrir una conversación del historial aparece
+              una barra con ⏮ ⏪ ⏵ ⏩ ⏭, velocidades de 0,5× a 16× y una barra para saltar a
+              cualquier punto. El ritmo respeta los tiempos reales de la conversación, acotados
+              para que los huecos largos no la congelen.</span>
           </li>
         </ul>
       </div>

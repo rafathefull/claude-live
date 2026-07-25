@@ -33,6 +33,18 @@ const BUBBLE_STYLE: TextStyleOptions = {
   breakWords: true,
 }
 
+/**
+ * Insignia de estado: se superpone al avatar sin sustituirlo, para que el estado se lea de un
+ * vistazo sin perder de vista quién es cada actor. El anillo de color sigue estando.
+ */
+export const MOOD_EMOJI: Record<ActorMood, string> = {
+  idle: '',
+  thinking: '🧠',
+  working: '🔧',
+  waiting: '❗',
+  talking: '💬',
+}
+
 /** Color del anillo por estado. Exportado para que la leyenda no duplique valores. */
 export const MOOD_RING: Record<ActorMood, number> = {
   idle: 0x3a4356,
@@ -44,6 +56,9 @@ export const MOOD_RING: Record<ActorMood, number> = {
 
 export class Actor {
   readonly view = new Container()
+  /** Qué mostrar al pasar el ratón por encima. */
+  tooltipTitle = ''
+  tooltipBody = ''
   /** Posición objetivo; el ticker interpola hacia ella. */
   targetX = 0
   targetY = 0
@@ -55,6 +70,8 @@ export class Actor {
   private body = new Graphics()
   private ring = new Graphics()
   private face: Text
+  private badge: Text
+  private badgeBg = new Graphics()
   private label: Text
   private subLabel: Text
   private bubble = new Container()
@@ -85,13 +102,34 @@ export class Actor {
     this.subLabel.anchor.set(0.5, 0)
     this.subLabel.y = radius + 21
 
+    // La insignia va en la esquina superior derecha, con un disco detrás para que se lea
+    // sobre el borde del avatar.
+    this.badge = new Text({ text: '', style: { fontSize: Math.max(13, radius * 0.62) } })
+    this.badge.anchor.set(0.5)
+    const badgeX = radius * 0.78
+    const badgeY = -radius * 0.78
+    this.badge.position.set(badgeX, badgeY)
+    this.badgeBg
+      .circle(badgeX, badgeY, Math.max(9, radius * 0.44))
+      .fill({ color: 0x0b0d12, alpha: 0.95 })
+    this.badgeBg.visible = false
+
     this.bubbleText = new Text({ text: '', style: BUBBLE_STYLE })
     this.bubbleText.position.set(8, 6)
     this.bubble.addChild(this.bubbleBg, this.bubbleText)
     this.bubble.visible = false
 
     this.draw()
-    this.view.addChild(this.ring, this.body, this.face, this.label, this.subLabel, this.bubble)
+    this.view.addChild(
+      this.ring,
+      this.body,
+      this.face,
+      this.badgeBg,
+      this.badge,
+      this.label,
+      this.subLabel,
+      this.bubble,
+    )
     this.view.scale.set(0)
   }
 
@@ -102,6 +140,7 @@ export class Actor {
 
   setLabel(text: string): void {
     this.label.text = text
+    this.tooltipTitle = text
   }
 
   /** El tipo del subagente llega después de su nacimiento: hay que poder recolorearlo. */
@@ -115,6 +154,7 @@ export class Actor {
   /** Segunda línea con el cometido del actor (la descripción con la que se lanzó). */
   setSubLabel(text: string): void {
     this.subLabel.text = text.length > 38 ? `${text.slice(0, 37)}…` : text
+    this.tooltipBody = text
   }
 
   setMood(mood: ActorMood): void {
@@ -201,6 +241,13 @@ export class Actor {
     const t = (now - this.born) / 1000
     this.face.y = Math.sin(t * 2.4) * 1.4
     this.face.text = this.emoji
+
+    // Insignia del estado: 🧠 pensando, 🔧 trabajando, 💬 hablando, ❗ esperando
+    const badge = MOOD_EMOJI[this.mood]
+    this.badge.text = badge
+    this.badge.visible = badge !== ''
+    this.badgeBg.visible = badge !== ''
+    if (badge) this.badge.scale.set(1 + Math.sin(t * 6) * 0.06)
 
     // Anillo de estado, pulsando cuando piensa o trabaja
     const pulse = this.mood === 'idle' ? 0 : (Math.sin(t * 5) + 1) / 2

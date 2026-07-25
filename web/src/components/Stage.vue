@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { isReplaying, onEvent, selectedSession, state } from '../store'
-import { Scene } from '../world/Scene'
+import { Scene, type HoverInfo } from '../world/Scene'
 import { Director } from '../world/director'
 import type { TimelineEvent } from '@shared/types'
 
 const host = ref<HTMLElement | null>(null)
+/** Ayuda contextual del elemento bajo el cursor, para no tener que abrir la leyenda. */
+const hover = ref<HoverInfo | null>(null)
+const hoverPos = ref({ x: 0, y: 0 })
 let scene: Scene | null = null
 let director: Director | null = null
 let unsubscribe: (() => void) | null = null
@@ -30,6 +33,10 @@ onMounted(async () => {
   director = new Director(scene)
   director.bootstrap(labelFor())
   scene.app.ticker.add(() => director?.tick(performance.now()))
+  scene.setHoverHandler((info, x, y) => {
+    hover.value = info
+    if (info) hoverPos.value = { x, y }
+  })
   unsubscribe = onEvent(feed)
   primeWorld()
 })
@@ -60,6 +67,17 @@ watch(
   () => director?.setMainLabel(labelFor()),
 )
 
+const TIP_W = 290
+const TIP_H = 150
+
+const tooltipStyle = computed(() => {
+  const width = host.value?.clientWidth ?? 0
+  const height = host.value?.clientHeight ?? 0
+  const x = Math.min(hoverPos.value.x + 18, Math.max(8, width - TIP_W))
+  const y = Math.min(hoverPos.value.y + 16, Math.max(8, height - TIP_H))
+  return { left: `${x}px`, top: `${y}px` }
+})
+
 onBeforeUnmount(() => {
   unsubscribe?.()
   scene?.destroy()
@@ -79,6 +97,15 @@ onBeforeUnmount(() => {
         </p>
       </div>
     </div>
+    <aside v-if="hover" class="world-tip" :style="tooltipStyle">
+      <header>
+        <span class="tip-icon">{{ hover.icon }}</span>
+        <strong :style="hover.color ? { color: hover.color } : undefined">{{ hover.title }}</strong>
+      </header>
+      <p>{{ hover.body }}</p>
+      <p v-if="hover.extra" class="tip-extra">{{ hover.extra }}</p>
+    </aside>
+
     <slot />
   </div>
 </template>
