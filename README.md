@@ -55,7 +55,7 @@ especial: **cualquier sesión de Claude Code que abras aparece sola**.
 ## Puesta en marcha
 
 ```bash
-git clone <este-repo> claude-live
+git clone https://github.com/rafathefull/claude-live.git
 cd claude-live
 npm install
 npm run build
