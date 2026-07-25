@@ -41,6 +41,25 @@ const PLATE_H = 68
 /** Grabado de la Mesa. «Los caballeros de la mesa cuadrada», por supuesto. */
 const DESK_MOTTO = 'Aquí están reunidos los caballeros de la mesa cuadrada'
 
+/**
+ * Los doce asientos, en el orden en que se dibujan (lado a lado). Los nombres no se escriben
+ * en el tablero —serían doce etiquetas de ruido—: aparecen al pasar el ratón por cada uno.
+ */
+const KNIGHTS: { name: string; quip: string }[] = [
+  { name: 'Arturo, rey de los britanos', quip: 'Elegido por la Dama del Lago, según él. Sin caballo, pero con Patsy.' },
+  { name: 'Sir Lancelot el Valiente', quip: 'Entusiasta hasta el exceso. No le encargues rescates delicados.' },
+  { name: 'Sir Galahad el Puro', quip: 'Sobrevivió al castillo de Anthrax. A duras penas, y a su pesar.' },
+  { name: 'Sir Bedevere el Sabio', quip: 'Autoridad en el peso de las brujas y en la carga de las golondrinas.' },
+  { name: 'Sir Robin el No-tan-valiente', quip: 'Huyó del pollo gigante de Bristol. Dos veces.' },
+  { name: 'Sir Gawain', quip: 'Sobrino del rey. Cortés hasta con quien va a decapitarlo.' },
+  { name: 'Sir Percival', quip: 'El que pregunta lo que nadie se atreve a preguntar.' },
+  { name: 'Sir Bors', quip: 'Se acercó al conejo. Que sirva de aviso: mira el Trastero.' },
+  { name: 'Sir Ector', quip: 'Crió al rey sin saberlo, que es más de lo que puede decir cualquiera.' },
+  { name: 'Sir Kay', quip: 'Hermano de leche del rey y quejica oficial de la mesa.' },
+  { name: 'Sir Tristán', quip: 'Mejor arpista que espadachín, y eso ya es decir algo.' },
+  { name: 'Sir No-Sale-en-esta-Película', quip: 'Su única aparición son los títulos de crédito.' },
+]
+
 interface StationView {
   meta: StationMeta
   view: Container
@@ -74,6 +93,8 @@ export class Scene {
   private height = 0
   private hoverHandler?: (info: HoverInfo | null, x: number, y: number) => void
   private onVisibility?: () => void
+  /** Zonas sensibles de los doce asientos, para poder saludar a cada caballero. */
+  private knightHits: Container[] = []
 
   async mount(host: HTMLElement): Promise<void> {
     await this.app.init({
@@ -107,6 +128,19 @@ export class Scene {
     })
     this.deskLabel.anchor.set(0.5)
     this.deskLayer.addChild(this.deskLabel)
+
+    for (const [index, knight] of KNIGHTS.entries()) {
+      const hit = new Container()
+      this.makeHoverable(hit, new Circle(0, 0, 19), () => ({
+        icon: '🛡️',
+        title: knight.name,
+        body: knight.quip,
+        extra: `asiento ${index + 1} de ${KNIGHTS.length} · mesa cuadrada`,
+        color: '#a8bcd8',
+      }))
+      this.deskLayer.addChild(hit)
+      this.knightHits.push(hit)
+    }
 
     for (const meta of STATIONS) {
       if (meta.id === 'desk') continue
@@ -295,6 +329,7 @@ export class Scene {
         const x = cx + nx * inset - ny * offset
         const y = cy + ny * inset + nx * offset
         this.drawKnight(x, y, Math.atan2(-ny, -nx))
+        this.knightHits[side * perSide + seat]?.position.set(x, y)
       }
     }
   }
