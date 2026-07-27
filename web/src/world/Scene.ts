@@ -320,6 +320,22 @@ export class Scene {
     this.stationClickHandler = handler
   }
 
+  /**
+   * Enciende o apaga la interacción del mundo.
+   *
+   * Hace falta porque Pixi escucha `pointermove` en el documento y en fase de captura: hace su
+   * hit-test por coordenadas sin saber que hay un panel HTML delante, así que con el banner del
+   * Campamento o la leyenda abiertos se activaban los tooltips y los resaltados de lo que había
+   * debajo. Al apagarla se retira también lo que estuviera resaltado.
+   */
+  setInteractive(on: boolean): void {
+    this.app.stage.interactiveChildren = on
+    if (!on) {
+      this.emitHover(null)
+      this.highlightKnight(null)
+    }
+  }
+
   /** Marca (o desmarca) el asiento bajo el cursor y redibuja la mesa solo si cambió. */
   private highlightKnight(index: number | null): void {
     if (this.hoveredKnight === index) return

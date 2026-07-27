@@ -23,6 +23,13 @@ const hover = ref<HoverInfo | null>(null)
 const hoverPos = ref({ x: 0, y: 0 })
 /** Banner del Campamento: se despliega al pulsar su cartel. */
 const campOpen = ref(false)
+
+/**
+ * Con un panel delante (el banner o la leyenda) el mundo se queda sordo: Pixi no sabe que hay
+ * HTML encima y seguía sacando tooltips de lo que quedaba debajo del panel.
+ */
+const covered = computed(() => campOpen.value || state.legendOpen)
+watch(covered, (value) => scene?.setInteractive(!value))
 let scene: Scene | null = null
 let director: Director | null = null
 let unsubscribe: (() => void) | null = null
@@ -42,6 +49,14 @@ function feed(event: TimelineEvent): void {
   director.handle(event)
 }
 
+/** ¿El cursor está sobre el canvas, o sobre algo de HTML que hay encima? */
+function overCanvas(x: number, y: number): boolean {
+  const canvas = host.value?.querySelector('canvas')
+  if (!canvas) return false
+  const rect = canvas.getBoundingClientRect()
+  return document.elementFromPoint(rect.left + x, rect.top + y) === canvas
+}
+
 /** Monta la escena. Se rehace al cambiar de idioma: los rótulos viven dentro del canvas. */
 async function mountWorld(): Promise<void> {
   if (!host.value) return
@@ -51,6 +66,12 @@ async function mountWorld(): Promise<void> {
   director.bootstrap(labelFor())
   scene.app.ticker.add(() => director?.tick(performance.now()))
   scene.setHoverHandler((info, x, y) => {
+    // Segunda red, para los paneles que no apagan el mundo (el inspector, que cae justo
+    // encima de la Vitrina): se pregunta al navegador quién está de verdad bajo el cursor.
+    if (info && !overCanvas(x, y)) {
+      hover.value = null
+      return
+    }
     hover.value = info
     if (info) hoverPos.value = { x, y }
   })
@@ -59,6 +80,7 @@ async function mountWorld(): Promise<void> {
   })
   unsubscribe = onEvent(feed)
   scene.syncJobs(state.jobs)
+  scene.setInteractive(!covered.value)
   fitter = new ResizeObserver(() => scene?.app.queueResize())
   fitter.observe(host.value)
   primeWorld()

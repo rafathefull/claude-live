@@ -28,7 +28,6 @@ const L = {
 }
 
 const view = ref<'live' | 'history'>('live')
-const legendOpen = ref(false)
 
 /** `null` = ancho por omisión, el que decide el CSS según el tamaño de ventana. */
 const timelineWidth = ref<number | null>(loadTimelineWidth())
@@ -130,7 +129,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="app" :class="{ dragging }">
-    <Hud :view="view" @view="view = $event" @legend="legendOpen = true" />
+    <Hud :view="view" @view="view = $event" @legend="state.legendOpen = true" />
 
     <ReplayBar v-if="isReplaying && view === 'live'" />
 
@@ -152,6 +151,6 @@ onBeforeUnmount(() => {
       <Timeline />
     </div>
 
-    <Legend v-if="legendOpen" @close="legendOpen = false" />
+    <Legend v-if="state.legendOpen" @close="state.legendOpen = false" />
   </div>
 </template>

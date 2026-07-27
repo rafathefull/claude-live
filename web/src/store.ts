@@ -52,6 +52,11 @@ interface State {
   selectedEvent: TimelineEvent | null
   /** Jobs en segundo plano. Globales: no pertenecen a la sesión seleccionada. */
   jobs: JobInfo[]
+  /**
+   * La leyenda está abierta. Vive aquí y no en el componente porque la escena tiene que
+   * enterarse: con un panel delante, el mundo no debe seguir respondiendo al ratón.
+   */
+  legendOpen: boolean
   /** Sesión que se está trayendo del histórico, para poder avisar mientras tarda. */
   loadingSession: string | null
   replay: ReplayState
@@ -68,6 +73,7 @@ export const state = reactive<State>({
   focusActor: null,
   selectedEvent: null,
   jobs: [],
+  legendOpen: false,
   loadingSession: null,
   replay: {
     sessionId: null,
