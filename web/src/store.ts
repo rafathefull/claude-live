@@ -8,8 +8,14 @@ import type { ActorInfo, ServerMessage, SessionInfo, TimelineEvent } from '@shar
 
 /** Tope del buffer de una sesión en vivo (el histórico se carga completo para el replay). */
 const MAX_EVENTS_PER_SESSION = 800
-/** Tope de eventos que se piden al abrir una sesión del historial. */
-const HISTORY_LIMIT = 2000
+/**
+ * Tamaño de página del historial. El servidor tiene su propio techo de 2000 por petición, así
+ * que las conversaciones largas se traen por tramos: el reproductor pide el siguiente cuando
+ * se acerca al final de lo cargado, en lugar de quedarse mudo a mitad de la película.
+ */
+const HISTORY_PAGE = 1000
+/** Cuántos eventos por delante hacen falta para no pedir la página siguiente. */
+const PREFETCH_MARGIN = 250
 
 export interface AgentView extends ActorInfo {
   active: boolean
@@ -29,6 +35,8 @@ export interface ReplayState {
   speed: number
   /** Marca de que hay que reconstruir el mundo desde `index` (tras un salto). */
   seekToken: number
+  /** Eventos que la sesión tiene y todavía no se han traído del servidor. */
+  pending: number
 }
 
 interface State {
@@ -55,7 +63,15 @@ export const state = reactive<State>({
   soberMode: false,
   focusActor: null,
   selectedEvent: null,
-  replay: { sessionId: null, index: 0, total: 0, playing: false, speed: 4, seekToken: 0 },
+  replay: {
+    sessionId: null,
+    index: 0,
+    total: 0,
+    playing: false,
+    speed: 4,
+    seekToken: 0,
+    pending: 0,
+  },
 })
 
 type EventListener = (event: TimelineEvent) => void
@@ -228,11 +244,12 @@ export function connect(): void {
  * A diferencia del stream en vivo, aquí NO se recorta a los últimos N: el reproductor
  * necesita la conversación entera desde el principio.
  */
-export async function loadSessionEvents(sessionId: string, limit = HISTORY_LIMIT): Promise<number> {
+export async function loadSessionEvents(sessionId: string, limit = HISTORY_PAGE): Promise<number> {
   const response = await fetch(`/api/sessions/${sessionId}/events?limit=${limit}&agents=1`)
   if (!response.ok) return 0
   const data = (await response.json()) as { events: TimelineEvent[]; total: number }
   state.events[sessionId] = data.events
+  loadedTotals[sessionId] = data.total
 
   // El índice del historial solo lee la cabeza y la cola del fichero, así que no sabe de
   // tokens: se suman aquí para que el HUD no muestre un 0 en las sesiones ya cerradas.
@@ -255,11 +272,57 @@ export async function loadSessionEvents(sessionId: string, limit = HISTORY_LIMIT
 
 export const SPEEDS = [0.5, 1, 2, 4, 8, 16]
 
+/** Cuántos eventos tiene de verdad cada sesión del historial, según el servidor. */
+const loadedTotals: Record<string, number> = {}
+/** Peticiones de página en vuelo, para no pedir el mismo tramo dos veces. */
+const fetching = new Set<string>()
+
+/**
+ * Trae el siguiente tramo si el reproductor se está acercando al final de lo cargado. La
+ * llama el motor del reproductor en cada avance; es idempotente y no bloquea.
+ */
+export function ensureUpcomingEvents(sessionId: string): void {
+  const loaded = state.events[sessionId]?.length ?? 0
+  const total = loadedTotals[sessionId] ?? loaded
+  if (loaded >= total || fetching.has(sessionId)) return
+  if (state.replay.index + PREFETCH_MARGIN < loaded) return
+
+  fetching.add(sessionId)
+  void fetch(`/api/sessions/${sessionId}/events?from=${loaded}&limit=${HISTORY_PAGE}&agents=1`)
+    .then(async (response) => {
+      if (!response.ok) return
+      const data = (await response.json()) as { events: TimelineEvent[]; total: number }
+      loadedTotals[sessionId] = data.total
+      const list = state.events[sessionId]
+      if (!list) return
+      if (data.events.length === 0) {
+        state.replay.pending = 0
+        return
+      }
+      list.push(...data.events)
+      for (const event of data.events) {
+        if (event.agentId && event.actor) upsertAgent(event.actor, false)
+      }
+      state.replay.total = list.length
+      state.replay.pending = Math.max(0, data.total - list.length)
+    })
+    .catch(() => {
+      // sin red o sesión desaparecida: el reproductor sigue con lo que tenga
+    })
+    .finally(() => fetching.delete(sessionId))
+}
+
+/** Cuántos eventos tiene la sesión en total, contando lo que aún no se ha traído. */
+export function totalEventsOf(sessionId: string): number {
+  return loadedTotals[sessionId] ?? state.events[sessionId]?.length ?? 0
+}
+
 /** Empieza a reproducir una sesión desde el principio. */
 export function startReplay(sessionId: string, total: number, play = true): void {
   state.replay.sessionId = sessionId
   state.replay.index = 0
   state.replay.total = total
+  state.replay.pending = Math.max(0, totalEventsOf(sessionId) - total)
   state.replay.playing = play
   state.replay.seekToken++
 }
@@ -280,6 +343,7 @@ export function stopReplay(): void {
   state.replay.playing = false
   state.replay.index = 0
   state.replay.total = 0
+  state.replay.pending = 0
 }
 
 export function togglePlay(): void {
@@ -297,14 +361,37 @@ export function setSpeed(speed: number): void {
 
 /** Salta a una posición absoluta: el mundo se reconstruye desde ahí. */
 export function seekTo(index: number): void {
-  const clamped = Math.max(0, Math.min(index, state.replay.total))
+  // Se acota al total real (lo cargado más lo que queda por traer): saltar al final debe
+  // llevar al final de la conversación, no al de la primera página.
+  const reachable = state.replay.total + state.replay.pending
+  const clamped = Math.max(0, Math.min(index, reachable))
   state.replay.index = clamped
   state.replay.seekToken++
+  if (state.replay.sessionId) ensureUpcomingEvents(state.replay.sessionId)
 }
 
 export function step(delta: number): void {
   state.replay.playing = false
   seekTo(state.replay.index + delta)
+}
+
+/** Cuánta historia sobrevive a la limpieza de Claude Code. */
+export interface Retention {
+  onDisk: number
+  known: number
+  missing: number
+  cleanupPeriodDays: number
+  configured: boolean
+  oldest?: string
+}
+
+export async function loadRetention(): Promise<Retention | null> {
+  try {
+    const response = await fetch('/api/retention')
+    return response.ok ? ((await response.json()) as Retention) : null
+  } catch {
+    return null
+  }
 }
 
 export async function loadAllSessions(): Promise<SessionInfo[]> {

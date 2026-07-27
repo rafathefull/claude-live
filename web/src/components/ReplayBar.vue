@@ -21,6 +21,7 @@ const L = {
   pause: { es: 'Pausa', en: 'Pause' },
   forward: { es: 'Adelante 10 eventos', en: 'Forward 10 events' },
   end: { es: 'Al final', en: 'To the end' },
+  loading: { es: 'trayendo más…', en: 'loading more…' },
   close: {
     es: 'Cerrar el reproductor (podrás volver a abrirlo con «⏵ Reproducir» en la cabecera)',
     en: 'Close the player (you can reopen it with "⏵ Replay" in the header)',
@@ -57,7 +58,7 @@ function onScrub(event: Event): void {
         {{ replay.playing ? '⏸' : '⏵' }}
       </button>
       <button :title="tr(L.forward)" @click="step(JUMP)">⏩</button>
-      <button :title="tr(L.end)" @click="seekTo(replay.total)">⏭</button>
+      <button :title="tr(L.end)" @click="seekTo(replay.total + replay.pending)">⏭</button>
     </div>
 
     <span class="replay-time">{{ currentTs }}</span>
@@ -66,13 +67,16 @@ function onScrub(event: Event): void {
       class="scrub"
       type="range"
       min="0"
-      :max="replay.total"
+      :max="replay.total + replay.pending"
       :value="position"
       @input="onScrub"
     />
 
     <span class="replay-time">{{ endTs }}</span>
-    <span class="replay-count">{{ position }} / {{ replay.total }}</span>
+    <span class="replay-count">
+      {{ position }} / {{ replay.total + replay.pending }}
+      <span v-if="replay.pending > 0" class="muted" :title="tr(L.loading)">…</span>
+    </span>
 
     <div class="replay-speeds">
       <button

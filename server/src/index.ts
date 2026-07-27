@@ -4,6 +4,7 @@ import Fastify from 'fastify'
 import { HOST, PORT, WEB_DIST } from './config.js'
 import { listHistory, readRawEvent, readSessionEvents } from './history.js'
 import { normalizeHook, type HookPayload } from './hooks.js'
+import { retentionInfo } from './retention.js'
 import { LiveRegistry } from './sessions.js'
 import type { ActorInfo, ServerMessage, TimelineEvent } from '../../shared/types.js'
 
@@ -80,6 +81,12 @@ app.get('/api/sessions', async (request) => {
   const liveIds = new Set(live.map((s) => s.sessionId))
   return { sessions: [...live, ...history.filter((h) => !liveIds.has(h.sessionId))] }
 })
+
+/**
+ * Cuánta historia sobrevive. Claude Code borra los transcripts pasados `cleanupPeriodDays`, y
+ * conviene que quien mire el historial sepa que lo que ve no es todo lo que hizo.
+ */
+app.get('/api/retention', async () => retentionInfo())
 
 app.get('/api/sessions/:id/events', async (request) => {
   const { id } = request.params as { id: string }

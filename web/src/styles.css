@@ -772,6 +772,30 @@ button.active {
 
 /* ---------------------------------------------------------------- historial */
 
+/* Aviso de retención: lo que se ve en el historial no es todo lo que hubo. */
+.retention-notice {
+  position: relative;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--warn);
+  border-radius: 8px;
+  background: rgba(251, 191, 36, 0.06);
+}
+
+.retention-notice strong {
+  color: var(--warn);
+}
+
+.retention-notice p {
+  margin: 5px 0 0;
+  color: var(--text-dim);
+  max-width: 90ch;
+}
+
+.retention-notice button {
+  margin-top: 8px;
+}
+
 .history {
   padding: 12px;
   overflow-y: auto;

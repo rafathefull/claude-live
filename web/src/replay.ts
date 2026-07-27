@@ -1,4 +1,4 @@
-import { dispatch, state } from './store'
+import { dispatch, ensureUpcomingEvents, state } from './store'
 
 /**
  * Motor del reproductor. Vive fuera de la escena a propósito: así el replay sigue
@@ -30,8 +30,15 @@ function tick(now: number): void {
     const events = state.events[sessionId] ?? []
     replay.total = events.length
 
-    if (replay.playing && replay.index >= events.length) {
+    // Se va trayendo lo que falta, en marcha o en pausa: una conversación larga no cabe en una
+    // sola petición, y un salto al final puede necesitar varios tramos seguidos.
+    ensureUpcomingEvents(sessionId)
+
+    if (replay.playing && replay.index >= events.length && replay.pending === 0) {
       replay.playing = false
+    } else if (replay.playing && replay.index >= events.length) {
+      // Esperando el siguiente tramo: no se avanza, pero tampoco se para la película.
+      nextAt = now + 250
     } else if (replay.playing && now >= nextAt) {
       const event = events[replay.index]
       replay.index++
