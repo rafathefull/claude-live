@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { isReplaying, onEvent, selectedSession, state } from '../store'
 import { Scene, type HoverInfo } from '../world/Scene'
+import JobsBanner from './JobsBanner.vue'
 import { Director } from '../world/director'
 import type { TimelineEvent } from '@shared/types'
 import { lang, tr } from '../i18n'
@@ -20,6 +21,8 @@ const host = ref<HTMLElement | null>(null)
 /** Ayuda contextual del elemento bajo el cursor, para no tener que abrir la leyenda. */
 const hover = ref<HoverInfo | null>(null)
 const hoverPos = ref({ x: 0, y: 0 })
+/** Banner del Campamento: se despliega al pulsar su cartel. */
+const campOpen = ref(false)
 let scene: Scene | null = null
 let director: Director | null = null
 let unsubscribe: (() => void) | null = null
@@ -50,6 +53,9 @@ async function mountWorld(): Promise<void> {
   scene.setHoverHandler((info, x, y) => {
     hover.value = info
     if (info) hoverPos.value = { x, y }
+  })
+  scene.setStationClickHandler((station) => {
+    if (station === 'camp') campOpen.value = !campOpen.value
   })
   unsubscribe = onEvent(feed)
   scene.syncJobs(state.jobs)
@@ -144,6 +150,8 @@ onBeforeUnmount(unmountWorld)
       <p>{{ hover.body }}</p>
       <p v-if="hover.extra" class="tip-extra">{{ hover.extra }}</p>
     </aside>
+
+    <JobsBanner v-if="campOpen" @close="campOpen = false" />
 
     <slot />
   </div>

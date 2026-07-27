@@ -29,12 +29,13 @@ comes from the files Claude Code writes under `~/.claude`.*
 - **Subagents**: born next to whoever launched them, with their type (`Explore`, `Plan`,
   `general-purpose`, your own) and the description they were launched with. They nest by depth
   and hand in their report when they finish.
-- **Background jobs**: the Camp, in the bottom corner. Each tent is a job you launched with
-  `/bg` and carries on by itself, with its state —green working, amber blocked waiting on you,
-  ✅ done, ❌ failed— and the last thing it said about itself. A job that claims to be working
-  with no process behind it shows up as 💤 stale, because saying it works would be a lie. They
-  stay there even if you switch sessions: they belong to none. In the panel, the `🏕️ Camp` row
-  lists their names, and clicking one opens its conversation.
+- **Background jobs**: the Camp, in the bottom corner. Its sign says how many there are and how
+  many are still running, and **clicking it unfolds a banner** with all of them: name, state
+  —green working, amber blocked waiting on you, ✅ done, ❌ failed—, project, when it was last
+  heard from and the last thing it said about itself. Clicking one opens its conversation. A job
+  that claims to be working with no process behind it shows up as 💤 stale, because saying it
+  works would be a lie. The Camp belongs to no session: it stays there even if you switch
+  rooms.
 
   ![The Camp with background jobs](docs/campamento.png)
 

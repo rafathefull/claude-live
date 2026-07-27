@@ -156,14 +156,18 @@ for (const size of [
   console.log(`  captura → ${path} (${size.width}×${size.height})`)
 }
 
-// El Campamento: los jobs en segundo plano, con su fila de píldoras en el panel.
-const tents = await page.locator('.job-pill').count()
-const campDetail = await page
-  .evaluate(() => document.querySelector('.job-legend')?.textContent?.replace(/\s+/g, ' ') ?? '')
-console.log(`  campamento: ${tents} jobs · «${campDetail.slice(0, 70)}»`)
+// El Campamento: se pulsa su cartel y despliega la lista de jobs en segundo plano.
+const canvas = (await page.locator('.stage canvas').boundingBox())!
+await page.mouse.click(canvas.x + canvas.width * 0.09, canvas.y + canvas.height * 0.79)
+await page.locator('.jobs-banner').waitFor({ state: 'visible' })
+await page.waitForTimeout(500)
+const tents = await page.locator('.jobs-banner li').count()
 if (tents === 0) throw new Error('el Campamento salió vacío: los jobs de la demostración no llegaron')
+console.log(`  campamento: ${tents} jobs en el banner`)
 await page.screenshot({ path: join(outDir, 'campamento.png') })
 console.log(`  captura → ${join(outDir, 'campamento.png')}`)
+await page.locator('.jobs-banner header button').click()
+await page.waitForTimeout(300)
 
 // Histórico en árbol: la vista que agrupa las sesiones por proyecto.
 await page.getByRole('button', { name: /Historial|History/ }).click()

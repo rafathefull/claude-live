@@ -30,12 +30,13 @@ ficheros que Claude Code escribe en `~/.claude`.*
 - **Subagentes**: nacen junto a quien los lanza, con su tipo (`Explore`, `Plan`,
   `general-purpose`, los tuyos) y la descripción con la que se lanzaron. Se anidan por
   profundidad y entregan su informe al terminar.
-- **Jobs en segundo plano**: el Campamento, en la esquina de abajo. Cada tienda es un job que
-  lanzaste con `/bg` y sigue por su cuenta, con su estado —verde trabajando, ámbar bloqueado
-  esperándote, ✅ hecho, ❌ fallido— y lo último que dijo de sí mismo. Un job que se declara
-  trabajando pero no tiene proceso detrás sale como 💤 residuo, porque decir que trabaja sería
-  mentir. Están ahí aunque cambies de sesión: no pertenecen a ninguna. En el panel, la fila
-  `🏕️ Campamento` lista sus nombres, y pulsando uno se abre su conversación.
+- **Jobs en segundo plano**: el Campamento, en la esquina de abajo. Su cartel dice cuántos hay y
+  cuántos siguen en marcha, y **al pulsarlo despliega un banner** con todos: nombre, estado
+  —verde trabajando, ámbar bloqueado esperándote, ✅ hecho, ❌ fallido—, proyecto, cuándo se supo
+  de él y lo último que dijo de sí mismo. Pulsando uno se abre su conversación. Un job que se
+  declara trabajando pero no tiene proceso detrás sale como 💤 residuo, porque decir que trabaja
+  sería mentir. El Campamento no pertenece a ninguna sesión: sigue ahí aunque cambies de
+  habitación.
 
   ![El Campamento con los jobs en segundo plano](docs/campamento.png)
 
