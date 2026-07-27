@@ -15,6 +15,12 @@
  2026-07-27
 --------------------------------------------------------------------------------
 
+  ! El inspector salia arriba, fuera de su caja, y el historial sin margen ni
+    scroll: un selector duplicado invalidaba todo el CSS que venia detras.
+                                                                      [b0c0bd1]
+  ! Con el banner del Campamento (o la leyenda) abierto se activaban los
+    tooltips de lo que quedaba debajo: Pixi escucha el raton en el documento
+    y no sabe que hay un panel delante.                               [540f4fc]
   + Los jobs en segundo plano ya se ven: el Campamento, en la esquina de
     abajo. Su cartel cuenta cuantos hay y al pulsarlo despliega un banner con
     todos: estado, proyecto, ultimo parte y un clic para abrir su
@@ -101,6 +107,12 @@
  2026-07-27
 --------------------------------------------------------------------------------
 
+  ! The inspector showed up at the top, out of its box, and the history had no
+    padding or scroll: a duplicated selector invalidated every rule after it.
+                                                                      [b0c0bd1]
+  ! With the Camp banner (or the legend) open, tooltips of whatever was
+    underneath still fired: Pixi listens for the mouse on the document and
+    does not know there is a panel in front.                          [540f4fc]
   + Background jobs are visible at last: the Camp, in the bottom corner. Its
     sign counts them and clicking it unfolds a banner with all of them: state,
     project, last report and one click to open its conversation. A job
