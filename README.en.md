@@ -420,10 +420,10 @@ Chromium, reports console errors and saves screenshots of the three views.
 
 ## State and what is missing
 
-Working: live sessions, subagents, a resizable timeline, inspector, history as a table or a
-tree with a complete player, a multi-session neighbourhood, metrics per project and day,
-background jobs, retention warning, legend, plain mode, light and
-dark theme, hook ingest and the bilingual interface.
+Working: live sessions, subagents, a resizable timeline, inspector, history as a table or a tree
+with a complete player, a multi-session neighbourhood, metrics per project and day, background
+jobs, retention warning, legend, plain mode, light and dark theme, hook ingest and the bilingual
+interface.
 
 What has been done, summarised in plain text, lives in [`CHANGELOG.txt`](CHANGELOG.txt).
 

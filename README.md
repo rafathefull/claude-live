@@ -414,10 +414,10 @@ ventana, informa de los errores de consola y guarda las capturas de las tres vis
 
 ## Estado y qué falta
 
-Funcionando: sesiones vivas, subagentes, timeline (de ancho ajustable), inspector, historial en
+Funcionando: sesiones vivas, subagentes, timeline de ancho ajustable, inspector, historial en
 tabla o en árbol con reproductor completo, vecindario multi-sesión, métricas por proyecto y día,
-jobs en segundo plano, aviso de retención, leyenda,
-modo sobrio, tema claro y oscuro, ingesta de hooks e interfaz bilingüe.
+jobs en segundo plano, aviso de retención, leyenda, modo sobrio, tema claro y oscuro, ingesta de
+hooks e interfaz bilingüe.
 
 Lo que se va haciendo, resumido y en texto plano, está en [`CHANGELOG.txt`](CHANGELOG.txt).
 
