@@ -26,6 +26,10 @@ export interface DemoStep {
 interface Ctx {
   ts: number
   parent: Record<string, string | null>
+  /** Para las conversaciones del histórico, que son de otras sesiones y otros proyectos. */
+  sessionId?: string
+  cwd?: string
+  branch?: string
 }
 
 function next(ctx: Ctx, seconds: number): string {
@@ -45,9 +49,9 @@ function envelope(
   return {
     uuid,
     parentUuid,
-    sessionId: SESSION_ID,
-    cwd: CWD,
-    gitBranch: 'main',
+    sessionId: ctx.sessionId ?? SESSION_ID,
+    cwd: ctx.cwd ?? CWD,
+    gitBranch: ctx.branch ?? 'main',
     version: '2.1.220',
     isSidechain: target !== 'main',
     timestamp: next(ctx, seconds),
@@ -325,6 +329,61 @@ const ARCHIVE: { cwd: string; branch: string; titles: string[] }[] = [
   { cwd: '/home/demo/notas', branch: 'main', titles: ['Ordenar las notas de la semana'] },
 ]
 
+/**
+ * Guion breve de una conversación del histórico. Antes eran dos líneas —lo justo para que el
+ * índice sacara el título—, y al abrirla el reproductor terminaba antes de empezar: no había nada
+ * que reproducir. Con esto cada una tiene su petición, su razonamiento y unas cuantas
+ * herramientas, así que se pueden mirar como una película.
+ */
+function archiveScript(
+  ctx: Ctx,
+  title: string,
+  flavour: number,
+): DemoStep[] {
+  const steps: DemoStep[] = [
+    prompt(ctx, 'main', title),
+    thinking(ctx, 'main', 'Antes de tocar nada, miro cómo está montado esto ahora mismo.'),
+  ]
+  // Cuatro sabores para que las conversaciones no salgan todas iguales.
+  const recipes: ((n: number) => DemoStep[])[] = [
+    (n) => [
+      call(ctx, 'main', `a${n}1`, 'Grep', { pattern: 'export function', path: 'src' }),
+      result(ctx, 'main', `a${n}1`, { matches: ['src/index.ts:12', 'src/util.ts:40'] }),
+      call(ctx, 'main', `a${n}2`, 'Read', { file_path: 'src/index.ts' }),
+      result(ctx, 'main', `a${n}2`, { type: 'text', file: { numLines: 214 } }),
+      call(ctx, 'main', `a${n}3`, 'Edit', { file_path: 'src/index.ts' }),
+      result(ctx, 'main', `a${n}3`, {
+        structuredPatch: [{ lines: ['+ const limit = 100', '- const limit = 20'] }],
+      }),
+    ],
+    (n) => [
+      call(ctx, 'main', `a${n}1`, 'Bash', { command: 'npm test', description: 'Pasar los tests' }),
+      result(ctx, 'main', `a${n}1`, { stdout: '31 passing (2.4s)', stderr: '', interrupted: false }),
+      call(ctx, 'main', `a${n}2`, 'Bash', { command: 'git status --short' }),
+      result(ctx, 'main', `a${n}2`, { stdout: ' M src/index.ts', stderr: '', interrupted: false }),
+    ],
+    (n) => [
+      call(ctx, 'main', `a${n}1`, 'WebSearch', { query: 'cursor pagination best practices' }),
+      result(ctx, 'main', `a${n}1`, { results: [{ title: 'Cursors' }, { title: 'Keyset' }] }),
+      call(ctx, 'main', `a${n}2`, 'Write', { file_path: 'docs/decision.md' }),
+      result(ctx, 'main', `a${n}2`, { type: 'create', filePath: 'docs/decision.md' }),
+      call(ctx, 'main', `a${n}3`, 'TaskCreate', { subject: title }),
+      result(ctx, 'main', `a${n}3`, { tasks: [{ id: '1' }] }),
+    ],
+    (n) => [
+      call(ctx, 'main', `a${n}1`, 'Read', { file_path: 'infra/nodes.yaml' }),
+      result(ctx, 'main', `a${n}1`, { type: 'text', file: { numLines: 96 } }),
+      call(ctx, 'main', `a${n}2`, 'Bash', { command: 'kubectl get nodes' }),
+      result(ctx, 'main', `a${n}2`, { stdout: 'node-1 Ready\nnode-2 Ready', stderr: '', interrupted: false }),
+      call(ctx, 'main', `a${n}3`, 'Bash', { command: 'terraform plan' }),
+      result(ctx, 'main', `a${n}3`, { stdout: 'No changes.', stderr: '', interrupted: false }),
+    ],
+  ]
+  steps.push(...recipes[flavour % recipes.length]!(flavour))
+  steps.push(say(ctx, 'main', 'Listo. Te dejo el resumen de lo que he cambiado y por qué.'))
+  return steps
+}
+
 /** Escribe el histórico ficticio. Devuelve cuántas sesiones ha dejado en disco. */
 async function writeArchive(dir: string, endedAt: number): Promise<number> {
   let written = 0
@@ -335,38 +394,15 @@ async function writeArchive(dir: string, endedAt: number): Promise<number> {
       // Fechas escalonadas hacia atrás: días distintos por proyecto y por sesión.
       const started = endedAt - ((p + 1) * 3 + t) * 86_400_000
       const sessionId = `dec0de00-0000-4000-8000-1${p}${t}000000000`.slice(0, 36)
-      const ctx: Ctx = { ts: started, parent: { main: null } }
-      const lines = [
-        {
-          uuid: randomUUID(),
-          parentUuid: null,
-          sessionId,
-          cwd: project.cwd,
-          gitBranch: project.branch,
-          version: '2.1.220',
-          isSidechain: false,
-          timestamp: next(ctx, 0),
-          type: 'user',
-          userType: 'external',
-          message: { role: 'user', content: [{ type: 'text', text: title }] },
-        },
-        {
-          uuid: randomUUID(),
-          parentUuid: null,
-          sessionId,
-          cwd: project.cwd,
-          gitBranch: project.branch,
-          version: '2.1.220',
-          isSidechain: false,
-          timestamp: next(ctx, 90),
-          type: 'assistant',
-          message: {
-            role: 'assistant',
-            model: MODEL,
-            usage: usage(3, 120, 18_000 + t * 4_000),
-            content: [{ type: 'text', text: 'Hecho.' }],
-          },
-        },
+      const ctx: Ctx = {
+        ts: started,
+        parent: { main: null },
+        sessionId,
+        cwd: project.cwd,
+        branch: project.branch,
+      }
+      const lines: Record<string, unknown>[] = [
+        ...archiveScript(ctx, title, p * 3 + t).map((step) => step.line),
         { type: 'ai-title', aiTitle: title, sessionId },
       ]
       await writeFile(

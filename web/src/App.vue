@@ -8,6 +8,7 @@ import HistoryView from './components/HistoryView.vue'
 import Neighborhood from './components/Neighborhood.vue'
 import MetricsView from './components/MetricsView.vue'
 import DemoNotice from './components/DemoNotice.vue'
+import Tour from './components/Tour.vue'
 import Legend from './components/Legend.vue'
 import ReplayBar from './components/ReplayBar.vue'
 import {
@@ -32,6 +33,15 @@ const L = {
 }
 
 const view = ref<'live' | 'history' | 'hood' | 'metrics'>('live')
+
+/**
+ * Recorrido guiado, solo en la demostración publicada: arranca solo la primera visita —con un
+ * retardo, para que el mundo ya tenga algo que enseñar— y se puede relanzar desde la cabecera.
+ */
+const tourOpen = ref(false)
+if (STATIC_MODE && localStorage.getItem('claude-live:tour-seen') !== '1') {
+  setTimeout(() => (tourOpen.value = true), 3500)
+}
 
 /** `null` = ancho por omisión, el que decide el CSS según el tamaño de ventana. */
 const timelineWidth = ref<number | null>(loadTimelineWidth())
@@ -133,9 +143,17 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="app" :class="{ dragging }">
-    <Hud :view="view" @view="view = $event" @legend="state.legendOpen = true" />
+    <Hud
+      :view="view"
+      :tour="STATIC_MODE"
+      @view="view = $event"
+      @legend="state.legendOpen = true"
+      @tour="tourOpen = true"
+    />
 
-    <DemoNotice v-if="STATIC_MODE" />
+    <DemoNotice v-if="STATIC_MODE" @tour="tourOpen = true" />
+
+    <Tour v-if="tourOpen" :view="view" @view="view = $event" @close="tourOpen = false" />
 
     <ReplayBar v-if="isReplaying && view === 'live'" />
 

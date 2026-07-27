@@ -24,7 +24,9 @@ comes from the files Claude Code writes under `~/.claude`.*
 **[▶ Playable demo](https://rafathefull.github.io/claude-live/)** — the whole viewer running in
 the browser, with a made-up world inside the page. There is no server and no `~/.claude` is read:
 the data is fictional, but **the code is the same**, so you can switch tabs, open a past
-conversation and play it back, click the Camp, drag the splitter or hover the world. To see it
+conversation and play it back, click the Camp, drag the splitter or hover the world. It comes with an
+eleven-stop **guided tour** —bubbles anchored to each place, explaining what it is and what is
+going on— that shows up on the first visit and can be relaunched with the 🧭 button. To see it
 with your own sessions you need to run it on your machine (below).
 
 ## What it shows

@@ -1665,3 +1665,85 @@ td.bad {
   flex: none;
   margin-left: auto;
 }
+
+/* --------------------------------------------------- recorrido guiado */
+
+/* Cubre la pantalla para poder poner el bocadillo donde haga falta, pero no recibe el ratón:
+   mientras lees puedes seguir tocando el mundo. */
+.tour {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+}
+
+/* Recuadro del sitio del que habla el paso. El halo enorme oscurece el resto sin taparlo. */
+.tour-spot {
+  position: fixed;
+  border: 2px solid var(--accent);
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 9999px var(--backdrop),
+    0 0 18px -2px var(--accent);
+  transition:
+    left 0.25s ease,
+    top 0.25s ease,
+    width 0.25s ease,
+    height 0.25s ease;
+}
+
+.tour-bubble {
+  position: fixed;
+  width: 380px;
+  max-width: calc(100vw - 28px);
+  padding: 11px 13px;
+  background: var(--float);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  box-shadow: 0 20px 52px var(--shadow-strong);
+  pointer-events: auto;
+}
+
+.tour-bubble header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.tour-count {
+  flex: none;
+  color: var(--accent);
+  font-size: 11px;
+}
+
+.tour-bubble .tour-x {
+  margin-left: auto;
+  border: none;
+  padding: 0 4px;
+  color: var(--text-faint);
+}
+
+.tour-bubble p {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.tour-bubble footer {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.tour-bubble footer button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.tour-bubble .tour-next {
+  margin-left: auto;
+  border-color: var(--accent);
+  color: var(--accent);
+}

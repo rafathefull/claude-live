@@ -17,7 +17,11 @@
 
   + Demostracion jugable en GitHub Pages: el visor entero en el navegador con
     un mundo inventado dentro de la pagina, sin servidor y sin leer ningun
-    ~/.claude. Mismo codigo: se cambia de donde salen los datos y ya.    [pend.]
+    ~/.claude. Mismo codigo: se cambia de donde salen los datos y ya.
+                                                             [b43ac9c] [ae75e0d]
+  + Recorrido guiado de la demostracion: once bocadillos anclados a cada sitio
+    que explican que es y que esta pasando, abriendo las pestanas solos. Sale
+    la primera visita y se relanza con el boton de la cabecera.          [pend.]
   + Coste en dinero, opcional y para quien pague por API: se ponen las tarifas
     por millon de tokens en pricing.json y las metricas anaden el coste del
     rango y una columna por proyecto. Sin fichero no se habla de dinero, que
@@ -129,7 +133,10 @@
 
   + Playable demo on GitHub Pages: the whole viewer in the browser with a
     made-up world inside the page, no server and no ~/.claude read. Same code:
-    only where the data comes from changes.                             [pend.]
+    only where the data comes from changes.                  [b43ac9c] [ae75e0d]
+  + Guided tour of the demo: eleven bubbles anchored to each place explaining
+    what it is and what is going on, opening the tabs by themselves. Shows up
+    on the first visit and can be relaunched from the header.            [pend.]
   + Cost in money, optional and for those paying per API: set the rates per
     million tokens in pricing.json and the metrics add the range cost and a
     column per project. With no file there is no talk of money, since a

@@ -22,7 +22,10 @@ const L = {
   },
   repo: { es: 'código y instrucciones', en: 'code and instructions' },
   hide: { es: 'Entendido', en: 'Got it' },
+  tour: { es: '🧭 Ver el recorrido', en: '🧭 Take the tour' },
 }
+
+const emit = defineEmits<{ (e: 'tour'): void }>()
 
 const REPO = 'https://github.com/rafathefull/claude-live'
 
@@ -45,6 +48,7 @@ function dismiss(): void {
         <a :href="REPO" target="_blank" rel="noopener">{{ tr(L.repo) }}</a>
       </p>
     </div>
+    <button @click="emit('tour')">{{ tr(L.tour) }}</button>
     <button @click="dismiss">{{ tr(L.hide) }}</button>
   </aside>
 </template>

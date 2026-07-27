@@ -26,8 +26,10 @@ ficheros que Claude Code escribe en `~/.claude`.*
 funcionando en el navegador, con un mundo inventado dentro de la página. No hay servidor y no se
 lee ningún `~/.claude`: los datos son ficticios, pero **el código es el mismo**, así que puedes
 cambiar de pestaña, abrir una conversación del histórico y reproducirla, pulsar el Campamento,
-arrastrar el divisor o pasar el ratón por el mundo. Para verlo con tus propias sesiones hay que
-ejecutarlo en tu máquina (más abajo).
+arrastrar el divisor o pasar el ratón por el mundo. Trae un **recorrido guiado** de once paradas
+—bocadillos anclados a cada sitio, explicando qué es y qué está pasando— que sale solo la primera
+vez y se puede relanzar con el botón 🧭. Para verlo con tus propias sesiones hay que ejecutarlo en
+tu máquina (más abajo).
 
 ## Qué muestra
 

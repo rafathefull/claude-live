@@ -35,6 +35,11 @@ const L = {
     en: 'Replay this conversation from the history again',
   },
   legend: { es: '❔ Leyenda', en: '❔ Legend' },
+  tour: { es: '🧭 Recorrido', en: '🧭 Tour' },
+  tourTitle: {
+    es: 'Explicaciones paso a paso de todo lo que hay en pantalla',
+    en: 'Step-by-step explanations of everything on screen',
+  },
   legendTitle: {
     es: 'Qué significa cada lugar, actor y color del mundo',
     en: 'What every place, actor and colour in the world means',
@@ -51,10 +56,15 @@ const L = {
   toEnglish: { es: 'Cambiar la interfaz a inglés', en: 'Interface in English' },
 }
 
-const props = defineProps<{ view: 'live' | 'history' | 'hood' | 'metrics' }>()
+const props = defineProps<{
+  view: 'live' | 'history' | 'hood' | 'metrics'
+  /** Solo en la demostración publicada hay recorrido guiado que ofrecer. */
+  tour?: boolean
+}>()
 const emit = defineEmits<{
   (e: 'view', value: 'live' | 'history' | 'hood' | 'metrics'): void
   (e: 'legend'): void
+  (e: 'tour'): void
 }>()
 
 const session = selectedSession
@@ -170,6 +180,9 @@ const statusLabel = computed(() => {
       @click="resumeReplay(session.sessionId)"
     >
       {{ tr(L.replay) }}
+    </button>
+    <button v-if="props.tour" :title="tr(L.tourTitle)" @click="emit('tour')">
+      {{ tr(L.tour) }}
     </button>
     <button :title="tr(L.legendTitle)" @click="emit('legend')">
       {{ tr(L.legend) }}
