@@ -15,6 +15,8 @@
  2026-07-27
 --------------------------------------------------------------------------------
 
+  ! Pulsar una sesion en la cabecera cambiaba la sesion pero no la vista: desde
+    metricas, vecindario o historial no pasaba nada visible.            [pend.]
   + Metricas por proyecto y por dia: sesiones, peticiones, eventos,
     herramientas, errores, subagentes, tokens y tamano en disco, con grafica de
     barras y rankings de herramientas, modelos y tipos de subagente. El
@@ -118,6 +120,8 @@
  2026-07-27
 --------------------------------------------------------------------------------
 
+  ! Clicking a session in the header changed the session but not the view: from
+    metrics, neighbourhood or history nothing visible happened.         [pend.]
   + Metrics per project and per day: sessions, prompts, events, tool calls,
     errors, subagents, tokens and size on disk, with a bar chart and rankings
     of tools, models and subagent types. The server walks the transcripts once

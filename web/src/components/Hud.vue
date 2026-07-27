@@ -63,6 +63,9 @@ const ctx = computed(() => (session.value ? contextPercent(session.value) : 0))
 function selectLive(sessionId: string): void {
   stopReplay()
   state.selectedSessionId = sessionId
+  // Pulsar una sesión es querer verla: desde el histórico, el vecindario o las métricas hay que
+  // volver al mundo, que si no se cambiaba la sesión por debajo sin que se notara nada.
+  if (props.view !== 'live') emit('view', 'live')
 }
 
 const statusLabel = computed(() => {
