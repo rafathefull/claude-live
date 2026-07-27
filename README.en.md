@@ -29,6 +29,15 @@ comes from the files Claude Code writes under `~/.claude`.*
 - **Subagents**: born next to whoever launched them, with their type (`Explore`, `Plan`,
   `general-purpose`, your own) and the description they were launched with. They nest by depth
   and hand in their report when they finish.
+- **Background jobs**: the Camp, in the bottom corner. Each tent is a job you launched with
+  `/bg` and carries on by itself, with its state —green working, amber blocked waiting on you,
+  ✅ done, ❌ failed— and the last thing it said about itself. A job that claims to be working
+  with no process behind it shows up as 💤 stale, because saying it works would be a lie. They
+  stay there even if you switch sessions: they belong to none. In the panel, the `🏕️ Camp` row
+  lists their names, and clicking one opens its conversation.
+
+  ![The Camp with background jobs](docs/campamento.png)
+
 - **Every tool in its place**: read/search, edit/write, shell, MCP, web, tasks, skills,
   worktrees, and whatever comes back to you (questions, plans, artifacts).
 - **A synchronised timeline**: filterable by actor, with durations, errors and an inspector
@@ -312,6 +321,7 @@ fetched separately with `/raw/:uuid`.
 | `GET /api/sessions?active=1` | Live sessions; without `active`, the history too |
 | `GET /api/sessions/:id/events?from=&limit=&agents=0` | Paginated timeline. Subagents come interleaved unless `agents=0` is passed; `limit` defaults to 500 and is capped at 2000 per request, and the player chains chunks with `from` |
 | `GET /api/retention` | How many sessions survive Claude Code's cleanup and how many are already gone |
+| `GET /api/jobs` | Background jobs, running and finished, with their state checked against the processes that actually exist |
 | `GET /api/sessions/:id/raw/:uuid` | The raw line of an event, untrimmed (transcript events only: the ones born from a hook are in no file) |
 | `POST /hook` | Ingest for Claude Code hooks |
 | `GET /api/health` | Sessions detected, clients connected and hooks received |
@@ -329,7 +339,7 @@ The tests use **your own transcripts**, not mocks, because the real risk in this
 format change or an unexpected hostile case:
 
 ```bash
-npm test           # parser + merging + store + units + splitter + shortcuts
+npm test           # parser + merging + store + units + splitter + shortcuts + jobs
 npm run typecheck  # vue-tsc
 ```
 
@@ -343,6 +353,10 @@ with units read correctly in both languages, using the results tools actually re
 on a wide screen it must really be able to grow. `test:shortcuts` covers what actually
 breaks in shortcuts: the context —space must still belong to the search box while you type, and
 Ctrl, Alt and Meta must not be hijacked—.
+
+`test:jobs` exercises the `~/.claude/jobs` reader with hostile input and with your own jobs,
+and above all the rule that is not in the file: a job claiming to be "working" with no process
+behind it is stale.
 
 Where there is no history to read (a brand new machine, continuous integration) you can seed a
 synthetic `~/.claude` with the demo script:
@@ -382,8 +396,8 @@ Chromium, reports console errors and saves screenshots of the three views.
 ## State and what is missing
 
 Working: live sessions, subagents, a resizable timeline, inspector, history as a table or a
-tree with a complete player, retention warning, legend, plain mode, light and dark theme, hook
-ingest and the bilingual interface.
+tree with a complete player, background jobs, retention warning, legend, plain mode, light and
+dark theme, hook ingest and the bilingual interface.
 
 What has been done, summarised in plain text, lives in [`CHANGELOG.txt`](CHANGELOG.txt).
 

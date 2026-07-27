@@ -73,7 +73,7 @@ const feed = (message: ServerMessage) => applyServerMessage(message)
 // ---------------------------------------------------------------- reconexión
 
 console.log('reconexión del SSE')
-feed({ type: 'hello', sessions: [session(SESSION_A, 'tienda-api')], agents: [] })
+feed({ type: 'hello', sessions: [session(SESSION_A, 'tienda-api')], agents: [], jobs: [] })
 check(state.selectedSessionId === SESSION_A, 'la sesión viva queda seleccionada')
 
 const stream: TimelineEvent[] = [
@@ -86,7 +86,7 @@ const afterFirst = currentEvents.value.length
 check(afterFirst === 3, `llegan los 3 eventos (${afterFirst})`)
 
 // El servidor reenvía su buffer reciente al reconectar: no debe duplicar nada.
-feed({ type: 'hello', sessions: [session(SESSION_A, 'tienda-api')], agents: [] })
+feed({ type: 'hello', sessions: [session(SESSION_A, 'tienda-api')], agents: [], jobs: [] })
 for (const event of stream) feed({ type: 'event', event })
 const afterReconnect = currentEvents.value.length
 check(afterReconnect === 3, `tras reconectar siguen siendo 3 (${afterReconnect})`)

@@ -1,5 +1,5 @@
 import { computed, reactive, ref } from 'vue'
-import type { ActorInfo, ServerMessage, SessionInfo, TimelineEvent } from '@shared/types'
+import type { ActorInfo, JobInfo, ServerMessage, SessionInfo, TimelineEvent } from '@shared/types'
 
 /**
  * Estado del mundo en el front. Un único store reactivo alimentado por SSE; la escena de
@@ -50,6 +50,8 @@ interface State {
   /** Filtro de la timeline: id de actor ('main' o agentId) o null para todo. */
   focusActor: string | null
   selectedEvent: TimelineEvent | null
+  /** Jobs en segundo plano. Globales: no pertenecen a la sesión seleccionada. */
+  jobs: JobInfo[]
   /** Sesión que se está trayendo del histórico, para poder avisar mientras tarda. */
   loadingSession: string | null
   replay: ReplayState
@@ -65,6 +67,7 @@ export const state = reactive<State>({
   soberMode: false,
   focusActor: null,
   selectedEvent: null,
+  jobs: [],
   loadingSession: null,
   replay: {
     sessionId: null,
@@ -198,6 +201,7 @@ export function applyServerMessage(message: ServerMessage): void {
     case 'hello':
       state.sessions = message.sessions
       for (const agent of message.agents) upsertAgent(agent, agent.done !== true)
+      state.jobs = message.jobs ?? []
       ensureSelection()
       break
     case 'sessions':
@@ -211,6 +215,11 @@ export function applyServerMessage(message: ServerMessage): void {
       // El sessionId viaja dentro del actor: deducirlo de la sesión seleccionada metía los
       // subagentes en la habitación equivocada cuando había dos sesiones abiertas.
       upsertAgent(message.agent, message.state === 'spawn')
+      break
+    case 'jobs':
+      // Los jobs no son de ninguna sesión: se guardan aparte y no se limpian al cambiar de
+      // habitación.
+      state.jobs = message.jobs
       break
   }
 }
@@ -402,6 +411,37 @@ export async function loadAllSessions(): Promise<SessionInfo[]> {
   if (!response.ok) return []
   const data = (await response.json()) as { sessions: SessionInfo[] }
   return data.sessions
+}
+
+/**
+ * Abre la conversación de un job en el mundo, como si la hubieras elegido del histórico.
+ *
+ * Es lo que cierra el círculo del Campamento: ver que un job falló no sirve de mucho si no
+ * puedes mirar qué hizo. La sesión de un job casi nunca está en la lista de vivas, así que se
+ * busca en el índice del histórico.
+ */
+export async function openJobSession(job: { sessionId?: string; name: string }): Promise<boolean> {
+  if (!job.sessionId) return false
+  const known = state.sessions.find((s) => s.sessionId === job.sessionId)
+  if (!known) {
+    const all = await loadAllSessions()
+    const found = all.find((s) => s.sessionId === job.sessionId)
+    if (!found) return false
+    state.sessions = [...state.sessions, found]
+  }
+  const session = state.sessions.find((s) => s.sessionId === job.sessionId)
+  if (!session) return false
+
+  state.loadingSession = session.sessionId
+  try {
+    const count = await loadSessionEvents(session.sessionId)
+    state.selectedSessionId = session.sessionId
+    if (session.live) stopReplay()
+    else startReplay(session.sessionId, count)
+    return true
+  } finally {
+    state.loadingSession = null
+  }
 }
 
 export async function loadRaw(sessionId: string, uuid: string): Promise<unknown> {

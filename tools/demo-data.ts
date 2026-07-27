@@ -380,6 +380,133 @@ async function writeArchive(dir: string, endedAt: number): Promise<number> {
   return written
 }
 
+/**
+ * Jobs en segundo plano de la demostración: seis, uno más de los que caben en el Campamento,
+ * para retratar también el «y 1 más» del cartel. El que se declara trabajando sin proceso
+ * detrás sale como residuo, que es un caso real y frecuente.
+ */
+const DEMO_JOBS: {
+  id: string
+  state: string
+  name: string
+  intent: string
+  detail: string
+  cwd: string
+  result?: string
+}[] = [
+  {
+    id: 'a1b2c3d4',
+    state: 'working',
+    name: 'Migrar los informes a la cola nueva',
+    intent: 'Pasa los informes nocturnos a la cola nueva y deja los dos convirtiendo mientras',
+    detail: 'Reescribiendo el consumidor; 3 de 7 informes migrados',
+    cwd: '/home/demo/proyectos/tienda-api',
+  },
+  {
+    id: 'b2c3d4e5',
+    state: 'blocked',
+    name: 'Subir la versión del SDK',
+    intent: 'Sube el SDK a la v3 y arregla lo que rompa',
+    detail: 'Necesito permiso para publicar el paquete',
+    cwd: '/home/demo/proyectos/web-clientes',
+  },
+  {
+    id: 'c3d4e5f6',
+    state: 'done',
+    name: 'Rotar los certificados',
+    intent: 'Rota los certificados de los nodos y comprueba que renuevan solos',
+    detail: 'Hecho',
+    result: 'Cuatro nodos rotados, renovación automática verificada',
+    cwd: '/home/demo/infra',
+  },
+  {
+    id: 'd4e5f6a7',
+    state: 'failed',
+    name: 'Limpiar el caché de imágenes',
+    intent: 'Vacía el caché de imágenes de producción',
+    detail: 'El bucket respondió 403: falta el rol de escritura',
+    cwd: '/home/demo/infra',
+  },
+  {
+    id: 'e5f6a7b8',
+    state: 'working',
+    name: 'Repasar las notas de la semana',
+    intent: 'Ordena las notas y saca una lista de pendientes',
+    detail: 'Leyendo las notas del martes',
+    cwd: '/home/demo/notas',
+  },
+  {
+    id: 'f6a7b8c9',
+    state: 'done',
+    name: 'Presupuesto del clúster',
+    intent: 'Calcula el coste del clúster con los nodos nuevos',
+    detail: 'Hecho',
+    result: '412 €/mes con los tres nodos nuevos',
+    cwd: '/home/demo/infra',
+  },
+]
+
+/**
+ * Escribe los jobs de la demostración y un roster de daemon que los avala.
+ *
+ * Sin roster, un job que se declara «trabajando» se muestra como residuo —y con razón: eso es
+ * lo que hace el visor cuando no hay proceso detrás—. Aquí se apunta el PID de este proceso,
+ * que está vivo mientras dura la demostración, así que se ven los dos casos: los que trabajan
+ * de verdad y los que solo lo dicen.
+ */
+async function writeJobs(dir: string, now: number): Promise<number> {
+  const workers: Record<string, unknown> = {}
+  const procStart = await selfProcStart()
+  for (const job of DEMO_JOBS) {
+    if (job.state !== 'working' && job.state !== 'blocked') continue
+    workers[job.id] = {
+      pid: process.pid,
+      procStart,
+      sessionId: job.id,
+      cwd: job.cwd,
+      cliVersion: '2.1.220',
+      startedAt: now,
+    }
+  }
+  await mkdir(join(dir, 'daemon'), { recursive: true })
+  await writeFile(
+    join(dir, 'daemon', 'roster.json'),
+    JSON.stringify({ proto: 1, supervisorPid: process.pid, updatedAt: now, workers }, null, 2),
+    'utf8',
+  )
+
+  for (const [index, job] of DEMO_JOBS.entries()) {
+    const jobDir = join(dir, 'jobs', job.id)
+    await mkdir(jobDir, { recursive: true })
+    const created = new Date(now - (index + 1) * 3_600_000).toISOString()
+    const updated = new Date(now - index * 600_000).toISOString()
+    await writeFile(
+      join(jobDir, 'state.json'),
+      JSON.stringify(
+        {
+          state: job.state,
+          detail: job.detail,
+          intent: job.intent,
+          name: job.name,
+          nameSource: 'auto',
+          template: 'bg',
+          output: job.result ? { result: job.result } : null,
+          sessionId: `dec0de00-0000-4000-8000-9${index}00000000000`.slice(0, 36),
+          daemonShort: job.id,
+          cwd: job.cwd,
+          createdAt: created,
+          updatedAt: updated,
+          backend: 'daemon',
+        },
+        null,
+        2,
+      ),
+      'utf8',
+    )
+  }
+  return DEMO_JOBS.length
+}
+
 export interface DemoWorld {
   dir: string
   transcript: string
@@ -396,6 +523,8 @@ export async function writeDemoWorld(dir: string, past: DemoStep[]): Promise<Dem
 
   const archived = await writeArchive(dir, Date.now())
   console.log(`  histórico ficticio: ${archived} sesiones en ${ARCHIVE.length} proyectos`)
+  const jobCount = await writeJobs(dir, Date.now())
+  console.log(`  jobs en segundo plano: ${jobCount}`)
 
   const transcript = join(projectDir, `${SESSION_ID}.jsonl`)
   await writeFile(transcript, '', 'utf8')

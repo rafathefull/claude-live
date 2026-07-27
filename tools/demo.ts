@@ -156,6 +156,15 @@ for (const size of [
   console.log(`  captura → ${path} (${size.width}×${size.height})`)
 }
 
+// El Campamento: los jobs en segundo plano, con su fila de píldoras en el panel.
+const tents = await page.locator('.job-pill').count()
+const campDetail = await page
+  .evaluate(() => document.querySelector('.job-legend')?.textContent?.replace(/\s+/g, ' ') ?? '')
+console.log(`  campamento: ${tents} jobs · «${campDetail.slice(0, 70)}»`)
+if (tents === 0) throw new Error('el Campamento salió vacío: los jobs de la demostración no llegaron')
+await page.screenshot({ path: join(outDir, 'campamento.png') })
+console.log(`  captura → ${join(outDir, 'campamento.png')}`)
+
 // Histórico en árbol: la vista que agrupa las sesiones por proyecto.
 await page.getByRole('button', { name: /Historial|History/ }).click()
 await page.locator('.history').waitFor({ state: 'visible' })

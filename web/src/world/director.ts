@@ -5,6 +5,7 @@ import { shouldMerge } from './grouping'
 import { tr } from '../i18n'
 import { summaryOf } from '../format'
 import { inkFor } from './palette'
+import { JOB_PREFIX } from './Scene'
 
 /**
  * El reloj del mundo.
@@ -97,7 +98,12 @@ export class Director {
    */
   reset(sessionLabel: string): void {
     for (const actorId of this.scene.actorIds()) {
-      if (actorId !== USER_ID && actorId !== MAIN_ID) this.scene.removeActor(actorId)
+      if (actorId === USER_ID || actorId === MAIN_ID) continue
+      // Los jobs en segundo plano no son de esta sesión ni de ninguna: no reciben eventos de
+      // timeline, así que si se barren aquí desaparecen del Campamento y no vuelven hasta que
+      // el servidor avise de un cambio, que puede no llegar nunca.
+      if (actorId.startsWith(JOB_PREFIX)) continue
+      this.scene.removeActor(actorId)
     }
     this.queues.clear()
     this.busyUntil.clear()

@@ -52,6 +52,7 @@ async function mountWorld(): Promise<void> {
     if (info) hoverPos.value = { x, y }
   })
   unsubscribe = onEvent(feed)
+  scene.syncJobs(state.jobs)
   fitter = new ResizeObserver(() => scene?.app.queueResize())
   fitter.observe(host.value)
   primeWorld()
@@ -94,6 +95,13 @@ function primeWorld(): void {
     : events.slice(-25)
   for (const event of slice) feed(event)
 }
+
+// Los jobs se sincronizan aparte de los eventos: no vienen de la timeline de ninguna sesión.
+watch(
+  () => state.jobs,
+  (jobs) => scene?.syncJobs(jobs),
+  { deep: true, immediate: true },
+)
 
 watch(() => state.selectedSessionId, primeWorld)
 watch(() => state.replay.seekToken, primeWorld)

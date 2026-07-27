@@ -17,6 +17,7 @@ export type StationId =
   | 'skills' // Skill, slash commands
   | 'worktree' // EnterWorktree, ExitWorktree
   | 'showcase' // Artifact, AskUserQuestion, ExitPlanMode
+  | 'camp' // jobs en segundo plano: no son una herramienta, son gente trabajando fuera
   | 'desk' // el sitio del usuario y del propio agente cuando no trabaja
   | 'unknown'
 
@@ -169,9 +170,39 @@ export interface SessionInfo {
   sizeBytes?: number
 }
 
+/**
+ * Estado de un job en segundo plano. Los cuatro primeros son los que escribe Claude Code;
+ * `stale` lo deduce el visor cuando un job se declara trabajando pero no tiene proceso detrás
+ * (el daemon murió, o se reinició la máquina).
+ */
+export type JobState = 'working' | 'blocked' | 'done' | 'failed' | 'stale'
+
+/** Un trabajo lanzado en segundo plano, vivo o ya terminado. */
+export interface JobInfo {
+  id: string
+  /** Nombre corto que le pone Claude Code; si falta, el propio id. */
+  name: string
+  /** Lo que le pediste, tal cual. */
+  intent?: string
+  /** Lo último que dijo de sí mismo. */
+  detail?: string
+  state: JobState
+  /** Lo que dice el fichero, antes de contrastarlo con los procesos vivos. */
+  declaredState: JobState
+  alive: boolean
+  cwd?: string
+  sessionId?: string
+  createdAt?: string
+  updatedAt?: string
+  /** Resultado final, cuando lo hay. */
+  result?: string
+  transcriptPath?: string
+}
+
 /** Mensajes que el servidor empuja por SSE. */
 export type ServerMessage =
-  | { type: 'hello'; sessions: SessionInfo[]; agents: ActorInfo[] }
+  | { type: 'hello'; sessions: SessionInfo[]; agents: ActorInfo[]; jobs: JobInfo[] }
   | { type: 'event'; event: TimelineEvent }
   | { type: 'sessions'; sessions: SessionInfo[] }
   | { type: 'agent'; agent: ActorInfo; state: 'spawn' | 'done' }
+  | { type: 'jobs'; jobs: JobInfo[] }

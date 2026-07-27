@@ -195,6 +195,17 @@ export const STATIONS: StationMeta[] = [
     },
   },
   {
+    id: 'camp',
+    label: { es: 'Campamento', en: 'Camp' },
+    icon: '🏕️',
+    x: 0.09,
+    y: 0.79,
+    help: {
+      es: 'Los jobs en segundo plano: trabajo que encargaste con /bg y sigue por su cuenta, fuera de esta conversación. Cada tienda es un job, con su estado (trabajando, bloqueado, hecho, fallido) y lo último que dijo de sí mismo. Están aquí aunque cambies de sesión, porque no pertenecen a ninguna.',
+      en: 'Background jobs: work you launched with /bg that carries on by itself, outside this conversation. Each tent is one job, with its state (working, blocked, done, failed) and the last thing it said about itself. They stay here even if you switch sessions, because they belong to none.',
+    },
+  },
+  {
     id: 'desk',
     label: { es: 'Mesa', en: 'The table' },
     icon: '🪑',

@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue'
-import { currentAgents, currentEvents, state } from '../store'
+import { currentAgents, currentEvents, openJobSession, state } from '../store'
 import { agentColorCss, formatDuration, formatTime, iconFor, shortTool, summaryOf } from '../format'
 import type { TimelineEvent } from '@shared/types'
 import { tr } from '../i18n'
+import { JOB_EMOJI, JOB_STATE_TEXT } from '../world/Scene'
+import type { JobInfo } from '@shared/types'
 
 const L = {
   title: { es: 'Timeline', en: 'Timeline' },
@@ -16,6 +18,18 @@ const L = {
   },
   all: { es: 'todo', en: 'all' },
   agent: { es: 'agente', en: 'agent' },
+  camp: { es: 'Campamento', en: 'Camp' },
+  campHint: {
+    es: 'Jobs en segundo plano, de cualquier proyecto. Pulsa uno para ver su conversación.',
+    en: 'Background jobs, from any project. Click one to see its conversation.',
+  },
+}
+
+/** Lo que se lee al pasar el ratón por una píldora de job: estado, proyecto y último parte. */
+function jobTitle(job: JobInfo): string {
+  const project = job.cwd ? job.cwd.split('/').filter(Boolean).pop() : ''
+  const said = job.result ?? job.detail ?? job.intent ?? ''
+  return `${tr(JOB_STATE_TEXT[job.state])}${project ? ` · ${project}` : ''}\n${said}`.trim()
 }
 
 const list = ref<HTMLElement | null>(null)
@@ -116,6 +130,21 @@ function agentLabel(agentId: string | null): string {
           {{ tr(L.empty) }}
         </span>
       </div>
+    </div>
+
+    <!-- Los jobs no son de esta sesión: van en su propia fila, y solo si hay alguno. -->
+    <div v-if="state.jobs.length > 0" class="job-legend" :title="tr(L.campHint)">
+      <span class="job-head">🏕️ {{ tr(L.camp) }}</span>
+      <span
+        v-for="job in state.jobs"
+        :key="job.id"
+        class="job-pill"
+        :class="job.state"
+        :title="jobTitle(job)"
+        @click="openJobSession(job)"
+      >
+        {{ JOB_EMOJI[job.state] }} {{ job.name }}
+      </span>
     </div>
 
     <div class="agent-legend">

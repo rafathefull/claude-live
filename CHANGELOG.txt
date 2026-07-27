@@ -15,6 +15,10 @@
  2026-07-27
 --------------------------------------------------------------------------------
 
+  + Los jobs en segundo plano ya se ven: el Campamento, en la esquina de
+    abajo. Una tienda por job con su estado, la fila de nombres en el panel
+    y un clic para abrir su conversacion. Un job que se dice trabajando sin
+    proceso detras sale como residuo.                                  [pend.]
   + Atajos de teclado en el reproductor: espacio (o K) reproduce y pausa,
     flechas avanzan un evento, con mayusculas diez, Inicio y Fin van a los
     extremos y arriba/abajo cambian la velocidad.                      [d6890fe]
@@ -96,6 +100,10 @@
  2026-07-27
 --------------------------------------------------------------------------------
 
+  + Background jobs are visible at last: the Camp, in the bottom corner. One
+    tent per job with its state, a row of names in the panel and one click to
+    open its conversation. A job claiming to work with no process behind it
+    shows up as stale.                                                 [pend.]
   + Keyboard shortcuts in the player: space (or K) plays and pauses, arrows
     move one event, with shift ten, Home and End jump to the ends and
     up/down change the speed.                                          [d6890fe]

@@ -12,7 +12,7 @@ import { STATIONS, colorForAgent, toolsForStation, type StationMeta } from '@sha
 import type { Text as Localized } from '@shared/i18n'
 import { inkFor, palette } from './palette'
 import { tr } from '../i18n'
-import type { StationId } from '@shared/types'
+import type { JobInfo, JobState, StationId } from '@shared/types'
 import { Actor, MOOD_EMOJI, MOOD_RING } from './Actor'
 
 /** Lo que se muestra al pasar el ratón por un elemento del escenario. */
@@ -182,6 +182,70 @@ interface StationView {
 }
 
 /** A partir de estos usos, el Trastero deja de parecer inofensivo. */
+/* ------------------------------------------------------------------- jobs */
+
+/** Prefijo de los actores de job: el director los distingue por él para no barrerlos. */
+export const JOB_PREFIX = 'job:'
+export const jobActorId = (id: string): string => `${JOB_PREFIX}${id}`
+
+/** Cuántas tiendas caben en el Campamento sin tapar el resto del escenario. */
+const MAX_JOB_AVATARS = 5
+
+/**
+ * Un color por estado, con los mismos tonos que el resto del mundo: verde en marcha, ámbar
+ * bloqueado, rojo fallido. `stale` es el que se dice trabajando sin proceso detrás: gris, que
+ * es lo honesto.
+ */
+export const JOB_COLOR: Record<JobState, number> = {
+  working: 0x4ade80,
+  blocked: 0xfbbf24,
+  done: 0x7dd3fc,
+  failed: 0xfb7185,
+  stale: 0x6b7688,
+}
+
+export const JOB_EMOJI: Record<JobState, string> = {
+  working: '⛺',
+  blocked: '⛺',
+  done: '✅',
+  failed: '❌',
+  stale: '💤',
+}
+
+export const JOB_STATE_TEXT: Record<JobState, Localized> = {
+  working: { es: 'trabajando', en: 'working' },
+  blocked: { es: 'bloqueado, te espera', en: 'blocked, waiting on you' },
+  done: { es: 'terminado', en: 'done' },
+  failed: { es: 'falló', en: 'failed' },
+  stale: { es: 'sin proceso detrás', en: 'no process behind it' },
+}
+
+/**
+ * Huecos del Campamento: una fila pegada al borde de abajo, delante del cartel.
+ *
+ * En dos filas con nombre debajo no caben: las etiquetas se pisaban entre ellas y se salían
+ * por la izquierda. Aquí las tiendas solo muestran su estado, y el nombre está en su ayuda al
+ * pasar el ratón y en las píldoras del panel, que es donde se puede leer.
+ */
+function jobFraction(index: number): { x: number; y: number } {
+  return { x: 0.042 + index * 0.045, y: 0.905 }
+}
+
+/** Tercera línea del tooltip de un job: estado, proyecto y cuándo se supo de él. */
+function jobTooltip(job: JobInfo): string {
+  const when = job.updatedAt ? new Date(job.updatedAt).toLocaleString() : '—'
+  const project = job.cwd ? job.cwd.split('/').filter(Boolean).pop() : undefined
+  const state = tr(JOB_STATE_TEXT[job.state])
+  const declared =
+    job.state === 'stale'
+      ? tr({ es: ` (el fichero dice «${job.declaredState}»)`, en: ` (the file says "${job.declaredState}")` })
+      : ''
+  return tr({
+    es: `estado: ${state}${declared}${project ? ` · ${project}` : ''} · ${when}`,
+    en: `state: ${state}${declared}${project ? ` · ${project}` : ''} · ${when}`,
+  })
+}
+
 const BEAST_THRESHOLD = 4
 
 /** Misma tinta, más tenue: para los trazos secundarios de los emblemas. */
@@ -846,10 +910,12 @@ export class Scene {
       icon: opts.emoji,
       title: actor.tooltipTitle,
       body: actor.tooltipBody || 'Sin tarea asignada.',
-      extra: tr({
-        es: `estado: ${MOOD_EMOJI[actor.mood]} ${MOOD_TEXT[actor.mood].es}`,
-        en: `state: ${MOOD_EMOJI[actor.mood]} ${MOOD_TEXT[actor.mood].en}`,
-      }).trim(),
+      extra:
+        actor.tooltipExtra ||
+        tr({
+          es: `estado: ${MOOD_EMOJI[actor.mood]} ${MOOD_TEXT[actor.mood].es}`,
+          en: `state: ${MOOD_EMOJI[actor.mood]} ${MOOD_TEXT[actor.mood].en}`,
+        }).trim(),
       color: `#${opts.color.toString(16).padStart(6, '0')}`,
     }))
     this.actors.set(opts.id, actor)
@@ -864,6 +930,60 @@ export class Scene {
   /** Todos los actores que hay en el escenario ahora mismo. */
   actorIds(): string[] {
     return [...this.actors.keys()]
+  }
+
+  /**
+   * Jobs en segundo plano, en el Campamento. No son actores de la sesión: viven mientras el
+   * job exista en disco y sobreviven a un cambio de habitación, porque no pertenecen a
+   * ninguna sesión. Por eso los ids llevan el prefijo `job:` y el director los respeta.
+   */
+  syncJobs(jobs: JobInfo[]): void {
+    // Solo caben unos cuantos sin convertir la esquina en un muro; el resto se cuenta en el
+    // cartel. Vienen ordenados por el servidor, así que los visibles son los que importan.
+    const visible = jobs.slice(0, MAX_JOB_AVATARS)
+    const wanted = new Set(visible.map((job) => jobActorId(job.id)))
+    for (const id of this.actorIds()) {
+      if (id.startsWith(JOB_PREFIX) && !wanted.has(id)) this.removeActor(id)
+    }
+
+    for (const [index, job] of visible.entries()) {
+      const color = inkFor(JOB_COLOR[job.state])
+      const said = job.result ?? job.detail ?? job.intent ?? ''
+      const actor = this.ensureActor({
+        id: jobActorId(job.id),
+        emoji: JOB_EMOJI[job.state],
+        color,
+        label: '',
+        radius: 15,
+        at: 'camp',
+      })
+      // Los huecos son propios y en fracciones del lienzo: los de estación caen debajo de la
+      // placa y aquí abajo no hay sitio, y en fracciones se recolocan solos al redimensionar.
+      const spot = jobFraction(index)
+      actor.homeStation = undefined
+      actor.homeFraction = spot
+      actor.place(spot.x * this.width, spot.y * this.height)
+      // La insignia repite el estado en icono, para no depender solo del color del anillo.
+      actor.setMood(
+        job.state === 'working' ? 'working' : job.state === 'blocked' ? 'waiting' : 'idle',
+      )
+      actor.tooltipTitle = job.name
+      actor.tooltipBody = said || tr({ es: 'Sin detalle.', en: 'No detail.' })
+      actor.tooltipExtra = jobTooltip(job)
+    }
+
+    const station = this.stations.get('camp')
+    if (station) {
+      station.counter.text = jobs.length > 0 ? `×${jobs.length}` : ''
+      const hidden = jobs.length - visible.length
+      const working = jobs.filter((job) => job.state === 'working').length
+      station.detail.text =
+        hidden > 0
+          ? tr({ es: `y ${hidden} más`, en: `and ${hidden} more` })
+          : working > 0
+            ? tr({ es: `${working} en marcha`, en: `${working} running` })
+            : ''
+    }
   }
 
   removeActor(id: string): void {
@@ -951,7 +1071,7 @@ export class Scene {
       }
     }
 
-    for (const station of this.stations.values()) {
+    for (const [id, station] of this.stations) {
       const remaining = station.flashUntil - now
       const intensity = remaining > 0 ? remaining / 900 : 0
       station.glow.clear()
@@ -960,7 +1080,9 @@ export class Scene {
           .roundRect(-PLATE_W / 2 - 7, -PLATE_H / 2 - 7, PLATE_W + 14, PLATE_H + 14, 14)
           .fill({ color: glowColor, alpha: 0.06 + intensity * 0.16 })
       }
-      if (remaining < -6000 && station.detail.text) station.detail.text = ''
+      // El detalle de una estación es lo último que se hizo allí y caduca; el del Campamento
+      // no es un log, es cuántos jobs hay ahora mismo, así que no se borra.
+      if (id !== 'camp' && remaining < -6000 && station.detail.text) station.detail.text = ''
     }
 
     const hadLinks = this.links.length > 0

@@ -4,9 +4,10 @@ import Fastify from 'fastify'
 import { HOST, PORT, WEB_DIST } from './config.js'
 import { listHistory, readRawEvent, readSessionEvents } from './history.js'
 import { normalizeHook, type HookPayload } from './hooks.js'
+import { JobsWatcher, readJobs } from './jobs.js'
 import { retentionInfo } from './retention.js'
 import { LiveRegistry } from './sessions.js'
-import type { ActorInfo, ServerMessage, TimelineEvent } from '../../shared/types.js'
+import type { ActorInfo, JobInfo, ServerMessage, TimelineEvent } from '../../shared/types.js'
 
 const app = Fastify({ logger: false, bodyLimit: 4 * 1024 * 1024 })
 const registry = new LiveRegistry()
@@ -32,6 +33,17 @@ registry.on('event-batch', (events: TimelineEvent[]) => {
   for (const event of events) broadcast({ type: 'event', event })
 })
 registry.on('sessions', () => broadcast({ type: 'sessions', sessions: registry.listSessions() }))
+
+/**
+ * Jobs en segundo plano. Se guarda la última lectura para poder incluirlos en el saludo: al
+ * reconectar, el mundo tiene que volver a poblarse con los que ya había.
+ */
+let jobs: JobInfo[] = []
+const jobsWatcher = new JobsWatcher()
+jobsWatcher.on('change', (next: JobInfo[]) => {
+  jobs = next
+  broadcast({ type: 'jobs', jobs })
+})
 registry.on('agent', ({ agent, state }: { agent: ActorInfo; state: 'spawn' | 'done' }) =>
   broadcast({ type: 'agent', agent, state }),
 )
@@ -52,6 +64,7 @@ app.get('/api/stream', (request, reply) => {
     type: 'hello',
     sessions: registry.listSessions(),
     agents: registry.listAgents(),
+    jobs,
   }
   client.write(`data: ${JSON.stringify(hello)}\n\n`)
   for (const event of registry.recentEvents()) {
@@ -87,6 +100,9 @@ app.get('/api/sessions', async (request) => {
  * conviene que quien mire el historial sepa que lo que ve no es todo lo que hizo.
  */
 app.get('/api/retention', async () => retentionInfo())
+
+/** Jobs en segundo plano, vivos y terminados. Se lee en el momento: son cinco ficheros. */
+app.get('/api/jobs', async () => ({ jobs: await readJobs() }))
 
 app.get('/api/sessions/:id/events', async (request) => {
   const { id } = request.params as { id: string }
@@ -148,6 +164,7 @@ if (existsSync(distDir)) {
 }
 
 await registry.start()
+jobsWatcher.start()
 await app.listen({ host: HOST, port: PORT })
 console.log(`[claude-live] escuchando en http://${HOST}:${PORT}`)
 if (!existsSync(distDir)) {

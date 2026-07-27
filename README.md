@@ -30,6 +30,15 @@ ficheros que Claude Code escribe en `~/.claude`.*
 - **Subagentes**: nacen junto a quien los lanza, con su tipo (`Explore`, `Plan`,
   `general-purpose`, los tuyos) y la descripción con la que se lanzaron. Se anidan por
   profundidad y entregan su informe al terminar.
+- **Jobs en segundo plano**: el Campamento, en la esquina de abajo. Cada tienda es un job que
+  lanzaste con `/bg` y sigue por su cuenta, con su estado —verde trabajando, ámbar bloqueado
+  esperándote, ✅ hecho, ❌ fallido— y lo último que dijo de sí mismo. Un job que se declara
+  trabajando pero no tiene proceso detrás sale como 💤 residuo, porque decir que trabaja sería
+  mentir. Están ahí aunque cambies de sesión: no pertenecen a ninguna. En el panel, la fila
+  `🏕️ Campamento` lista sus nombres, y pulsando uno se abre su conversación.
+
+  ![El Campamento con los jobs en segundo plano](docs/campamento.png)
+
 - **Cada herramienta en su lugar**: leer/buscar, editar/escribir, shell, MCP, web, tareas,
   skills, worktrees y lo que vuelve hacia ti (preguntas, planes, artifacts).
 - **Timeline sincronizada**: filtrable por actor, con duraciones, errores y un inspector que
@@ -312,6 +321,7 @@ lo hace el parser, así que afecta tanto al stream como a la timeline paginada; 
 | `GET /api/sessions?active=1` | Sesiones vivas; sin `active`, también el historial |
 | `GET /api/sessions/:id/events?from=&limit=&agents=0` | Timeline paginada. Los subagentes vienen intercalados salvo que se pase `agents=0`; `limit` es 500 por defecto y está topado a 2000 por petición, y el reproductor encadena tramos con `from` |
 | `GET /api/retention` | Cuántas sesiones sobreviven a la limpieza de Claude Code y cuántas se han perdido |
+| `GET /api/jobs` | Jobs en segundo plano, vivos y terminados, con su estado contrastado contra los procesos que hay de verdad |
 | `GET /api/sessions/:id/raw/:uuid` | Línea cruda de un evento, sin recortar (solo para eventos del transcript: los que nacen de un hook no están en ningún fichero) |
 | `POST /hook` | Ingesta de los hooks de Claude Code |
 | `GET /api/health` | Sesiones detectadas y clientes conectados |
@@ -322,7 +332,7 @@ Las pruebas usan **tus propios transcripts**, no mocks, porque el riesgo real de
 proyecto es que el formato cambie o que aparezca un caso hostil:
 
 ```bash
-npm test           # parser + agrupación + store + unidades + divisor + atajos
+npm test           # parser + agrupación + store + unidades + divisor + atajos + jobs
 npm run typecheck  # vue-tsc
 ```
 
@@ -337,6 +347,10 @@ leen bien en los dos idiomas, con los resultados tal como los devuelven las herr
 escenario y que en una pantalla ancha se pueda ampliar de verdad. `test:shortcuts` cubre lo que
 de verdad se rompe en los atajos: el contexto —que el espacio siga siendo del buscador cuando
 estás escribiendo, y que Ctrl, Alt y Meta no se pisen—.
+
+`test:jobs` prueba el lector de `~/.claude/jobs` con formato hostil y con tus propios jobs, y
+sobre todo la regla que no está en el fichero: un job que se dice «trabajando» sin proceso
+detrás es un residuo.
 
 Donde no hay historia que leer (una máquina recién estrenada, la integración continua) se puede
 sembrar un `~/.claude` sintético con el guion de la demostración:
@@ -375,8 +389,8 @@ ventana, informa de los errores de consola y guarda las capturas de las tres vis
 ## Estado y qué falta
 
 Funcionando: sesiones vivas, subagentes, timeline (de ancho ajustable), inspector, historial en
-tabla o en árbol con reproductor completo, aviso de retención, leyenda, modo sobrio, tema claro
-y oscuro, ingesta de hooks e interfaz bilingüe.
+tabla o en árbol con reproductor completo, jobs en segundo plano, aviso de retención, leyenda,
+modo sobrio, tema claro y oscuro, ingesta de hooks e interfaz bilingüe.
 
 Lo que se va haciendo, resumido y en texto plano, está en [`CHANGELOG.txt`](CHANGELOG.txt).
 
@@ -388,7 +402,6 @@ conservar más, añade `"cleanupPeriodDays": 365` a `~/.claude/settings.json`.
 
 Pendiente:
 
-- Avatares para los jobs en segundo plano de `~/.claude/jobs`.
 - Panel de métricas agregadas por proyecto y día.
 - No se muestra coste en dinero, solo tokens y porcentaje de contexto: habría que fijar las
   tarifas de cada modelo a mano.

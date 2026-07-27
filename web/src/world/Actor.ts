@@ -62,6 +62,8 @@ export class Actor {
   /** Qué mostrar al pasar el ratón por encima. */
   tooltipTitle = ''
   tooltipBody = ''
+  /** Tercera línea, cuando el actor tiene algo mejor que decir que su ánimo (los jobs). */
+  tooltipExtra = ''
   /**
    * Dónde «vive» el actor, en términos del escenario y no en píxeles: la estación y el hueco
    * que ocupa, o una fracción del ancho y el alto para los que no van a ninguna estación.
