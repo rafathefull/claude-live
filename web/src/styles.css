@@ -66,11 +66,56 @@ button.active {
   height: 100%;
 }
 
+/* Tres columnas: mundo, divisor arrastrable y timeline. El ancho de la timeline sale de
+   --timeline-w cuando lo has ajustado con el ratón; si no, manda el valor por omisión de
+   cada breakpoint. */
 .body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 420px;
+  grid-template-columns: minmax(0, 1fr) 7px var(--timeline-w, 420px);
   flex: 1;
   min-height: 0;
+}
+
+.splitter {
+  position: relative;
+  cursor: col-resize;
+  background: var(--border);
+  touch-action: none;
+}
+
+.splitter:hover,
+.app.dragging .splitter {
+  background: var(--accent);
+}
+
+/* Zona sensible más ancha que la línea: 7 px de agarre real son pocos para el ratón. */
+.splitter::before {
+  content: '';
+  position: absolute;
+  inset: 0 -4px;
+}
+
+/* Tres muescas en el centro, para que se vea que eso se puede coger. */
+.splitter::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 26px;
+  transform: translate(-50%, -50%);
+  border-radius: 2px;
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--text-faint) 0 3px,
+    transparent 3px 6px
+  );
+}
+
+/* Durante el arrastre no debe seleccionarse texto de la timeline ni cambiar el cursor. */
+.app.dragging {
+  user-select: none;
+  cursor: col-resize;
 }
 
 .history {
@@ -565,7 +610,7 @@ button.active {
    debajo del escenario, que si no se queda sin sitio para el mundo. */
 @media (max-width: 1280px) {
   .body {
-    grid-template-columns: minmax(0, 1fr) 340px;
+    grid-template-columns: minmax(0, 1fr) 7px var(--timeline-w, 340px);
   }
 
   .replay-title {
@@ -580,9 +625,14 @@ button.active {
 }
 
 @media (max-width: 960px) {
+  /* Apilado: aquí el divisor vertical no tiene sentido y el ancho guardado se ignora. */
   .body {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(220px, 1fr) minmax(160px, 40%);
+  }
+
+  .splitter {
+    display: none;
   }
 
   .stage {
@@ -794,6 +844,23 @@ button.active {
 
 .retention-notice button {
   margin-top: 8px;
+}
+
+/* Versión discreta del aviso: se queda para siempre, ocupa una línea. */
+.retention-line {
+  margin: 0 0 8px;
+  color: var(--text-faint);
+  font-size: 12px;
+}
+
+.retention-line button.linkish {
+  padding: 0 2px;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .history {

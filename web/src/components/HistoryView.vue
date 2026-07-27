@@ -36,6 +36,7 @@ const L = {
     en: 'To keep more, add "cleanupPeriodDays" to ~/.claude/settings.json (365, for instance) and restart Claude Code. What is already deleted cannot be recovered.',
   },
   dismiss: { es: 'Entendido', en: 'Got it' },
+  why: { es: '¿por qué?', en: 'why?' },
 }
 
 const emit = defineEmits<{ (e: 'open'): void }>()
@@ -45,6 +46,8 @@ const query = ref('')
 const loading = ref(true)
 const retention = ref<Retention | null>(null)
 const noticeHidden = ref(localStorage.getItem('claude-live:retention-seen') === '1')
+/** Vuelve a desplegar el aviso desde la línea discreta, solo para esta visita. */
+const noticeReopened = ref(false)
 
 onMounted(async () => {
   sessions.value = await loadAllSessions()
@@ -53,14 +56,29 @@ onMounted(async () => {
 })
 
 /** El aviso solo tiene sentido si de verdad falta historia. */
+const hasGap = computed(() => (retention.value?.missing ?? 0) > 0)
 const showNotice = computed(
-  () => !noticeHidden.value && (retention.value?.missing ?? 0) > 0,
+  () => hasGap.value && (!noticeHidden.value || noticeReopened.value),
 )
 
 function dismissNotice(): void {
   noticeHidden.value = true
+  noticeReopened.value = false
   localStorage.setItem('claude-live:retention-seen', '1')
 }
+
+/**
+ * Resumen permanente para cuando el aviso ya se ha descartado: el dato no debería
+ * desaparecer del todo, o dentro de un mes vuelves a preguntarte dónde está tu histórico.
+ */
+const retentionLine = computed(() => {
+  const info = retention.value
+  if (!info) return ''
+  return tr({
+    es: `${info.onDisk} de ${info.known} sesiones · retención de ${info.cleanupPeriodDays} días`,
+    en: `${info.onDisk} of ${info.known} sessions · ${info.cleanupPeriodDays}-day retention`,
+  })
+})
 
 /** El aviso con los números reales de esta máquina. */
 const noticeText = computed(() => {
@@ -118,6 +136,11 @@ async function open(session: SessionInfo): Promise<void> {
       <p class="muted">{{ tr(L.howTo) }}</p>
       <button @click="dismissNotice">{{ tr(L.dismiss) }}</button>
     </aside>
+
+    <p v-if="hasGap && !showNotice" class="retention-line" :title="tr(L.howTo)">
+      ⚠ {{ retentionLine }}
+      <button class="linkish" @click="noticeReopened = true">{{ tr(L.why) }}</button>
+    </p>
 
     <input v-model="query" class="search" :placeholder="tr(L.search)" />
     <p v-if="loading" class="muted">{{ tr(L.indexing) }}</p>

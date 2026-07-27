@@ -21,6 +21,8 @@ const hoverPos = ref({ x: 0, y: 0 })
 let scene: Scene | null = null
 let director: Director | null = null
 let unsubscribe: (() => void) | null = null
+/** Pixi solo escucha el `resize` de la ventana; el divisor cambia el hueco sin tocarla. */
+let fitter: ResizeObserver | null = null
 
 function labelFor(): string {
   const session = selectedSession.value
@@ -48,12 +50,16 @@ async function mountWorld(): Promise<void> {
     if (info) hoverPos.value = { x, y }
   })
   unsubscribe = onEvent(feed)
+  fitter = new ResizeObserver(() => scene?.app.queueResize())
+  fitter.observe(host.value)
   primeWorld()
 }
 
 function unmountWorld(): void {
   unsubscribe?.()
   unsubscribe = null
+  fitter?.disconnect()
+  fitter = null
   scene?.destroy()
   scene = null
   director = null
