@@ -1578,15 +1578,19 @@ td.bad {
   gap: 3px;
 }
 
+/* La columna del nombre se ajusta al más largo de la lista, no a un ancho fijo: los ids de
+   modelo («claude-haiku-4-5-20251001») y las herramientas MCP no caben en doce caracteres. */
 .ranking li {
   display: grid;
-  grid-template-columns: minmax(0, 12ch) 1fr auto;
+  grid-template-columns: minmax(0, max-content) minmax(50px, 1fr) auto;
   align-items: center;
   gap: 7px;
   font-size: 12px;
 }
 
 .rank-key {
+  /* Tope de seguridad para un nombre desmedido; el recorte sigue estando por si acaso. */
+  max-width: 28ch;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
