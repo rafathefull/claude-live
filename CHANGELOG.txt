@@ -19,7 +19,7 @@
     abajo. Su cartel cuenta cuantos hay y al pulsarlo despliega un banner con
     todos: estado, proyecto, ultimo parte y un clic para abrir su
     conversacion. Un job que se dice trabajando sin proceso detras sale como
-    residuo.                                                 [e696f79] [pend.]
+    residuo.                                                 [e696f79] [f1d87fd]
   + Atajos de teclado en el reproductor: espacio (o K) reproduce y pausa,
     flechas avanzan un evento, con mayusculas diez, Inicio y Fin van a los
     extremos y arriba/abajo cambian la velocidad.                      [d6890fe]
@@ -105,7 +105,7 @@
     sign counts them and clicking it unfolds a banner with all of them: state,
     project, last report and one click to open its conversation. A job
     claiming to work with no process behind it shows up as stale.
-                                                             [e696f79] [pend.]
+                                                             [e696f79] [f1d87fd]
   + Keyboard shortcuts in the player: space (or K) plays and pauses, arrows
     move one event, with shift ten, Home and End jump to the ends and
     up/down change the speed.                                          [d6890fe]
