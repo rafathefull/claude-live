@@ -17,14 +17,14 @@
 
   + Atajos de teclado en el reproductor: espacio (o K) reproduce y pausa,
     flechas avanzan un evento, con mayusculas diez, Inicio y Fin van a los
-    extremos y arriba/abajo cambian la velocidad.                      [pend.]
+    extremos y arriba/abajo cambian la velocidad.                      [d6890fe]
   * Integracion continua en GitHub Actions: tipos, pruebas contra un
-    ~/.claude sembrado y el mundo montado en un Chromium de verdad.    [pend.]
-  * @fastify/static al dia (4 avisos de path traversal cerrados).      [pend.]
+    ~/.claude sembrado y el mundo montado en un Chromium de verdad.    [d6890fe]
+  * @fastify/static al dia (4 avisos de path traversal cerrados).      [d6890fe]
   ! El indice del historial podia apuntar a un transcript ya borrado y la
     peticion moria con ENOENT; ademas la cache se compartia entre mundos
-    distintos.                                                        [pend.]
-  ! "npm run demo -- --keep" no devolvia el terminal.                 [pend.]
+    distintos.                                                        [d6890fe]
+  ! "npm run demo -- --keep" no devolvia el terminal.                 [d6890fe]
   + Tema claro ademas del oscuro, con un boton unico al lado de los idiomas.
     Cambia tambien el escenario: la escena tiene su propia paleta, porque el
     canvas no hereda las variables CSS.                                [b9bcd06]
@@ -98,14 +98,14 @@
 
   + Keyboard shortcuts in the player: space (or K) plays and pauses, arrows
     move one event, with shift ten, Home and End jump to the ends and
-    up/down change the speed.                                          [pend.]
+    up/down change the speed.                                          [d6890fe]
   * Continuous integration on GitHub Actions: types, tests against a seeded
-    ~/.claude, and the world mounted in a real Chromium.               [pend.]
-  * @fastify/static up to date (4 path traversal advisories closed).   [pend.]
+    ~/.claude, and the world mounted in a real Chromium.               [d6890fe]
+  * @fastify/static up to date (4 path traversal advisories closed).   [d6890fe]
   ! The history index could point at an already deleted transcript and the
     request died with ENOENT; the cache was also shared between different
-    worlds.                                                            [pend.]
-  ! "npm run demo -- --keep" did not give the terminal back.           [pend.]
+    worlds.                                                            [d6890fe]
+  ! "npm run demo -- --keep" did not give the terminal back.           [d6890fe]
   + Light theme next to the dark one, with a single button beside the
     languages. The stage changes too: the scene has its own palette,
     because a canvas does not inherit CSS variables.                   [b9bcd06]
