@@ -697,7 +697,7 @@ button.active {
   border-top: 1px solid var(--border);
 }
 
-.agent-legend {.agent-legend {
+.agent-legend {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
@@ -747,6 +747,8 @@ button.active {
   position: absolute;
   right: 12px;
   bottom: 12px;
+  /* Por encima del banner del Campamento: si abres un evento, es lo que quieres leer. */
+  z-index: 14;
   width: min(560px, 60%);
   max-height: 60%;
   background: var(--float);
