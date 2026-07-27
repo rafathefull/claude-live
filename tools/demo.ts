@@ -169,6 +169,17 @@ console.log(`  captura → ${join(outDir, 'campamento.png')}`)
 await page.locator('.jobs-banner header button').click()
 await page.waitForTimeout(300)
 
+// El vecindario: todas las sesiones vivas a la vez, cada una con su plano.
+await page.getByRole('button', { name: /Vecindario|Neighbourhood/ }).click()
+await page.locator('.hood').waitFor({ state: 'visible' })
+await page.waitForTimeout(700)
+const hoodCards = await page.locator('.hood-card').count()
+const hoodLit = await page.locator('.hood-card .plan-cell.used').count()
+console.log(`  vecindario: ${hoodCards} tarjetas · ${hoodLit} estaciones encendidas`)
+if (hoodCards === 0) throw new Error('el vecindario salió vacío: no se detectó ninguna sesión viva')
+await page.screenshot({ path: join(outDir, 'vecindario.png') })
+console.log(`  captura → ${join(outDir, 'vecindario.png')}`)
+
 // Histórico en árbol: la vista que agrupa las sesiones por proyecto.
 await page.getByRole('button', { name: /Historial|History/ }).click()
 await page.locator('.history').waitFor({ state: 'visible' })

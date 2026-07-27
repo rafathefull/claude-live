@@ -23,8 +23,15 @@ comes from the files Claude Code writes under `~/.claude`.*
 
 - **Live sessions**, with their directory, git branch, model, permission mode, accumulated
   tokens, percentage of context used, and whether Claude is working or waiting for you.
-  With several sessions open, each one is a room and you switch between them from the header
-  (they cannot be seen side by side yet).
+  Each one is a room and you switch between them from the header.
+- **Neighbourhood**: every live session at once, each with a plan of its stations —they light up
+  when used and carry their count—, what it is doing, its subagents and its context. The station
+  is highlighted only while the session is actually working; if it is waiting for you, it is put
+  in the past ("last thing"), because waiting is not being anywhere. Click a card and you enter that room. They are deliberately not
+  miniature worlds: one canvas per card would be several WebGL renderers at once, and the big
+  scene is demanding enough. A background session also shows its job's last report.
+
+  ![Neighbourhood](docs/vecindario.png)
 - **The reasoning**: thinking blocks show up in the avatar's speech bubble.
 - **Subagents**: born next to whoever launched them, with their type (`Explore`, `Plan`,
   `general-purpose`, your own) and the description they were launched with. They nest by depth
@@ -340,7 +347,7 @@ The tests use **your own transcripts**, not mocks, because the real risk in this
 format change or an unexpected hostile case:
 
 ```bash
-npm test           # parser + merging + store + units + splitter + shortcuts + jobs
+npm test           # parser + merging + store + units + splitter + shortcuts + jobs + hood
 npm run typecheck  # vue-tsc
 ```
 
@@ -355,6 +362,9 @@ on a wide screen it must really be able to grow. `test:shortcuts` covers what ac
 breaks in shortcuts: the context —space must still belong to the search box while you type, and
 Ctrl, Alt and Meta must not be hijacked—.
 
+`test:hood` covers the summary behind the neighbourhood, where the easy mistakes are counting
+results as well as calls (every visit would show twice) and taking the plain last event as "what
+it is doing", which may be a mode change.
 `test:jobs` exercises the `~/.claude/jobs` reader with hostile input and with your own jobs,
 and above all the rule that is not in the file: a job claiming to be "working" with no process
 behind it is stale.
@@ -397,7 +407,7 @@ Chromium, reports console errors and saves screenshots of the three views.
 ## State and what is missing
 
 Working: live sessions, subagents, a resizable timeline, inspector, history as a table or a
-tree with a complete player, background jobs, retention warning, legend, plain mode, light and
+tree with a complete player, a multi-session neighbourhood, background jobs, retention warning, legend, plain mode, light and
 dark theme, hook ingest and the bilingual interface.
 
 What has been done, summarised in plain text, lives in [`CHANGELOG.txt`](CHANGELOG.txt).
@@ -410,7 +420,6 @@ add `"cleanupPeriodDays": 365` to `~/.claude/settings.json`.
 
 Pending:
 
-- Avatars for the background jobs under `~/.claude/jobs`.
 - An aggregate metrics panel per project and per day.
 - No cost in money is shown, only tokens and context percentage: that would mean pinning each
   model's pricing by hand.

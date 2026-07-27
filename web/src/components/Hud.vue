@@ -9,6 +9,11 @@ import { theme, toggleTheme } from '../theme'
 const L = {
   live: { es: 'En vivo', en: 'Live' },
   history: { es: 'Historial', en: 'History' },
+  hood: { es: 'Vecindario', en: 'Neighbourhood' },
+  hoodTitle: {
+    es: 'Todas las sesiones vivas a la vez, con el plano de cada una',
+    en: 'Every live session at once, each with its own plan',
+  },
   noSession: { es: 'ninguna sesión de Claude abierta', en: 'no Claude session open' },
   branch: { es: 'rama', en: 'branch' },
   model: { es: 'modelo', en: 'model' },
@@ -41,9 +46,9 @@ const L = {
   toEnglish: { es: 'Cambiar la interfaz a inglés', en: 'Interface in English' },
 }
 
-const props = defineProps<{ view: 'live' | 'history' }>()
+const props = defineProps<{ view: 'live' | 'history' | 'hood' }>()
 const emit = defineEmits<{
-  (e: 'view', value: 'live' | 'history'): void
+  (e: 'view', value: 'live' | 'history' | 'hood'): void
   (e: 'legend'): void
 }>()
 
@@ -79,6 +84,13 @@ const statusLabel = computed(() => {
       </button>
       <button :class="{ active: props.view === 'history' }" @click="emit('view', 'history')">
         {{ tr(L.history) }}
+      </button>
+      <button
+        :class="{ active: props.view === 'hood' }"
+        :title="tr(L.hoodTitle)"
+        @click="emit('view', 'hood')"
+      >
+        {{ tr(L.hood) }}
       </button>
     </div>
 

@@ -5,6 +5,7 @@ import Stage from './components/Stage.vue'
 import Timeline from './components/Timeline.vue'
 import Inspector from './components/Inspector.vue'
 import HistoryView from './components/HistoryView.vue'
+import Neighborhood from './components/Neighborhood.vue'
 import Legend from './components/Legend.vue'
 import ReplayBar from './components/ReplayBar.vue'
 import {
@@ -27,7 +28,7 @@ const L = {
   },
 }
 
-const view = ref<'live' | 'history'>('live')
+const view = ref<'live' | 'history' | 'hood'>('live')
 
 /** `null` = ancho por omisión, el que decide el CSS según el tamaño de ventana. */
 const timelineWidth = ref<number | null>(loadTimelineWidth())
@@ -134,6 +135,8 @@ onBeforeUnmount(() => {
     <ReplayBar v-if="isReplaying && view === 'live'" />
 
     <HistoryView v-if="view === 'history'" @open="view = 'live'" />
+
+    <Neighborhood v-else-if="view === 'hood'" @enter="view = 'live'" />
 
     <div v-else ref="body" class="body" :class="{ sober: state.soberMode }" :style="bodyStyle">
       <Stage v-if="!state.soberMode">

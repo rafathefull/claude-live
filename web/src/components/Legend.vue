@@ -79,6 +79,10 @@ const L = {
     es: 'Tema — el botón ☀️/🌙 de arriba cambia entre claro y oscuro, mundo incluido. Los colores de estado y de subagente son los mismos en los dos temas, solo se oscurecen sobre fondo claro.',
     en: 'Theme — the ☀️/🌙 button above switches between light and dark, the world included. State and subagent colours are the same in both themes, only darkened over a light background.',
   },
+  hoodTip: {
+    es: 'Vecindario — la pestaña de arriba muestra todas las sesiones vivas a la vez, cada una con el plano de sus estaciones: se encienden al usarse, la de ahora va marcada y llevan su recuento. Pulsa una tarjeta para entrar en esa habitación.',
+    en: 'Neighbourhood — the tab above shows every live session at once, each with a plan of its stations: they light up when used, the current one is highlighted and they carry their count. Click a card to enter that room.',
+  },
   widthTip: {
     es: 'Ancho — arrastra el divisor entre el mundo y la timeline para darle más sitio; doble clic vuelve al ancho de siempre.',
     en: 'Width — drag the splitter between the world and the timeline to give it more room; double-click restores the default.',
@@ -229,6 +233,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
           <li><span>{{ tr(L.keysTip) }}</span></li>
           <li><span>{{ tr(L.treeTip) }}</span></li>
           <li><span>{{ tr(L.themeTip) }}</span></li>
+          <li><span>{{ tr(L.hoodTip) }}</span></li>
           <li><span>{{ tr(L.widthTip) }}</span></li>
         </ul>
       </div>

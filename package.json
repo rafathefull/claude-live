@@ -15,7 +15,7 @@
     "screenshot": "tsx tools/screenshot.ts",
     "test:parser": "tsx server/test/parser.smoke.ts",
     "test:grouping": "tsx server/test/grouping.smoke.ts",
-    "test": "npm run test:parser && npm run test:grouping && npm run test:store && npm run test:stats && npm run test:split && npm run test:shortcuts && npm run test:jobs",
+    "test": "npm run test:parser && npm run test:grouping && npm run test:store && npm run test:stats && npm run test:split && npm run test:shortcuts && npm run test:jobs && npm run test:hood",
     "test:store": "tsx web/test/store.smoke.ts",
     "server": "bash scripts/claude-live.sh",
     "test:stats": "tsx server/test/stats.smoke.ts",
@@ -23,6 +23,7 @@
     "test:shortcuts": "tsx web/test/shortcuts.smoke.ts",
     "test:seed": "tsx tools/seed.ts",
     "test:jobs": "tsx server/test/jobs.smoke.ts",
+    "test:hood": "tsx web/test/neighborhood.smoke.ts",
     "gif": "tsx tools/gif.ts"
   },
   "dependencies": {

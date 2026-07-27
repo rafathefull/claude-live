@@ -457,12 +457,14 @@ const DEMO_JOBS: {
 async function writeJobs(dir: string, now: number): Promise<number> {
   const workers: Record<string, unknown> = {}
   const procStart = await selfProcStart()
-  for (const job of DEMO_JOBS) {
+  for (const [index, job] of DEMO_JOBS.entries()) {
     if (job.state !== 'working' && job.state !== 'blocked') continue
     workers[job.id] = {
       pid: process.pid,
       procStart,
-      sessionId: job.id,
+      // El mismo que escribe su state.json: si no coinciden, el visor no puede emparejar la
+      // sesión de background con su job.
+      sessionId: `dec0de00-0000-4000-8000-9${index}00000000000`.slice(0, 36),
       cwd: job.cwd,
       cliVersion: '2.1.220',
       startedAt: now,

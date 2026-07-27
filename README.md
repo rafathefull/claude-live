@@ -24,8 +24,16 @@ ficheros que Claude Code escribe en `~/.claude`.*
 
 - **Sesiones vivas**, con su directorio, rama de git, modelo, modo de permisos, tokens
   acumulados, porcentaje de contexto usado y si Claude está trabajando o esperándote.
-  Si tienes varias sesiones abiertas, cada una es una habitación y se cambia entre ellas
-  desde la cabecera (todavía no se ven las dos a la vez).
+  Cada una es una habitación y se cambia entre ellas desde la cabecera.
+- **Vecindario**: todas las sesiones vivas a la vez, cada una con el plano de sus estaciones
+  —se encienden al usarse y llevan su recuento—, lo que está haciendo, sus subagentes y su
+  contexto. La estación va marcada con halo solo si la sesión está trabajando de verdad; si te
+  está esperando, se dice en pasado («lo último»), porque esperar no es estar en ninguna parte. Pulsa una tarjeta y entras en esa habitación. No son mundos en
+  miniatura a propósito: un canvas por tarjeta serían varios renderers WebGL a la vez, y la
+  escena grande ya da bastante trabajo. Una sesión de background enseña además el parte de su
+  job.
+
+  ![Vecindario](docs/vecindario.png)
 - **El razonamiento**: los bloques de pensamiento aparecen en la burbuja del avatar.
 - **Subagentes**: nacen junto a quien los lanza, con su tipo (`Explore`, `Plan`,
   `general-purpose`, los tuyos) y la descripción con la que se lanzaron. Se anidan por
@@ -333,7 +341,7 @@ Las pruebas usan **tus propios transcripts**, no mocks, porque el riesgo real de
 proyecto es que el formato cambie o que aparezca un caso hostil:
 
 ```bash
-npm test           # parser + agrupación + store + unidades + divisor + atajos + jobs
+npm test           # parser + agrupación + store + unidades + divisor + atajos + jobs + vecindario
 npm run typecheck  # vue-tsc
 ```
 
@@ -349,6 +357,9 @@ escenario y que en una pantalla ancha se pueda ampliar de verdad. `test:shortcut
 de verdad se rompe en los atajos: el contexto —que el espacio siga siendo del buscador cuando
 estás escribiendo, y que Ctrl, Alt y Meta no se pisen—.
 
+`test:hood` cubre el resumen que alimenta el vecindario, donde los errores fáciles son contar
+los resultados además de las llamadas (cada visita saldría doble) y tomar como «lo que está
+haciendo» el último evento a secas, que puede ser un cambio de modo.
 `test:jobs` prueba el lector de `~/.claude/jobs` con formato hostil y con tus propios jobs, y
 sobre todo la regla que no está en el fichero: un job que se dice «trabajando» sin proceso
 detrás es un residuo.
@@ -390,7 +401,7 @@ ventana, informa de los errores de consola y guarda las capturas de las tres vis
 ## Estado y qué falta
 
 Funcionando: sesiones vivas, subagentes, timeline (de ancho ajustable), inspector, historial en
-tabla o en árbol con reproductor completo, jobs en segundo plano, aviso de retención, leyenda,
+tabla o en árbol con reproductor completo, vecindario multi-sesión, jobs en segundo plano, aviso de retención, leyenda,
 modo sobrio, tema claro y oscuro, ingesta de hooks e interfaz bilingüe.
 
 Lo que se va haciendo, resumido y en texto plano, está en [`CHANGELOG.txt`](CHANGELOG.txt).

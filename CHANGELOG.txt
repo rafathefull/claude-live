@@ -15,6 +15,12 @@
  2026-07-27
 --------------------------------------------------------------------------------
 
+  + Vecindario: todas las sesiones vivas a la vez, cada una con el plano de sus
+    estaciones (se encienden al usarse y llevan su recuento), lo que esta
+    haciendo, sus subagentes y su contexto. Un clic entra en esa habitacion.
+    Las sesiones de background ensenan el parte de su job, y la estacion solo
+    se marca si la sesion esta trabajando: esperandote no es estar en ninguna
+    parte.                                                             [pend.]
   ! El inspector salia arriba, fuera de su caja, y el historial sin margen ni
     scroll: un selector duplicado invalidaba todo el CSS que venia detras.
                                                                       [b0c0bd1]
@@ -107,6 +113,12 @@
  2026-07-27
 --------------------------------------------------------------------------------
 
+  + Neighbourhood: every live session at once, each with a plan of its
+    stations (they light up when used and carry their count), what it is doing,
+    its subagents and its context. One click enters that room. Background
+    sessions show their job's last report, and the station is only highlighted
+    while the session is working: waiting for you is not being anywhere.
+                                                                       [pend.]
   ! The inspector showed up at the top, out of its box, and the history had no
     padding or scroll: a duplicated selector invalidated every rule after it.
                                                                       [b0c0bd1]
