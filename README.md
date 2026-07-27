@@ -473,9 +473,12 @@ visor lo detecta comparando los transcripts en disco con el registro de prompts 
 `~/.claude/history.jsonl`, y lo avisa en la pestaña de historial con tus propios números. Para
 conservar más, añade `"cleanupPeriodDays": 365` a `~/.claude/settings.json`.
 
-Pendiente:
-
-- Empaquetado como app de escritorio.
+**Sin app de escritorio, y a propósito.** Se valoró empaquetarlo con Tauri y no compensa: la
+ventana la da igual de bien el navegador (`--app=http://127.0.0.1:7317` abre una sin barra de
+direcciones), y el visor necesita su servidor Node para leer `~/.claude`, así que habría que
+lanzarlo como proceso hijo —exigiendo Node instalado o empaquetando su runtime, con lo que se
+pierde la ventaja de tamaño— o reescribir en Rust el parser, el watcher y las métricas, que ya
+funcionan. Tendría sentido solo para distribuirlo a quien no sepa qué es `npm`.
 
 ## Licencia
 

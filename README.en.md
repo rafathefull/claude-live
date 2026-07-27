@@ -477,9 +477,12 @@ viewer detects this by comparing the transcripts on disk against the prompt log 
 `~/.claude/history.jsonl`, and says so in the history tab with your own numbers. To keep more,
 add `"cleanupPeriodDays": 365` to `~/.claude/settings.json`.
 
-Pending:
-
-- Packaging as a desktop app.
+**No desktop app, on purpose.** Packaging it with Tauri was considered and does not pay off: the
+browser gives you the same window (`--app=http://127.0.0.1:7317` opens one with no address bar),
+and the viewer needs its Node server to read `~/.claude`, so it would have to be launched as a
+child process —requiring Node installed, or bundling its runtime, which loses the size advantage—
+or the parser, the watcher and the metrics would have to be rewritten in Rust, and they already
+work. It would only make sense to hand it to someone who does not know what `npm` is.
 
 ## Licence
 
