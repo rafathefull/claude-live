@@ -213,6 +213,31 @@ export interface MetricsBucket {
   tokensOut: number
   tokensCache: number
   bytes: number
+  /**
+   * Tokens desglosados por modelo. Hace falta para poder calcular coste: cada modelo tiene su
+   * tarifa, y la caché de lectura y de escritura se facturan distinto que el resto.
+   */
+  modelTokens: Record<string, TokenUsage>
+}
+
+/**
+ * Tarifas por millón de tokens, para quien pague por API. Con una suscripción no hay coste por
+ * uso —Claude Code declara `costUSD: 0`—, así que esto es opcional: sin fichero de tarifas, el
+ * visor no habla de dinero.
+ */
+export interface Pricing {
+  currency: string
+  /** Modelo → precio por millón de tokens de cada tipo. `default` cubre los no listados. */
+  models: Record<string, ModelRate>
+  /** De dónde se leyó, para poder decirlo en la interfaz. */
+  source?: string
+}
+
+export interface ModelRate {
+  input: number
+  output: number
+  cacheRead: number
+  cacheWrite: number
 }
 
 /** Resumen de un transcript, la unidad que se cachea para no releer cien megas cada vez. */
@@ -241,6 +266,8 @@ export interface Metrics {
   /** Cuántos transcripts hubo que releer: el resto salió de la caché. */
   reread: number
   computedInMs: number
+  /** Tarifas encontradas, o null si no hay: entonces no se muestra coste. */
+  pricing: Pricing | null
 }
 
 /** Mensajes que el servidor empuja por SSE. */

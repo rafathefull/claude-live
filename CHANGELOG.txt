@@ -15,6 +15,10 @@
  2026-07-27
 --------------------------------------------------------------------------------
 
+  + Coste en dinero, opcional y para quien pague por API: se ponen las tarifas
+    por millon de tokens en pricing.json y las metricas anaden el coste del
+    rango y una columna por proyecto. Sin fichero no se habla de dinero, que
+    con una suscripcion no se paga por uso.                             [pend.]
   ! Pulsar una sesion en la cabecera cambiaba la sesion pero no la vista: desde
     metricas, vecindario o historial no pasaba nada visible.            [pend.]
   + Metricas por proyecto y por dia: sesiones, peticiones, eventos,
@@ -120,6 +124,10 @@
  2026-07-27
 --------------------------------------------------------------------------------
 
+  + Cost in money, optional and for those paying per API: set the rates per
+    million tokens in pricing.json and the metrics add the range cost and a
+    column per project. With no file there is no talk of money, since a
+    subscription does not charge per use.                                [pend.]
   ! Clicking a session in the header changed the session but not the view: from
     metrics, neighbourhood or history nothing visible happened.         [pend.]
   + Metrics per project and per day: sessions, prompts, events, tool calls,

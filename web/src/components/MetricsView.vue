@@ -3,6 +3,8 @@ import { computed, onMounted, ref } from 'vue'
 import { loadMetrics } from '../store'
 import {
   ALL_PROJECTS,
+  costOf,
+  formatMoney,
   series,
   top,
   totals,
@@ -60,6 +62,16 @@ const L = {
   reread: { es: 'releídos', en: 're-read' },
   empty: { es: 'sin actividad', en: 'no activity' },
   peak: { es: 'máximo del rango:', en: 'range peak:' },
+  cost: { es: 'coste', en: 'cost' },
+  noPricing: {
+    es: 'No se muestra coste: con una suscripción de Claude no se paga por uso (Claude Code declara 0). Si pagas por API, pon tus tarifas en pricing.json y aparecerá una columna de coste; hay un ejemplo en docs/pricing.example.json.',
+    en: 'No cost is shown: with a Claude subscription you do not pay per use (Claude Code reports 0). If you pay per API, put your rates in pricing.json and a cost column will appear; there is an example in docs/pricing.example.json.',
+  },
+  untariffed: {
+    es: 'sin tarifa (no suman):',
+    en: 'no rate (not counted):',
+  },
+  rates: { es: 'tarifas de', en: 'rates from' },
 }
 
 const MEASURES: { key: Measure; label: { es: string; en: string } }[] = [
@@ -101,6 +113,10 @@ const sum = computed(() => totals(points.value))
 const peak = computed(() =>
   Math.max(1, ...points.value.map((point) => valueOf(point.bucket, measure.value))),
 )
+
+/** Coste del rango y de cada proyecto, solo si hay tarifas configuradas. */
+const cost = computed(() => costOf(sum.value, metrics.value?.pricing ?? null))
+const hasPricing = computed(() => (metrics.value?.pricing ?? null) !== null)
 
 const tools = computed(() => top(metrics.value?.tools ?? {}, 10))
 const models = computed(() => top(metrics.value?.models ?? {}, 6))
@@ -195,7 +211,12 @@ const measureLabel = computed(
         <span><b>{{ formatTokens(sum.tokensIn + sum.tokensOut) }}</b> {{ tr(L.tokens) }}</span>
         <span><b>{{ formatTokens(sum.tokensCache) }}</b> {{ tr(L.cache) }}</span>
         <span><b>{{ formatBytes(sum.bytes) }}</b> {{ tr(L.size) }}</span>
+        <span v-if="cost"><b>{{ formatMoney(cost) }}</b> {{ tr(L.cost) }}</span>
       </div>
+
+      <p v-if="cost && cost.untariffed.length > 0" class="muted metrics-note">
+        ⚠ {{ tr(L.untariffed) }} {{ cost.untariffed.join(', ') }}
+      </p>
 
       <!-- Barras por día. Los días sin actividad se dibujan vacíos: si se saltaran, una semana
            sin tocar nada parecería una semana de trabajo seguido. -->
@@ -229,6 +250,7 @@ const measureLabel = computed(
                 <th>{{ tr(L.errors) }}</th>
                 <th>{{ tr(L.agents) }}</th>
                 <th>{{ tr(L.tokens) }}</th>
+                <th v-if="hasPricing">{{ tr(L.cost) }}</th>
               </tr>
             </thead>
             <tbody>
@@ -245,6 +267,9 @@ const measureLabel = computed(
                 <td :class="{ bad: entry.bucket.errors > 0 }">{{ entry.bucket.errors }}</td>
                 <td>{{ entry.bucket.agents }}</td>
                 <td>{{ formatTokens(entry.bucket.tokensIn + entry.bucket.tokensOut) }}</td>
+                <td v-if="hasPricing">
+                  {{ formatMoney(costOf(entry.bucket, metrics.pricing)!) }}
+                </td>
               </tr>
             </tbody>
           </table>
@@ -287,6 +312,12 @@ const measureLabel = computed(
       </div>
 
       <p class="muted metrics-note">{{ tr(L.note) }}</p>
+      <p class="muted metrics-note">
+        <template v-if="hasPricing">
+          💰 {{ tr(L.rates) }} <code>{{ metrics.pricing?.source }}</code>
+        </template>
+        <template v-else>{{ tr(L.noPricing) }}</template>
+      </p>
     </template>
   </div>
 </template>

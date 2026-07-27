@@ -1,9 +1,10 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { CACHE_DIR, METRICS_CACHE } from './config.js'
 import { readAgentMeta, scanTranscripts } from './discover.js'
+import { readPricing } from './pricing.js'
 import { forEachLine } from './lines.js'
 import { TranscriptParser } from './parser.js'
-import type { Metrics, MetricsBucket, TranscriptSummary } from '../../shared/types.js'
+import type { Metrics, MetricsBucket, TokenUsage, TranscriptSummary } from '../../shared/types.js'
 
 /**
  * Métricas agregadas por proyecto y por día, calculadas desde los transcripts.
@@ -65,6 +66,7 @@ function emptyBucket(): MetricsBucket {
     tokensOut: 0,
     tokensCache: 0,
     bytes: 0,
+    modelTokens: {},
   }
 }
 
@@ -79,6 +81,18 @@ function add(target: MetricsBucket, source: MetricsBucket): void {
   target.tokensOut += source.tokensOut
   target.tokensCache += source.tokensCache
   target.bytes += source.bytes
+  for (const [model, usage] of Object.entries(source.modelTokens)) {
+    const into = (target.modelTokens[model] ??= {
+      input: 0,
+      output: 0,
+      cacheRead: 0,
+      cacheCreate: 0,
+    })
+    into.input += usage.input
+    into.output += usage.output
+    into.cacheRead += usage.cacheRead
+    into.cacheCreate += usage.cacheCreate
+  }
 }
 
 function bump(counts: Record<string, number>, key: string | undefined, by = 1): void {
@@ -128,6 +142,18 @@ export async function summarizeTranscript(
         bucket.tokensIn += event.tokens.input
         bucket.tokensOut += event.tokens.output
         bucket.tokensCache += event.tokens.cacheRead + event.tokens.cacheCreate
+        // Y por modelo: cada uno tiene su tarifa, y sin este desglose no se puede poner precio.
+        const key = event.model ?? 'sin-modelo'
+        const usage: TokenUsage = (bucket.modelTokens[key] ??= {
+          input: 0,
+          output: 0,
+          cacheRead: 0,
+          cacheCreate: 0,
+        })
+        usage.input += event.tokens.input
+        usage.output += event.tokens.output
+        usage.cacheRead += event.tokens.cacheRead
+        usage.cacheCreate += event.tokens.cacheCreate
       }
       if (event.model) bump(models, event.model)
       if (!firstTs || event.ts < firstTs) firstTs = event.ts
@@ -221,5 +247,6 @@ export async function computeMetrics(opts: MetricsOptions = {}): Promise<Metrics
     transcripts: files.length,
     reread,
     computedInMs: Date.now() - started,
+    pricing: await readPricing(),
   }
 }

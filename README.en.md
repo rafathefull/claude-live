@@ -259,6 +259,27 @@ deserves an explanation:
 Several subagents at once share out the space around the station they work at, and the nesting
 depth (`spawnDepth`) places them next to whoever launched them.
 
+## Cost in money (optional)
+
+With a Claude subscription you **do not pay per use**, and Claude Code confirms it: its
+`stats-cache.json` reports `costUSD: 0` for every model. That is why the viewer says nothing
+about money by default, and ships no prices: they would go stale and produce a false figure.
+
+If you pay per API and want to see it, set your rates:
+
+```bash
+cp docs/pricing.example.json ~/.local/share/claude-live/pricing.json
+$EDITOR ~/.local/share/claude-live/pricing.json   # or CLAUDE_LIVE_PRICING=/other/path.json
+```
+
+The numbers are the price **per million tokens**, in whatever currency you declare. Cache reads
+and cache writes are billed differently from plain input, so they go separately. `default`
+covers models you do not list; a model with neither its own rate nor `default` does not add to
+the total, and the metrics say so instead of hiding it — otherwise the figure would come out low
+with no explanation.
+
+With the file in place, the metrics add the cost to the range total and a column per project.
+
 ## Privacy
 
 Transcripts contain **your code and your prompts**. So:
@@ -435,8 +456,6 @@ add `"cleanupPeriodDays": 365` to `~/.claude/settings.json`.
 
 Pending:
 
-- No cost in money is shown, only tokens and context percentage: that would mean pinning each
-  model's pricing by hand.
 - Packaging as a desktop app.
 
 ## Licence

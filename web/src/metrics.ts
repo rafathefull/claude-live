@@ -1,4 +1,4 @@
-import type { Metrics, MetricsBucket } from '@shared/types'
+import type { Metrics, MetricsBucket, Pricing } from '@shared/types'
 
 /**
  * Filtrado y agregación de las métricas para la vista.
@@ -29,11 +29,23 @@ export function emptyBucket(): MetricsBucket {
     tokensOut: 0,
     tokensCache: 0,
     bytes: 0,
+    modelTokens: {},
   }
 }
 
 export function addBucket(target: MetricsBucket, source: MetricsBucket): MetricsBucket {
+  const modelTokens: MetricsBucket['modelTokens'] = {}
+  for (const from of [target.modelTokens, source.modelTokens]) {
+    for (const [model, usage] of Object.entries(from ?? {})) {
+      const into = (modelTokens[model] ??= { input: 0, output: 0, cacheRead: 0, cacheCreate: 0 })
+      into.input += usage.input
+      into.output += usage.output
+      into.cacheRead += usage.cacheRead
+      into.cacheCreate += usage.cacheCreate
+    }
+  }
   return {
+    modelTokens,
     sessions: target.sessions + source.sessions,
     events: target.events + source.events,
     toolCalls: target.toolCalls + source.toolCalls,
@@ -110,4 +122,47 @@ export function valueOf(bucket: MetricsBucket, measure: Measure): number {
     case 'errors':
       return bucket.errors
   }
+}
+
+/**
+ * Coste del tramo según las tarifas, que van por millón de tokens.
+ *
+ * Devuelve `null` cuando no hay tarifas —lo normal con una suscripción, donde no se paga por
+ * uso— para que la interfaz no muestre un cero que parecería un dato. Un modelo sin tarifa
+ * propia usa la entrada `default` si existe; si no, no se cobra y se cuenta como no tarifado,
+ * porque callarlo daría una cifra baja sin decir por qué.
+ */
+export interface Cost {
+  total: number
+  currency: string
+  /** Modelos sin tarifa: su consumo no está en el total. */
+  untariffed: string[]
+}
+
+export function costOf(bucket: MetricsBucket, pricing: Pricing | null): Cost | null {
+  if (!pricing) return null
+  let total = 0
+  const untariffed: string[] = []
+  for (const [model, usage] of Object.entries(bucket.modelTokens ?? {})) {
+    const rate = pricing.models[model] ?? pricing.models.default
+    if (!rate) {
+      if (usage.input + usage.output + usage.cacheRead + usage.cacheCreate > 0) {
+        untariffed.push(model)
+      }
+      continue
+    }
+    total +=
+      (usage.input / 1e6) * rate.input +
+      (usage.output / 1e6) * rate.output +
+      (usage.cacheRead / 1e6) * rate.cacheRead +
+      (usage.cacheCreate / 1e6) * rate.cacheWrite
+  }
+  return { total, currency: pricing.currency, untariffed: untariffed.sort() }
+}
+
+/** Con céntimos si es poco dinero, sin ellos si es mucho: 0,42 € y 1.284 € se leen distinto. */
+export function formatMoney(cost: Cost): string {
+  const value = cost.total
+  const digits = value >= 100 ? 0 : value >= 1 ? 2 : 3
+  return `${value.toFixed(digits)} ${cost.currency}`
 }

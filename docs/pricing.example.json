@@ -1,0 +1,43 @@
+{
+  "_leeme": [
+    "Tarifas OPCIONALES, solo para quien pague por API. Con una suscripción de Claude no se paga",
+    "por uso —Claude Code declara costUSD: 0—, así que sin este fichero el visor no habla de dinero.",
+    "",
+    "Para activarlo: copia este fichero a ~/.local/share/claude-live/pricing.json (o donde apunte",
+    "$XDG_DATA_HOME/claude-live/) y pon TUS precios; también vale $CLAUDE_LIVE_PRICING=/ruta.json.",
+    "",
+    "Los números son precio por MILLÓN de tokens, en la moneda que digas en «currency». Los de",
+    "abajo son inventados y están para que se vea la forma: consulta la tarifa vigente y pon la",
+    "tuya, que cambia con el tiempo y por modelo.",
+    "",
+    "«default» cubre los modelos que no listes. Un modelo sin tarifa ni default no suma al total,",
+    "y la interfaz lo dice en vez de callarlo."
+  ],
+  "currency": "USD",
+  "models": {
+    "default": {
+      "input": 3,
+      "output": 15,
+      "cacheRead": 0.3,
+      "cacheWrite": 3.75
+    },
+    "claude-opus-5": {
+      "input": 15,
+      "output": 75,
+      "cacheRead": 1.5,
+      "cacheWrite": 18.75
+    },
+    "claude-sonnet-5": {
+      "input": 3,
+      "output": 15,
+      "cacheRead": 0.3,
+      "cacheWrite": 3.75
+    },
+    "claude-haiku-4-5-20251001": {
+      "input": 1,
+      "output": 5,
+      "cacheRead": 0.1,
+      "cacheWrite": 1.25
+    }
+  }
+}

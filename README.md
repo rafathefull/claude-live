@@ -260,6 +260,27 @@ Es lo más vistoso del mundo y lo que más piezas cruza, así que merece explica
 Varios subagentes a la vez se reparten el sitio alrededor de la estación en la que trabajan,
 y la profundidad de anidamiento (`spawnDepth`) los coloca junto a quien los lanzó.
 
+## Coste en dinero (opcional)
+
+Con una suscripción de Claude **no se paga por uso**, y Claude Code lo confirma: en su
+`stats-cache.json` declara `costUSD: 0` para todos los modelos. Por eso el visor no habla de
+dinero por omisión, y no trae precios de fábrica: quedarían obsoletos y darían una cifra falsa.
+
+Si pagas por API y quieres verlo, pon tus tarifas:
+
+```bash
+cp docs/pricing.example.json ~/.local/share/claude-live/pricing.json
+$EDITOR ~/.local/share/claude-live/pricing.json   # o CLAUDE_LIVE_PRICING=/otra/ruta.json
+```
+
+Los números son precio **por millón de tokens**, en la moneda que declares. La caché de lectura
+y la de escritura se cobran distinto que la entrada normal, así que van por separado. `default`
+cubre los modelos que no listes; un modelo sin tarifa ni `default` no suma al total, y las
+métricas lo dicen en vez de callarlo, que si no la cifra saldría baja sin explicación.
+
+Con el fichero puesto, las métricas añaden el coste al total del rango y una columna por
+proyecto.
+
 ## Privacidad
 
 Los transcripts contienen **tu código y tus prompts**. Por eso:
@@ -429,8 +450,6 @@ conservar más, añade `"cleanupPeriodDays": 365` a `~/.claude/settings.json`.
 
 Pendiente:
 
-- No se muestra coste en dinero, solo tokens y porcentaje de contexto: habría que fijar las
-  tarifas de cada modelo a mano.
 - Empaquetado como app de escritorio.
 
 ## Licencia
