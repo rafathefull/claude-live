@@ -477,7 +477,20 @@ viewer detects this by comparing the transcripts on disk against the prompt log 
 `~/.claude/history.jsonl`, and says so in the history tab with your own numbers. To keep more,
 add `"cleanupPeriodDays": 365` to `~/.claude/settings.json`.
 
-**No desktop app, on purpose.** Packaging it with Tauri was considered and does not pay off: the
+### As if it were an application
+
+```bash
+./scripts/claude-live.sh app              # starts it if needed and opens a clean window
+./scripts/claude-live.sh install-desktop  # and puts it in the applications menu
+```
+
+`app` opens the viewer in the browser's application mode: no address bar, no tabs, its own
+profile —so it inherits none of your extensions or sessions— and its own icon in the launcher.
+`install-desktop` writes the `.desktop` into `~/.local/share/applications` and the icon into
+`~/.local/share/icons`, with a secondary action to stop the server from the menu itself. It looks
+for a browser with application mode among the usual ones; `CLAUDE_LIVE_BROWSER` forces one.
+
+**No packaged desktop app, on purpose.** Packaging it with Tauri was considered and does not pay off: the
 browser gives you the same window (`--app=http://127.0.0.1:7317` opens one with no address bar),
 and the viewer needs its Node server to read `~/.claude`, so it would have to be launched as a
 child process —requiring Node installed, or bundling its runtime, which loses the size advantage—

@@ -8,8 +8,10 @@
 #   ./scripts/claude-live.sh stop       # lo para, aunque lo hubiera arrancado otra terminal
 #   ./scripts/claude-live.sh restart    # stop + bg
 #   ./scripts/claude-live.sh logs       # sigue el registro del modo segundo plano
+#   ./scripts/claude-live.sh app        # arranca si hace falta y abre una ventana sin navegador
+#   ./scripts/claude-live.sh install-desktop   # lo pone en el menú de aplicaciones
 #
-# Variables: CLAUDE_LIVE_PORT (7317), CLAUDE_CONFIG_DIR (~/.claude)
+# Variables: CLAUDE_LIVE_PORT (7317), CLAUDE_CONFIG_DIR (~/.claude), CLAUDE_LIVE_BROWSER
 
 set -uo pipefail
 
@@ -151,6 +153,75 @@ cmd_bg() {
   exit 1
 }
 
+# Navegador en modo aplicación: una ventana sin barra de direcciones ni pestañas. No hace falta
+# empaquetar nada —ni Electron ni Tauri— para tener la sensación de app de escritorio.
+find_browser() {
+  if [ -n "${CLAUDE_LIVE_BROWSER:-}" ]; then
+    printf '%s' "$CLAUDE_LIVE_BROWSER"
+    return 0
+  fi
+  for candidate in google-chrome chromium chromium-browser brave-browser microsoft-edge vivaldi; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+      printf '%s' "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
+cmd_app() {
+  browser="$(find_browser)" || die "no encuentro un navegador con modo aplicación; usa CLAUDE_LIVE_BROWSER=/ruta"
+  if ! responding >/dev/null; then
+    say "el servidor no responde; lo arranco"
+    cmd_bg || exit 1
+  fi
+  ok "abriendo $URL en $browser"
+  # `--app` quita la barra de direcciones; el perfil aparte evita heredar tus pestañas y
+  # extensiones, y `--class` hace que la ventana se agrupe con su propio icono en el lanzador.
+  "$browser" \
+    --app="$URL" \
+    --class=claude-live \
+    --user-data-dir="$STATE_DIR/browser" \
+    --window-size=1500,940 \
+    >/dev/null 2>&1 &
+  disown
+}
+
+cmd_install_desktop() {
+  apps="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+  icons="${XDG_DATA_HOME:-$HOME/.local/share}/icons"
+  mkdir -p "$apps" "$icons"
+  cp "$ROOT/docs/icon.png" "$icons/claude-live.png"
+
+  cat >"$apps/claude-live.desktop" <<DESKTOP
+[Desktop Entry]
+Type=Application
+Name=claude-live
+GenericName=Visor de Claude Code
+Comment=Mundo en vivo de lo que hace Claude Code
+Exec=$ROOT/scripts/claude-live.sh app
+Icon=$icons/claude-live.png
+Terminal=false
+Categories=Development;
+Keywords=claude;code;agentes;visor;
+StartupWMClass=claude-live
+Actions=Stop;
+
+[Desktop Action Stop]
+Name=Parar el servidor
+Exec=$ROOT/scripts/claude-live.sh stop
+DESKTOP
+
+  if command -v desktop-file-validate >/dev/null 2>&1; then
+    desktop-file-validate "$apps/claude-live.desktop" || warn "el lanzador tiene avisos de validación"
+  fi
+  if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database "$apps" >/dev/null 2>&1 || true
+  fi
+  ok "lanzador instalado en $apps/claude-live.desktop"
+  dim "icono en $icons/claude-live.png · búscalo como «claude-live» en el menú"
+}
+
 case "${1:-start}" in
   start)   cmd_start ;;
   bg)      cmd_bg ;;
@@ -158,8 +229,10 @@ case "${1:-start}" in
   restart) cmd_stop; cmd_bg ;;
   status)  cmd_status ;;
   logs)    [ -f "$LOG_FILE" ] && tail -f "$LOG_FILE" || die "no hay registro en $LOG_FILE" ;;
+  app)     cmd_app ;;
+  install-desktop) cmd_install_desktop ;;
   -h|--help|help)
-    sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    sed -n '2,16p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
     ;;
-  *) die "orden desconocida: $1 (prueba: start, bg, stop, restart, status, logs)" ;;
+  *) die "orden desconocida: $1 (prueba: start, bg, stop, restart, status, logs, app, install-desktop)" ;;
 esac

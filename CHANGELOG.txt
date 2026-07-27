@@ -19,6 +19,9 @@
     un mundo inventado dentro de la pagina, sin servidor y sin leer ningun
     ~/.claude. Mismo codigo: se cambia de donde salen los datos y ya.
                                                              [b43ac9c] [ae75e0d]
+  + Lanzador de escritorio: "claude-live.sh app" abre una ventana sin barra de
+    direcciones y "install-desktop" lo pone en el menu con su icono. Sin
+    empaquetar nada: la ventana la da el navegador.                     [pend.]
   + Recorrido guiado de la demostracion: once bocadillos anclados a cada sitio
     que explican que es y que esta pasando, abriendo las pestanas solos. Sale
     la primera visita y se relanza con el boton de la cabecera.          [pend.]
@@ -134,6 +137,9 @@
   + Playable demo on GitHub Pages: the whole viewer in the browser with a
     made-up world inside the page, no server and no ~/.claude read. Same code:
     only where the data comes from changes.                  [b43ac9c] [ae75e0d]
+  + Desktop launcher: "claude-live.sh app" opens a window with no address bar
+    and "install-desktop" adds it to the menu with its icon. Nothing packaged:
+    the window comes from the browser.                                  [pend.]
   + Guided tour of the demo: eleven bubbles anchored to each place explaining
     what it is and what is going on, opening the tabs by themselves. Shows up
     on the first visit and can be relaunched from the header.            [pend.]

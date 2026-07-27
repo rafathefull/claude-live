@@ -473,7 +473,21 @@ visor lo detecta comparando los transcripts en disco con el registro de prompts 
 `~/.claude/history.jsonl`, y lo avisa en la pestaña de historial con tus propios números. Para
 conservar más, añade `"cleanupPeriodDays": 365` a `~/.claude/settings.json`.
 
-**Sin app de escritorio, y a propósito.** Se valoró empaquetarlo con Tauri y no compensa: la
+### Como si fuera una aplicación
+
+```bash
+./scripts/claude-live.sh app              # arranca si hace falta y abre una ventana limpia
+./scripts/claude-live.sh install-desktop  # y lo pone en el menú de aplicaciones
+```
+
+`app` abre el visor en el navegador en modo aplicación: sin barra de direcciones ni pestañas, con
+su propio perfil —así no hereda tus extensiones ni tus sesiones— y su icono propio en el
+lanzador. `install-desktop` escribe el `.desktop` en `~/.local/share/applications` y el icono en
+`~/.local/share/icons`, con una acción secundaria para parar el servidor desde el propio menú.
+Busca un navegador con modo aplicación entre los habituales; se puede forzar con
+`CLAUDE_LIVE_BROWSER`.
+
+**Sin app de escritorio empaquetada, y a propósito.** Se valoró empaquetarlo con Tauri y no compensa: la
 ventana la da igual de bien el navegador (`--app=http://127.0.0.1:7317` abre una sin barra de
 direcciones), y el visor necesita su servidor Node para leer `~/.claude`, así que habría que
 lanzarlo como proceso hijo —exigiendo Node instalado o empaquetando su runtime, con lo que se
