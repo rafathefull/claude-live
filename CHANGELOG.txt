@@ -21,16 +21,16 @@
                                                              [b43ac9c] [ae75e0d]
   + Lanzador de escritorio: "claude-live.sh app" abre una ventana sin barra de
     direcciones y "install-desktop" lo pone en el menu con su icono. Sin
-    empaquetar nada: la ventana la da el navegador.                     [pend.]
+    empaquetar nada: la ventana la da el navegador.                     [f6017c7]
   + Recorrido guiado de la demostracion: once bocadillos anclados a cada sitio
     que explican que es y que esta pasando, abriendo las pestanas solos. Sale
-    la primera visita y se relanza con el boton de la cabecera.          [pend.]
+    la primera visita y se relanza con el boton de la cabecera.          [f6017c7]
   + Coste en dinero, opcional y para quien pague por API: se ponen las tarifas
     por millon de tokens en pricing.json y las metricas anaden el coste del
     rango y una columna por proyecto. Sin fichero no se habla de dinero, que
-    con una suscripcion no se paga por uso.                             [pend.]
+    con una suscripcion no se paga por uso.                             [f6017c7]
   ! Pulsar una sesion en la cabecera cambiaba la sesion pero no la vista: desde
-    metricas, vecindario o historial no pasaba nada visible.            [pend.]
+    metricas, vecindario o historial no pasaba nada visible.            [f6017c7]
   + Metricas por proyecto y por dia: sesiones, peticiones, eventos,
     herramientas, errores, subagentes, tokens y tamano en disco, con grafica de
     barras y rankings de herramientas, modelos y tipos de subagente. El
@@ -139,16 +139,16 @@
     only where the data comes from changes.                  [b43ac9c] [ae75e0d]
   + Desktop launcher: "claude-live.sh app" opens a window with no address bar
     and "install-desktop" adds it to the menu with its icon. Nothing packaged:
-    the window comes from the browser.                                  [pend.]
+    the window comes from the browser.                                  [f6017c7]
   + Guided tour of the demo: eleven bubbles anchored to each place explaining
     what it is and what is going on, opening the tabs by themselves. Shows up
-    on the first visit and can be relaunched from the header.            [pend.]
+    on the first visit and can be relaunched from the header.            [f6017c7]
   + Cost in money, optional and for those paying per API: set the rates per
     million tokens in pricing.json and the metrics add the range cost and a
     column per project. With no file there is no talk of money, since a
-    subscription does not charge per use.                                [pend.]
+    subscription does not charge per use.                                [f6017c7]
   ! Clicking a session in the header changed the session but not the view: from
-    metrics, neighbourhood or history nothing visible happened.         [pend.]
+    metrics, neighbourhood or history nothing visible happened.         [f6017c7]
   + Metrics per project and per day: sessions, prompts, events, tool calls,
     errors, subagents, tokens and size on disk, with a bar chart and rankings
     of tools, models and subagent types. The server walks the transcripts once
