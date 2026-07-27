@@ -1,4 +1,5 @@
 import { computed, reactive, ref } from 'vue'
+import { backend, STATIC_MODE } from './backend'
 import type {
   ActorInfo,
   JobInfo,
@@ -240,28 +241,20 @@ export function applyServerMessage(message: ServerMessage): void {
 export const reconnectAttempts = ref(0)
 
 export function connect(): void {
-  const source = new EventSource('/api/stream')
-
-  source.onopen = () => {
-    state.connected = true
-    reconnectAttempts.value = 0
-  }
-
-  source.onmessage = (message) => {
-    try {
-      applyServerMessage(JSON.parse(message.data) as ServerMessage)
-    } catch {
-      // mensaje ilegible: se ignora
-    }
-  }
-
-  source.onerror = () => {
-    state.connected = false
-    source.close()
-    reconnectAttempts.value++
-    const delay = Math.min(1000 * reconnectAttempts.value, 10_000)
-    setTimeout(connect, delay)
-  }
+  backend.connect({
+    onOpen: () => {
+      state.connected = true
+      reconnectAttempts.value = 0
+    },
+    onMessage: applyServerMessage,
+    onClose: () => {
+      state.connected = false
+      // En la demostración estática no hay nada a lo que reconectarse.
+      if (STATIC_MODE) return
+      reconnectAttempts.value++
+      setTimeout(connect, Math.min(1000 * reconnectAttempts.value, 10_000))
+    },
+  })
 }
 
 /**
@@ -270,9 +263,7 @@ export function connect(): void {
  * necesita la conversación entera desde el principio.
  */
 export async function loadSessionEvents(sessionId: string, limit = HISTORY_PAGE): Promise<number> {
-  const response = await fetch(`/api/sessions/${sessionId}/events?limit=${limit}&agents=1`)
-  if (!response.ok) return 0
-  const data = (await response.json()) as { events: TimelineEvent[]; total: number }
+  const data = await backend.sessionEvents(sessionId, 0, limit)
   state.events[sessionId] = data.events
   loadedTotals[sessionId] = data.total
 
@@ -313,10 +304,9 @@ export function ensureUpcomingEvents(sessionId: string): void {
   if (state.replay.index + PREFETCH_MARGIN < loaded) return
 
   fetching.add(sessionId)
-  void fetch(`/api/sessions/${sessionId}/events?from=${loaded}&limit=${HISTORY_PAGE}&agents=1`)
-    .then(async (response) => {
-      if (!response.ok) return
-      const data = (await response.json()) as { events: TimelineEvent[]; total: number }
+  void backend
+    .sessionEvents(sessionId, loaded, HISTORY_PAGE)
+    .then((data) => {
       loadedTotals[sessionId] = data.total
       const list = state.events[sessionId]
       if (!list) return
@@ -412,18 +402,14 @@ export interface Retention {
 
 export async function loadRetention(): Promise<Retention | null> {
   try {
-    const response = await fetch('/api/retention')
-    return response.ok ? ((await response.json()) as Retention) : null
+    return await backend.retention()
   } catch {
     return null
   }
 }
 
 export async function loadAllSessions(): Promise<SessionInfo[]> {
-  const response = await fetch('/api/sessions')
-  if (!response.ok) return []
-  const data = (await response.json()) as { sessions: SessionInfo[] }
-  return data.sessions
+  return backend.allSessions()
 }
 
 /**
@@ -459,13 +445,9 @@ export async function openJobSession(job: { sessionId?: string; name: string }):
 
 /** Métricas agregadas. `force` recalcula ignorando la caché del servidor. */
 export async function loadMetrics(force = false): Promise<Metrics | null> {
-  const response = await fetch(`/api/metrics${force ? '?force=1' : ''}`)
-  if (!response.ok) return null
-  return (await response.json()) as Metrics
+  return backend.metrics(force)
 }
 
 export async function loadRaw(sessionId: string, uuid: string): Promise<unknown> {
-  const response = await fetch(`/api/sessions/${sessionId}/raw/${encodeURIComponent(uuid)}`)
-  if (!response.ok) return null
-  return response.json()
+  return backend.raw(sessionId, uuid)
 }

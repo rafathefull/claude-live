@@ -15,6 +15,9 @@
  2026-07-27
 --------------------------------------------------------------------------------
 
+  + Demostracion jugable en GitHub Pages: el visor entero en el navegador con
+    un mundo inventado dentro de la pagina, sin servidor y sin leer ningun
+    ~/.claude. Mismo codigo: se cambia de donde salen los datos y ya.    [pend.]
   + Coste en dinero, opcional y para quien pague por API: se ponen las tarifas
     por millon de tokens en pricing.json y las metricas anaden el coste del
     rango y una columna por proyecto. Sin fichero no se habla de dinero, que
@@ -124,6 +127,9 @@
  2026-07-27
 --------------------------------------------------------------------------------
 
+  + Playable demo on GitHub Pages: the whole viewer in the browser with a
+    made-up world inside the page, no server and no ~/.claude read. Same code:
+    only where the data comes from changes.                             [pend.]
   + Cost in money, optional and for those paying per API: set the rates per
     million tokens in pricing.json and the metrics add the range cost and a
     column per project. With no file there is no talk of money, since a

@@ -509,6 +509,39 @@ async function writeJobs(dir: string, now: number): Promise<number> {
   return DEMO_JOBS.length
 }
 
+/**
+ * `history.jsonl` es el registro de prompts, y sobrevive a la limpieza de transcripts: de ahí
+ * saca el visor cuántas sesiones has tenido de verdad. Aquí se escriben unas cuantas de las que
+ * ya no queda transcript, para que el aviso de retención tenga algo que contar.
+ */
+async function writeHistoryLog(dir: string): Promise<number> {
+  const rows: string[] = []
+  // Las que sí existen, con su prompt.
+  rows.push(JSON.stringify({ display: 'Añade paginación por cursor', sessionId: SESSION_ID }))
+  for (const [p, project] of ARCHIVE.entries()) {
+    for (const [t, title] of project.titles.entries()) {
+      rows.push(
+        JSON.stringify({
+          display: title,
+          sessionId: `dec0de00-0000-4000-8000-1${p}${t}000000000`.slice(0, 36),
+        }),
+      )
+    }
+  }
+  // Y las olvidadas: mismo formato, con ids que ya no están en disco.
+  const forgotten = 28
+  for (let i = 0; i < forgotten; i++) {
+    rows.push(
+      JSON.stringify({
+        display: `una conversación de hace tiempo (${i + 1})`,
+        sessionId: `dec0de00-0000-4000-8000-f${String(i).padStart(2, '0')}00000000000`.slice(0, 36),
+      }),
+    )
+  }
+  await writeFile(join(dir, 'history.jsonl'), `${rows.join('\n')}\n`, 'utf8')
+  return forgotten
+}
+
 export interface DemoWorld {
   dir: string
   transcript: string
@@ -527,6 +560,8 @@ export async function writeDemoWorld(dir: string, past: DemoStep[]): Promise<Dem
   console.log(`  histórico ficticio: ${archived} sesiones en ${ARCHIVE.length} proyectos`)
   const jobCount = await writeJobs(dir, Date.now())
   console.log(`  jobs en segundo plano: ${jobCount}`)
+  const forgotten = await writeHistoryLog(dir)
+  console.log(`  registro de prompts: ${forgotten} sesiones de las que ya no queda transcript`)
 
   const transcript = join(projectDir, `${SESSION_ID}.jsonl`)
   await writeFile(transcript, '', 'utf8')

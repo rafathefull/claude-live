@@ -20,6 +20,15 @@ especial: **cualquier sesión de Claude Code que abras aparece sola**.
 se va a la estación que le toca mientras la timeline se llena. Todo lo que se ve sale de los
 ficheros que Claude Code escribe en `~/.claude`.*
 
+## Probarlo sin instalar nada
+
+**[▶ Demostración jugable](https://rafathefull.github.io/claude-live/)** — el visor entero
+funcionando en el navegador, con un mundo inventado dentro de la página. No hay servidor y no se
+lee ningún `~/.claude`: los datos son ficticios, pero **el código es el mismo**, así que puedes
+cambiar de pestaña, abrir una conversación del histórico y reproducirla, pulsar el Campamento,
+arrastrar el divisor o pasar el ratón por el mundo. Para verlo con tus propias sesiones hay que
+ejecutarlo en tu máquina (más abajo).
+
 ## Qué muestra
 
 - **Sesiones vivas**, con su directorio, rama de git, modelo, modo de permisos, tokens
@@ -411,6 +420,20 @@ Es un suelo mínimo, no un sustituto: los datos de la demostración son amables 
 Eso es lo que corre en [la integración continua](.github/workflows/ci.yml), que además monta el
 mundo en un Chromium de verdad y falla si la consola escupe algo —un fallo de la API de Pixi en
 tiempo de ejecución no lo ve el `typecheck`—.
+
+### Demostración publicada
+
+```bash
+npm run build:pages        # deja pages-dist/ listo, con los datos en data/demo.json
+```
+
+`tools/build-pages.ts` escribe el mundo de demostración en un directorio temporal, lo lee con el
+**pipeline real del servidor** (el índice del histórico, el parser, los jobs, las métricas y la
+retención) y vuelca el resultado en un JSON; luego construye el front con `VITE_STATIC=1`, que
+cambia el origen de los datos —`web/src/backend.ts`— por ese fichero: el mismo store, la misma
+escena, la misma timeline, sin servidor. La sesión del guion se emite en bucle con temporizador
+para que parezca un directo. Lo publica
+[el flujo de Pages](.github/workflows/pages.yml) en cada empujón a `main`.
 
 ### Mundo de demostración
 

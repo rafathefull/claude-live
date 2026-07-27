@@ -1632,3 +1632,36 @@ td.bad {
   font-size: 11px;
   padding: 0 2px 3px;
 }
+
+/* ------------------------------------------------ aviso de la demostración */
+
+/* Solo aparece en la versión publicada, donde los datos son inventados y no hay servidor. */
+.demo-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 9px 12px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--accent);
+}
+
+.demo-notice p {
+  margin: 3px 0 0;
+  color: var(--text-dim);
+  font-size: 12px;
+  max-width: 120ch;
+}
+
+.demo-notice code {
+  color: var(--text);
+  font-size: 11px;
+}
+
+.demo-notice a {
+  color: var(--accent);
+}
+
+.demo-notice button {
+  flex: none;
+  margin-left: auto;
+}

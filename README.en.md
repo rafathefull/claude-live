@@ -19,6 +19,14 @@ be launched in any special way: **any Claude Code session you open shows up on i
 and each walks off to the station it needs while the timeline fills up. Everything you see
 comes from the files Claude Code writes under `~/.claude`.*
 
+## Try it without installing anything
+
+**[▶ Playable demo](https://rafathefull.github.io/claude-live/)** — the whole viewer running in
+the browser, with a made-up world inside the page. There is no server and no `~/.claude` is read:
+the data is fictional, but **the code is the same**, so you can switch tabs, open a past
+conversation and play it back, click the Camp, drag the splitter or hover the world. To see it
+with your own sessions you need to run it on your machine (below).
+
 ## What it shows
 
 - **Live sessions**, with their directory, git branch, model, permission mode, accumulated
@@ -416,6 +424,19 @@ It is a floor, not a substitute: the demo data is friendly and yours is not. Tha
 in [continuous integration](.github/workflows/ci.yml), which also mounts the world in a real
 Chromium and fails if the console says anything —a runtime Pixi API failure is invisible to
 `typecheck`—.
+
+### The published demo
+
+```bash
+npm run build:pages        # leaves pages-dist/ ready, with the data in data/demo.json
+```
+
+`tools/build-pages.ts` writes the demo world into a temporary directory, reads it with the
+**real server pipeline** (history index, parser, jobs, metrics and retention) and dumps the
+result into a JSON; then it builds the front end with `VITE_STATIC=1`, which swaps the data
+source —`web/src/backend.ts`— for that file: same store, same scene, same timeline, no server.
+The scripted session is replayed on a timer so it looks live. It is published by
+[the Pages workflow](.github/workflows/pages.yml) on every push to `main`.
 
 ### Demo world
 

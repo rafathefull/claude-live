@@ -26,7 +26,8 @@
     "test:hood": "tsx web/test/neighborhood.smoke.ts",
     "test:metrics": "tsx web/test/metrics.smoke.ts",
     "test:metrics-server": "tsx server/test/metrics.smoke.ts",
-    "gif": "tsx tools/gif.ts"
+    "gif": "tsx tools/gif.ts",
+    "build:pages": "tsx tools/build-pages.ts"
   },
   "dependencies": {
     "@fastify/static": "^10.1.2",

@@ -7,6 +7,7 @@ import Inspector from './components/Inspector.vue'
 import HistoryView from './components/HistoryView.vue'
 import Neighborhood from './components/Neighborhood.vue'
 import MetricsView from './components/MetricsView.vue'
+import DemoNotice from './components/DemoNotice.vue'
 import Legend from './components/Legend.vue'
 import ReplayBar from './components/ReplayBar.vue'
 import {
@@ -18,6 +19,7 @@ import {
   step,
   togglePlay,
 } from './store'
+import { STATIC_MODE } from './backend'
 import { clampTimelineWidth, loadTimelineWidth, saveTimelineWidth } from './split'
 import { actionForKey, isTypingTarget, nextSpeed } from './shortcuts'
 import { tr } from './i18n'
@@ -132,6 +134,8 @@ onBeforeUnmount(() => {
 <template>
   <div class="app" :class="{ dragging }">
     <Hud :view="view" @view="view = $event" @legend="state.legendOpen = true" />
+
+    <DemoNotice v-if="STATIC_MODE" />
 
     <ReplayBar v-if="isReplaying && view === 'live'" />
 
