@@ -20,7 +20,7 @@
     haciendo, sus subagentes y su contexto. Un clic entra en esa habitacion.
     Las sesiones de background ensenan el parte de su job, y la estacion solo
     se marca si la sesion esta trabajando: esperandote no es estar en ninguna
-    parte.                                                             [pend.]
+    parte.                                                             [194a6c9]
   ! El inspector salia arriba, fuera de su caja, y el historial sin margen ni
     scroll: un selector duplicado invalidaba todo el CSS que venia detras.
                                                                       [b0c0bd1]
@@ -118,7 +118,7 @@
     its subagents and its context. One click enters that room. Background
     sessions show their job's last report, and the station is only highlighted
     while the session is working: waiting for you is not being anywhere.
-                                                                       [pend.]
+                                                                       [194a6c9]
   ! The inspector showed up at the top, out of its box, and the history had no
     padding or scroll: a duplicated selector invalidated every rule after it.
                                                                       [b0c0bd1]
