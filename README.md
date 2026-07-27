@@ -35,9 +35,9 @@ ficheros que Claude Code escribe en `~/.claude`.*
 - **Timeline sincronizada**: filtrable por actor, con duraciones, errores y un inspector que
   muestra el payload completo de cualquier evento.
 - **Reproductor del historial**: abre una conversación pasada y reprodúcela como una película,
-  con `⏮ ⏪ ⏵ ⏩ ⏭`, velocidades de 0,5× a 16× y barra para saltar a cualquier punto. De momento
-  carga los primeros 2000 eventos de la sesión: las conversaciones más largas se reproducen
-  hasta ahí.
+  con `⏮ ⏪ ⏵ ⏩ ⏭`, velocidades de 0,5× a 16× y barra para saltar a cualquier punto. Las
+  conversaciones largas se traen por tramos mientras avanza, así que se reproducen enteras, y el
+  contador muestra el total real desde el primer momento.
 - **Ayuda en el sitio**: pasa el ratón por cualquier estación o actor y sale su explicación,
   con lo que está haciendo y su estado, sin abrir nada.
 - **Estado a dos señales**: el anillo de cada actor late cuando está activo y su color dice en
@@ -290,7 +290,8 @@ lo hace el parser, así que afecta tanto al stream como a la timeline paginada; 
 |---|---|
 | `GET /api/stream` | SSE con los eventos normalizados |
 | `GET /api/sessions?active=1` | Sesiones vivas; sin `active`, también el historial |
-| `GET /api/sessions/:id/events?from=&limit=&agents=0` | Timeline paginada. Los subagentes vienen intercalados salvo que se pase `agents=0`; `limit` es 500 por defecto y está topado a 2000 |
+| `GET /api/sessions/:id/events?from=&limit=&agents=0` | Timeline paginada. Los subagentes vienen intercalados salvo que se pase `agents=0`; `limit` es 500 por defecto y está topado a 2000 por petición, y el reproductor encadena tramos con `from` |
+| `GET /api/retention` | Cuántas sesiones sobreviven a la limpieza de Claude Code y cuántas se han perdido |
 | `GET /api/sessions/:id/raw/:uuid` | Línea cruda de un evento, sin recortar (solo para eventos del transcript: los que nacen de un hook no están en ningún fichero) |
 | `POST /hook` | Ingesta de los hooks de Claude Code |
 | `GET /api/health` | Sesiones detectadas y clientes conectados |
@@ -336,8 +337,14 @@ ventana, informa de los errores de consola y guarda las capturas de las tres vis
 
 ## Estado y qué falta
 
-Funcionando: sesiones vivas, subagentes, timeline, inspector, historial con reproductor,
-leyenda, modo sobrio e ingesta de hooks.
+Funcionando: sesiones vivas, subagentes, timeline, inspector, historial con reproductor
+completo, aviso de retención, leyenda, modo sobrio, ingesta de hooks e interfaz bilingüe.
+
+**Ojo con el historial**: Claude Code borra los transcripts pasados `cleanupPeriodDays` días
+(30 por omisión), así que lo que ves no es todo lo que has hecho, sino lo que sobrevive. El
+visor lo detecta comparando los transcripts en disco con el registro de prompts de
+`~/.claude/history.jsonl`, y lo avisa en la pestaña de historial con tus propios números. Para
+conservar más, añade `"cleanupPeriodDays": 365` a `~/.claude/settings.json`.
 
 Pendiente:
 

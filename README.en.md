@@ -34,8 +34,9 @@ comes from the files Claude Code writes under `~/.claude`.*
 - **A synchronised timeline**: filterable by actor, with durations, errors and an inspector
   that shows the full payload of any event.
 - **History player**: open a past conversation and play it back like a film, with
-  `⏮ ⏪ ⏵ ⏩ ⏭`, speeds from 0.5× to 16× and a slider to jump anywhere. For now it loads the
-  first 2000 events of a session: longer conversations play up to that point.
+  `⏮ ⏪ ⏵ ⏩ ⏭`, speeds from 0.5× to 16× and a slider to jump anywhere. Long conversations are
+  fetched in chunks as it goes, so they play in full, and the counter shows the real total from
+  the very start.
 - **Help where you are**: hover any station or actor and its explanation appears, along with
   what it is doing and its state, without opening anything.
 - **State on two channels**: each actor's ring beats while it is busy and its colour says what
@@ -289,7 +290,8 @@ fetched separately with `/raw/:uuid`.
 |---|---|
 | `GET /api/stream` | SSE with normalised events |
 | `GET /api/sessions?active=1` | Live sessions; without `active`, the history too |
-| `GET /api/sessions/:id/events?from=&limit=&agents=0` | Paginated timeline. Subagents come interleaved unless `agents=0` is passed; `limit` defaults to 500 and is capped at 2000 |
+| `GET /api/sessions/:id/events?from=&limit=&agents=0` | Paginated timeline. Subagents come interleaved unless `agents=0` is passed; `limit` defaults to 500 and is capped at 2000 per request, and the player chains chunks with `from` |
+| `GET /api/retention` | How many sessions survive Claude Code's cleanup and how many are already gone |
 | `GET /api/sessions/:id/raw/:uuid` | The raw line of an event, untrimmed (transcript events only: the ones born from a hook are in no file) |
 | `POST /hook` | Ingest for Claude Code hooks |
 | `GET /api/health` | Sessions detected, clients connected and hooks received |
@@ -342,8 +344,14 @@ Chromium, reports console errors and saves screenshots of the three views.
 
 ## State and what is missing
 
-Working: live sessions, subagents, timeline, inspector, history with player, legend, plain
-mode, hook ingest and the bilingual interface.
+Working: live sessions, subagents, timeline, inspector, history with a complete player,
+retention warning, legend, plain mode, hook ingest and the bilingual interface.
+
+**A warning about the history**: Claude Code deletes transcripts after `cleanupPeriodDays` days
+(30 by default), so what you see is not everything you have done but whatever survived. The
+viewer detects this by comparing the transcripts on disk against the prompt log in
+`~/.claude/history.jsonl`, and says so in the history tab with your own numbers. To keep more,
+add `"cleanupPeriodDays": 365` to `~/.claude/settings.json`.
 
 Pending:
 
