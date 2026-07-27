@@ -5,8 +5,10 @@ import { Scene, type HoverInfo } from '../world/Scene'
 import { Director } from '../world/director'
 import type { TimelineEvent } from '@shared/types'
 import { lang, tr } from '../i18n'
+import { theme } from '../theme'
 
 const L = {
+  loading: { es: 'Cargando la sesión…', en: 'Loading the session…' },
   noSession: { es: 'No hay ninguna sesión de Claude abierta.', en: 'No Claude session is open.' },
   hint: {
     es: 'Abre claude en cualquier directorio y aparecerá aquí sola: no hay que configurar nada en el proyecto.',
@@ -67,9 +69,9 @@ function unmountWorld(): void {
 
 onMounted(mountWorld)
 
-// El mundo se reconstruye al cambiar de idioma: los nombres de las estaciones, el grabado de
-// la mesa y las etiquetas de los actores son texto dibujado en el canvas.
-watch(lang, async () => {
+// El mundo se reconstruye al cambiar de idioma o de tema: los nombres de las estaciones y el
+// grabado de la mesa son texto y trazos dibujados en el canvas, con sus colores ya aplicados.
+watch([lang, theme], async () => {
   hover.value = null
   unmountWorld()
   await mountWorld()
@@ -117,7 +119,10 @@ onBeforeUnmount(unmountWorld)
 
 <template>
   <div class="stage" ref="host">
-    <div v-if="!state.selectedSessionId" class="stage-empty">
+    <div v-if="state.loadingSession" class="stage-empty">
+      <p>{{ tr(L.loading) }}</p>
+    </div>
+    <div v-else-if="!state.selectedSessionId" class="stage-empty">
       <div>
         <p>{{ tr(L.noSession) }}</p>
         <p class="muted">{{ tr(L.hint) }}</p>

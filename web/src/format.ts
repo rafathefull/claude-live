@@ -2,6 +2,7 @@ import { STATION_BY_ID, colorForAgent } from '@shared/mapping'
 import type { EventKind, Stat, TimelineEvent } from '@shared/types'
 import { formatStat as formatStatIn } from '@shared/stats'
 import { lang } from './i18n'
+import { inkFor } from './world/palette'
 
 /**
  * Límite de contexto. Los modelos con sufijo `[1m]` llevan ventana de 1M, pero el
@@ -74,9 +75,12 @@ export function iconFor(event: TimelineEvent): string {
   return KIND_ICON[event.kind] ?? '·'
 }
 
-/** Color de un subagente: tono base por tipo, matiz propio por `variant`. */
+/**
+ * Color de un subagente: tono base por tipo, matiz propio por `variant`. Pasa por `inkFor`
+ * para que en tema claro las píldoras y el canvas usen exactamente el mismo tono.
+ */
 export function agentColorCss(agentType: string | undefined, variant = 0): string {
-  return `#${colorForAgent(agentType, variant).toString(16).padStart(6, '0')}`
+  return `#${inkFor(colorForAgent(agentType, variant)).toString(16).padStart(6, '0')}`
 }
 
 /** Nombre corto de la herramienta: mcp__serena__find_symbol → serena·find_symbol */

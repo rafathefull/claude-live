@@ -4,6 +4,7 @@ import { STATIONS, toolsForStation } from '@shared/mapping'
 import { MOOD_EMOJI, MOOD_RING } from '../world/Actor'
 import type { ActorMood } from '../world/Actor'
 import { agentColorCss } from '../format'
+import { inkFor } from '../world/palette'
 import { tr } from '../i18n'
 
 const L = {
@@ -70,8 +71,9 @@ const L = {
 
 const emit = defineEmits<{ (e: 'close'): void }>()
 
+/** Mismo ajuste de tema que en el canvas, para que la leyenda no mienta sobre el color. */
 function hex(value: number): string {
-  return `#${value.toString(16).padStart(6, '0')}`
+  return `#${inkFor(value).toString(16).padStart(6, '0')}`
 }
 
 /** Los tipos de subagente que Claude Code trae de serie, más el caso genérico. */

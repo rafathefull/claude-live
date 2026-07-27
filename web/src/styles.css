@@ -17,6 +17,45 @@
   --agent-guide: #f59e0b;
   --agent-other: #fb7185;
   --mono: ui-monospace, 'JetBrains Mono', 'Fira Code', Menlo, Consolas, monospace;
+  /* Velo sobre el escenario mientras carga una sesión. */
+  --veil: rgba(11, 13, 18, 0.78);
+  /* Superficies flotantes (tooltips, inspector, leyenda) y sus sombras. */
+  --float: rgba(17, 20, 27, 0.97);
+  --backdrop: rgba(4, 6, 10, 0.72);
+  --shadow: rgba(0, 0, 0, 0.55);
+  --shadow-strong: rgba(0, 0, 0, 0.6);
+  --text-bright: #c8d3e6;
+  --warn-wash: rgba(251, 191, 36, 0.06);
+}
+
+/* Tema claro. Mismos papeles, distintos tonos: los colores de estado (verde trabajando,
+   ámbar esperando) se mantienen para que lo aprendido en oscuro siga valiendo, solo se
+   oscurecen lo justo para que contrasten sobre blanco. */
+:root[data-theme='light'] {
+  --bg: #f4f6fa;
+  --bg-panel: #ffffff;
+  --bg-raised: #e9edf4;
+  --border: #d3dae6;
+  --border-strong: #b9c3d3;
+  --text: #1d2430;
+  --text-dim: #53607a;
+  --text-faint: #7d879b;
+  --accent: #0b6f9e;
+  --ok: #158a4a;
+  --warn: #a06a12;
+  --err: #c0344c;
+  --agent-explore: #1d6fd0;
+  --agent-plan: #7a3fd0;
+  --agent-general: #158a4a;
+  --agent-guide: #a06a12;
+  --agent-other: #c0344c;
+  --veil: rgba(244, 246, 250, 0.82);
+  --float: rgba(255, 255, 255, 0.98);
+  --backdrop: rgba(35, 44, 58, 0.42);
+  --shadow: rgba(31, 41, 55, 0.18);
+  --shadow-strong: rgba(31, 41, 55, 0.24);
+  --text-bright: #0f1620;
+  --warn-wash: rgba(160, 106, 18, 0.09);
 }
 
 * {
@@ -145,6 +184,10 @@ button.active {
   inset: 0;
   display: grid;
   place-items: center;
+  /* Velo: mientras carga otra sesión sigue debajo el mundo anterior, y el aviso tiene que
+     leerse por encima. */
+  background: var(--veil);
+  z-index: 2;
   color: var(--text-faint);
   text-align: center;
   padding: 24px;
@@ -157,10 +200,10 @@ button.active {
   width: 290px;
   max-width: calc(100% - 16px);
   padding: 8px 10px;
-  background: rgba(11, 13, 18, 0.97);
+  background: var(--float);
   border: 1px solid var(--border-strong);
   border-radius: 8px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 12px 32px var(--shadow);
   pointer-events: none;
   z-index: 20;
 }
@@ -513,7 +556,7 @@ button.active {
 }
 
 .row.kind-text .summary {
-  color: #c8d3e6;
+  color: var(--text-bright);
 }
 
 .row.error .summary {
@@ -578,12 +621,12 @@ button.active {
   bottom: 12px;
   width: min(560px, 60%);
   max-height: 60%;
-  background: rgba(17, 20, 27, 0.97);
+  background: var(--float);
   border: 1px solid var(--border-strong);
   border-radius: 8px;
   display: grid;
   grid-template-rows: auto 1fr;
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 18px 48px var(--shadow);
 }
 
 .inspector header {
@@ -662,7 +705,7 @@ button.active {
 .legend-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(4, 6, 10, 0.72);
+  background: var(--backdrop);
   display: grid;
   place-items: center;
   padding: 24px;
@@ -680,7 +723,7 @@ button.active {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 24px 64px var(--shadow-strong);
 }
 
 .legend > header {
@@ -829,7 +872,7 @@ button.active {
   padding: 10px 12px;
   border: 1px solid var(--warn);
   border-radius: 8px;
-  background: rgba(251, 191, 36, 0.06);
+  background: var(--warn-wash);
 }
 
 .retention-notice strong {
@@ -853,7 +896,7 @@ button.active {
   font-size: 12px;
 }
 
-.retention-line button.linkish {
+button.linkish {
   padding: 0 2px;
   border: none;
   background: none;
@@ -901,6 +944,122 @@ button.active {
   background: var(--bg-raised);
   color: var(--text);
   cursor: pointer;
+}
+
+/* Buscador y conmutador de vista en la misma fila. */
+.history-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.history-bar .search {
+  margin-bottom: 0;
+}
+
+.theme-toggle {
+  font-size: 14px;
+  line-height: 1;
+  padding: 3px 8px;
+}
+
+.modes {
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+
+/* ------------------------------------------------------- árbol de proyectos */
+
+.tree-tools {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.tree-node {
+  border-bottom: 1px solid var(--border);
+}
+
+.tree-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 6px;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tree-head:hover {
+  background: var(--bg-panel);
+}
+
+.tree-head .caret {
+  width: 12px;
+  color: var(--text-faint);
+}
+
+/* Los contadores a la derecha, alineados, para poder comparar proyectos de un vistazo. */
+.tree-head .node-meta {
+  margin-left: auto;
+  color: var(--text-faint);
+  font-size: 12px;
+}
+
+.tree-head .node-when {
+  width: 13ch;
+  text-align: right;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.tree-node ul {
+  margin: 0 0 6px 19px;
+  padding: 0 0 0 12px;
+  list-style: none;
+  border-left: 1px solid var(--border);
+}
+
+.tree-node li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.tree-node li:hover {
+  background: var(--bg-panel);
+}
+
+.leaf-when {
+  flex: none;
+  width: 13ch;
+  color: var(--text-faint);
+  font-size: 12px;
+  font-family: ui-monospace, monospace;
+}
+
+.leaf-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leaf-meta {
+  flex: none;
+  color: var(--text-faint);
+  font-size: 12px;
 }
 
 .search {

@@ -37,6 +37,19 @@ const L = {
   },
   dismiss: { es: 'Entendido', en: 'Got it' },
   why: { es: '¿por qué?', en: 'why?' },
+  table: { es: 'Tabla', en: 'Table' },
+  tree: { es: 'Árbol', en: 'Tree' },
+  tableHint: {
+    es: 'Todas las sesiones en una lista, ordenadas por fecha',
+    en: 'Every session in one list, sorted by date',
+  },
+  treeHint: {
+    es: 'Sesiones agrupadas por proyecto',
+    en: 'Sessions grouped by project',
+  },
+  expandAll: { es: 'Abrir todo', en: 'Expand all' },
+  collapseAll: { es: 'Cerrar todo', en: 'Collapse all' },
+  noTitle: { es: 'sin título', en: 'untitled' },
 }
 
 const emit = defineEmits<{ (e: 'open'): void }>()
@@ -52,6 +65,9 @@ const noticeReopened = ref(false)
 onMounted(async () => {
   sessions.value = await loadAllSessions()
   loading.value = false
+  // El proyecto más reciente arranca abierto: un árbol enteramente cerrado parece vacío.
+  const first = tree.value[0]
+  if (first) opened.value = new Set([first.cwd])
   retention.value = await loadRetention()
 })
 
@@ -111,20 +127,109 @@ const filtered = computed(() => {
   )
 })
 
+/* ------------------------------------------------------------------ árbol */
+
+type ProjectNode = {
+  cwd: string
+  project: string
+  sessions: SessionInfo[]
+  lastTs: string
+  bytes: number
+  live: boolean
+}
+
+const mode = ref<'table' | 'tree'>(
+  localStorage.getItem('claude-live:history-mode') === 'tree' ? 'tree' : 'table',
+)
+
+function setMode(next: 'table' | 'tree'): void {
+  mode.value = next
+  localStorage.setItem('claude-live:history-mode', next)
+}
+
+/**
+ * Se agrupa por `cwd` y no por nombre de proyecto: dos carpetas distintas pueden llamarse
+ * igual (un `backend` por cliente) y mezclarlas sería peor que la lista plana.
+ */
+const tree = computed<ProjectNode[]>(() => {
+  const nodes = new Map<string, ProjectNode>()
+  for (const session of filtered.value) {
+    const key = session.cwd || session.project || '—'
+    const ts = session.lastTs ?? ''
+    const node =
+      nodes.get(key) ??
+      ({ cwd: key, project: session.project || key, sessions: [], lastTs: ts, bytes: 0, live: false } satisfies ProjectNode)
+    nodes.set(key, node)
+    node.sessions.push(session)
+    node.bytes += session.sizeBytes ?? 0
+    if (session.live) node.live = true
+    if (ts > node.lastTs) node.lastTs = ts
+  }
+  const list = [...nodes.values()]
+  for (const node of list) {
+    node.sessions.sort((a, b) => (b.lastTs ?? '').localeCompare(a.lastTs ?? ''))
+  }
+  // Los proyectos vivos primero, y el resto por actividad reciente: lo que buscas casi
+  // siempre es lo último que tocaste.
+  return list.sort((a, b) => Number(b.live) - Number(a.live) || b.lastTs.localeCompare(a.lastTs))
+})
+
+const opened = ref<Set<string>>(new Set())
+/** Un proyecto abierto a mano vuelve a cerrarse; con búsqueda activa se abre todo. */
+const isOpen = (cwd: string): boolean => query.value.trim() !== '' || opened.value.has(cwd)
+
+function toggle(cwd: string): void {
+  const next = new Set(opened.value)
+  if (next.has(cwd)) next.delete(cwd)
+  else next.add(cwd)
+  opened.value = next
+}
+
+function expandAll(): void {
+  opened.value = new Set(tree.value.map((node) => node.cwd))
+}
+
+function collapseAll(): void {
+  opened.value = new Set()
+}
+
+function subtitle(session: SessionInfo): string {
+  const parts = [session.gitBranch, session.model].filter(Boolean)
+  parts.push(`${((session.sizeBytes ?? 0) / 1024).toFixed(0)} KB`)
+  return parts.join(' · ')
+}
+
+function nodeMeta(node: ProjectNode): string {
+  const n = node.sessions.length
+  const mb = node.bytes / 1024 / 1024
+  const size = mb >= 1 ? `${mb.toFixed(1)} MB` : `${(node.bytes / 1024).toFixed(0)} KB`
+  return tr({
+    es: `${n} ${n === 1 ? 'sesión' : 'sesiones'} · ${size}`,
+    en: `${n} ${n === 1 ? 'session' : 'sessions'} · ${size}`,
+  })
+}
+
 async function open(session: SessionInfo): Promise<void> {
   if (!state.sessions.some((s) => s.sessionId === session.sessionId)) {
     state.sessions = [...state.sessions, session]
   }
-  // Primero los eventos y después la selección: al revés el mundo se poblaba con un
-  // array todavía vacío y la conversación parecía tener cuatro pasos.
-  const count = await loadSessionEvents(session.sessionId)
-  state.selectedSessionId = session.sessionId
-  if (session.live) {
-    stopReplay()
-  } else {
-    startReplay(session.sessionId, count)
-  }
+  // Se salta al mundo antes de traer los eventos: un transcript de 11 MB tarda lo suyo, y
+  // esperando la carga el clic parecía no hacer nada (había que pulsar «En vivo» a mano).
+  state.loadingSession = session.sessionId
   emit('open')
+  try {
+    // Primero los eventos y después la selección: al revés el mundo se poblaba con un
+    // array todavía vacío y la conversación parecía tener cuatro pasos.
+    const count = await loadSessionEvents(session.sessionId)
+    state.selectedSessionId = session.sessionId
+    if (session.live) {
+      stopReplay()
+    } else {
+      startReplay(session.sessionId, count)
+    }
+  } finally {
+    state.loadingSession = null
+  }
 }
 </script>
 
@@ -142,8 +247,54 @@ async function open(session: SessionInfo): Promise<void> {
       <button class="linkish" @click="noticeReopened = true">{{ tr(L.why) }}</button>
     </p>
 
-    <input v-model="query" class="search" :placeholder="tr(L.search)" />
+    <div class="history-bar">
+      <input v-model="query" class="search" :placeholder="tr(L.search)" />
+      <div class="modes">
+        <button
+          :class="{ active: mode === 'table' }"
+          :title="tr(L.tableHint)"
+          @click="setMode('table')"
+        >
+          ☰ {{ tr(L.table) }}
+        </button>
+        <button
+          :class="{ active: mode === 'tree' }"
+          :title="tr(L.treeHint)"
+          @click="setMode('tree')"
+        >
+          🌳 {{ tr(L.tree) }}
+        </button>
+      </div>
+    </div>
+
     <p v-if="loading" class="muted">{{ tr(L.indexing) }}</p>
+
+    <!-- Árbol: proyectos plegables, para ubicarse sin recorrer ochenta filas. -->
+    <div v-else-if="mode === 'tree'" class="tree">
+      <div class="tree-tools">
+        <button class="linkish" @click="expandAll">{{ tr(L.expandAll) }}</button>
+        <button class="linkish" @click="collapseAll">{{ tr(L.collapseAll) }}</button>
+      </div>
+      <section v-for="node in tree" :key="node.cwd" class="tree-node">
+        <button class="tree-head" :title="node.cwd" @click="toggle(node.cwd)">
+          <span class="caret">{{ isOpen(node.cwd) ? '▾' : '▸' }}</span>
+          <span class="folder">{{ isOpen(node.cwd) ? '📂' : '📁' }}</span>
+          <strong>{{ node.project }}</strong>
+          <i v-if="node.live" class="dot busy" />
+          <span class="node-meta">{{ nodeMeta(node) }}</span>
+          <span class="node-when">{{ formatDate(node.lastTs) }}</span>
+        </button>
+        <ul v-if="isOpen(node.cwd)">
+          <li v-for="s in node.sessions" :key="s.sessionId" @click="open(s)">
+            <i v-if="s.live" class="dot" :class="s.status" />
+            <span class="leaf-when">{{ formatDate(s.lastTs) }}</span>
+            <span class="leaf-title" :title="s.aiTitle">{{ s.aiTitle || tr(L.noTitle) }}</span>
+            <span class="leaf-meta">{{ subtitle(s) }}</span>
+          </li>
+        </ul>
+      </section>
+    </div>
+
     <table v-else>
       <thead>
         <tr>

@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { isReplaying, liveSessions, resumeReplay, selectedSession, state, stopReplay } from '../store'
 import { contextPercent, formatTokens } from '../format'
 import { lang, setLang, tr } from '../i18n'
+import { theme, toggleTheme } from '../theme'
 
 /** Textos de la cabecera, con sus dos versiones juntas. */
 const L = {
@@ -27,6 +28,10 @@ const L = {
   legendTitle: {
     es: 'Qué significa cada lugar, actor y color del mundo',
     en: 'What every place, actor and colour in the world means',
+  },
+  themeTitle: {
+    es: 'Cambiar entre tema claro y oscuro',
+    en: 'Switch between light and dark theme',
   },
   sober: { es: 'Modo sobrio', en: 'Plain mode' },
   world: { es: 'Mundo', en: 'World' },
@@ -160,6 +165,9 @@ const statusLabel = computed(() => {
         <span class="flag" aria-hidden="true">🇬🇧</span> EN
       </button>
     </div>
+    <button class="theme-toggle" :title="tr(L.themeTitle)" @click="toggleTheme">
+      {{ theme === 'dark' ? '☀' : '🌙' }}
+    </button>
     <button :class="{ active: state.soberMode }" @click="state.soberMode = !state.soberMode">
       {{ state.soberMode ? tr(L.sober) : tr(L.world) }}
     </button>

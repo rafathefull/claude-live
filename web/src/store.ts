@@ -50,6 +50,8 @@ interface State {
   /** Filtro de la timeline: id de actor ('main' o agentId) o null para todo. */
   focusActor: string | null
   selectedEvent: TimelineEvent | null
+  /** Sesión que se está trayendo del histórico, para poder avisar mientras tarda. */
+  loadingSession: string | null
   replay: ReplayState
 }
 
@@ -63,6 +65,7 @@ export const state = reactive<State>({
   soberMode: false,
   focusActor: null,
   selectedEvent: null,
+  loadingSession: null,
   replay: {
     sessionId: null,
     index: 0,

@@ -10,6 +10,7 @@ import {
 import { STATIONS, colorForAgent, toolsForStation, type StationMeta } from '@shared/mapping'
 // `Text` ya es la clase de texto de Pixi: el tipo de i18n entra con alias.
 import type { Text as Localized } from '@shared/i18n'
+import { inkFor, palette } from './palette'
 import { tr } from '../i18n'
 import type { StationId } from '@shared/types'
 import { Actor, MOOD_EMOJI, MOOD_RING } from './Actor'
@@ -211,7 +212,7 @@ export class Scene {
 
   async mount(host: HTMLElement): Promise<void> {
     await this.app.init({
-      background: 0x0b0d12,
+      background: palette().bg,
       antialias: true,
       resizeTo: host,
       // Resolución 1 y 30 fps de techo: es un panel que se deja abierto durante horas, no un
@@ -232,7 +233,7 @@ export class Scene {
       style: {
         fontFamily: 'ui-monospace, monospace',
         fontSize: 26,
-        fill: 0x2b3448,
+        fill: palette().motto,
         align: 'center',
         wordWrap: true,
         wordWrapWidth: 300,
@@ -311,13 +312,14 @@ export class Scene {
   // ------------------------------------------------------------- estaciones
 
   private buildStation(meta: StationMeta): StationView {
+    const p = palette()
     const view = new Container()
     const glow = new Graphics()
     const plate = new Graphics()
-    plate.roundRect(-PLATE_W / 2, -PLATE_H / 2, PLATE_W, PLATE_H, 12).fill({ color: 0x11141b })
+    plate.roundRect(-PLATE_W / 2, -PLATE_H / 2, PLATE_W, PLATE_H, 12).fill({ color: p.plate })
     plate
       .roundRect(-PLATE_W / 2, -PLATE_H / 2, PLATE_W, PLATE_H, 12)
-      .stroke({ width: 1, color: 0x232936 })
+      .stroke({ width: 1, color: p.plateBorder })
 
     const icon = new Text({ text: meta.icon, style: { fontSize: 34 } })
     icon.anchor.set(0.5)
@@ -325,7 +327,7 @@ export class Scene {
 
     const name = new Text({
       text: tr(meta.label),
-      style: { fontFamily: 'ui-monospace, monospace', fontSize: 12, fill: 0x8b95a8 },
+      style: { fontFamily: 'ui-monospace, monospace', fontSize: 12, fill: p.plateLabel },
     })
     name.anchor.set(0.5)
     name.y = 18
@@ -333,7 +335,7 @@ export class Scene {
     // El contador va dentro del cartel: el hueco de debajo es por donde llegan los actores.
     const counter = new Text({
       text: '',
-      style: { fontFamily: 'ui-monospace, monospace', fontSize: 11, fill: 0x5b6474 },
+      style: { fontFamily: 'ui-monospace, monospace', fontSize: 11, fill: p.plateDetail },
     })
     counter.anchor.set(1, 0)
     counter.position.set(PLATE_W / 2 - 8, -PLATE_H / 2 + 5)
@@ -344,7 +346,7 @@ export class Scene {
       style: {
         fontFamily: 'ui-monospace, monospace',
         fontSize: 11,
-        fill: 0x7dd3fc,
+        fill: p.ink,
         wordWrap: true,
         wordWrapWidth: 180,
         breakWords: true,
@@ -415,7 +417,8 @@ export class Scene {
    */
   private drawEngraving(cx: number, cy: number, radius: number): void {
     const g = this.deskZone
-    const ink = { width: 1, color: 0x7dd3fc, alpha: 0.05 } as const
+    const { ink: color, inkAlpha: alpha } = palette()
+    const ink = { width: 1, color, alpha } as const
 
     for (const factor of [1, 0.72, 0.34, 0.12]) {
       g.circle(cx, cy, radius * factor).stroke(ink)
@@ -495,12 +498,13 @@ export class Scene {
     shieldDir: 1 | -1 = 1,
   ): void {
     const g = this.deskZone
+    const pal = palette()
     const ink = {
       width: highlighted ? 2 : 1.5,
-      color: highlighted ? 0xf2f6ff : 0xb8c9e2,
-      alpha: highlighted ? 0.88 : 0.24,
+      color: highlighted ? pal.knightHot : pal.knight,
+      alpha: Math.min(1, (highlighted ? 0.88 : 0.24) * pal.inkBoost),
     } as const
-    const soft = { ...ink, alpha: highlighted ? 0.68 : 0.16 } as const
+    const soft = { ...ink, alpha: Math.min(1, (highlighted ? 0.68 : 0.16) * pal.inkBoost) } as const
     const dashed = helmet === 'ghost'
 
     // Hombreras: el yelmo se apoya en unos hombros, o parece flotar.
@@ -641,11 +645,12 @@ export class Scene {
     flip: 1 | -1 = 1,
   ): void {
     const g = this.deskZone
+    const pal = palette()
     const k = highlighted ? 1.9 : 1.25
     const ink = {
       width: highlighted ? 2 : 1.4,
-      color: highlighted ? 0xffe6a3 : 0xc3d3ea,
-      alpha: highlighted ? 0.95 : 0.4,
+      color: highlighted ? pal.crestHot : pal.crest,
+      alpha: Math.min(1, (highlighted ? 0.95 : 0.4) * pal.inkBoost),
     } as const
     // `flip` espeja el emblema cuando el escudo está al otro lado, para que las figuras
     // asimétricas (la bandera, la luna) sigan mirando hacia el tablero.
@@ -743,15 +748,16 @@ export class Scene {
     const { x, y } = this.positionOf('desk')
     const half = Math.min(this.width * 0.19, this.height * 0.26)
     const size = half * 2
+    const p = palette()
     const g = this.deskZone
     g.clear()
       .roundRect(x - half, y - half, size, size, 10)
-      .fill({ color: 0x7dd3fc, alpha: 0.016 })
+      .fill({ color: p.deskFill, alpha: p.deskFillAlpha })
       .roundRect(x - half, y - half, size, size, 10)
-      .stroke({ width: 1, color: 0x1c2230, alpha: 0.55 })
+      .stroke({ width: 1, color: p.deskLine, alpha: 0.55 })
     // Filete interior, como el de un tablero labrado.
     g.roundRect(x - half + 9, y - half + 9, size - 18, size - 18, 8)
-      .stroke({ width: 1, color: 0x1a2030, alpha: 0.5 })
+      .stroke({ width: 1, color: p.deskLineSoft, alpha: 0.5 })
 
     this.drawEngraving(x, y, half * 0.78)
     this.drawKnights(x, y, half)
@@ -920,18 +926,19 @@ export class Scene {
   }
 
   /** Línea temporal entre un actor y una estación (o entre dos actores). */
-  drawLink(fromActorId: string, to: StationId | string, color = 0x7dd3fc, ms = 700): void {
+  drawLink(fromActorId: string, to: StationId | string, color = palette().ink, ms = 700): void {
     this.links.push({ from: fromActorId, to, until: performance.now() + ms, color })
   }
 
   colorForAgent(agentType: string | undefined, variant = 0): number {
-    return colorForAgent(agentType, variant)
+    return inkFor(colorForAgent(agentType, variant))
   }
 
   // ------------------------------------------------------------- ticker
 
   private tick(deltaMs: number): void {
     const now = performance.now()
+    const glowColor = palette().ink
 
     for (const [id, actor] of this.actors) {
       // Arriba del escenario los carteles están por encima del actor: la burbuja se va abajo.
@@ -951,7 +958,7 @@ export class Scene {
       if (intensity > 0) {
         station.glow
           .roundRect(-PLATE_W / 2 - 7, -PLATE_H / 2 - 7, PLATE_W + 14, PLATE_H + 14, 14)
-          .fill({ color: 0x7dd3fc, alpha: 0.06 + intensity * 0.16 })
+          .fill({ color: glowColor, alpha: 0.06 + intensity * 0.16 })
       }
       if (remaining < -6000 && station.detail.text) station.detail.text = ''
     }

@@ -1,4 +1,5 @@
 import { Container, Graphics, Text, type TextStyleOptions } from 'pixi.js'
+import { inkFor, palette } from './palette'
 
 /**
  * Un habitante del mundo: el usuario, Claude o un subagente.
@@ -7,31 +8,33 @@ import { Container, Graphics, Text, type TextStyleOptions } from 'pixi.js'
 
 export type ActorMood = 'idle' | 'thinking' | 'working' | 'waiting' | 'talking'
 
-const LABEL_STYLE: TextStyleOptions = {
+// Los estilos son funciones y no constantes: el color de los rótulos depende del tema, y la
+// escena se rehace al cambiarlo.
+const labelStyle = (): TextStyleOptions => ({
   fontFamily: 'ui-monospace, monospace',
   fontSize: 12,
-  fill: 0x8b95a8,
+  fill: palette().actorLabel,
   align: 'center',
-}
+})
 
-const SUBLABEL_STYLE: TextStyleOptions = {
+const subLabelStyle = (): TextStyleOptions => ({
   fontFamily: 'ui-monospace, monospace',
   fontSize: 10,
-  fill: 0x6b7688,
+  fill: palette().actorSubLabel,
   align: 'center',
   wordWrap: true,
   wordWrapWidth: 96,
   breakWords: true,
-}
+})
 
-const BUBBLE_STYLE: TextStyleOptions = {
+const bubbleStyle = (): TextStyleOptions => ({
   fontFamily: 'ui-monospace, monospace',
   fontSize: 12,
-  fill: 0xdde3ee,
+  fill: palette().bubbleText,
   wordWrap: true,
   wordWrapWidth: 240,
   breakWords: true,
-}
+})
 
 /**
  * Insignia de estado: se superpone al avatar sin sustituirlo, para que el estado se lea de un
@@ -100,15 +103,15 @@ export class Actor {
     labelText: string,
     private radius = 24,
   ) {
-    this.face = new Text({ text: emoji, style: { fontSize: radius * 1.15, fill: 0xffffff } })
+    this.face = new Text({ text: emoji, style: { fontSize: radius * 1.15, fill: palette().faceFill } })
     this.face.anchor.set(0.5)
-    this.label = new Text({ text: labelText, style: { ...LABEL_STYLE, fill: color } })
+    this.label = new Text({ text: labelText, style: { ...labelStyle(), fill: color } })
     this.label.anchor.set(0.5, 0)
     this.label.y = radius + 7
 
     // Segunda línea: el cometido del actor. Sin ella, dos subagentes del mismo tipo son
     // dos círculos iguales y no hay forma de saber cuál hace qué.
-    this.subLabel = new Text({ text: '', style: SUBLABEL_STYLE })
+    this.subLabel = new Text({ text: '', style: subLabelStyle() })
     this.subLabel.anchor.set(0.5, 0)
     this.subLabel.y = radius + 21
 
@@ -121,10 +124,10 @@ export class Actor {
     this.badge.position.set(badgeX, badgeY)
     this.badgeBg
       .circle(badgeX, badgeY, Math.max(9, radius * 0.44))
-      .fill({ color: 0x0b0d12, alpha: 0.95 })
+      .fill({ color: palette().bubbleBg, alpha: 0.95 })
     this.badgeBg.visible = false
 
-    this.bubbleText = new Text({ text: '', style: BUBBLE_STYLE })
+    this.bubbleText = new Text({ text: '', style: bubbleStyle() })
     this.bubbleText.position.set(8, 6)
     this.bubble.addChild(this.bubbleBg, this.bubbleText)
     this.bubble.visible = false
@@ -144,7 +147,7 @@ export class Actor {
   }
 
   private draw(): void {
-    this.body.clear().circle(0, 0, this.radius).fill({ color: 0x171b24 })
+    this.body.clear().circle(0, 0, this.radius).fill({ color: palette().actorBody })
     this.body.circle(0, 0, this.radius).stroke({ width: 2, color: this.color, alpha: 0.9 })
   }
 
@@ -198,7 +201,7 @@ export class Actor {
     this.bubbleBg
       .clear()
       .roundRect(0, 0, width, this.bubbleHeight, 8)
-      .fill({ color: 0x0b0d12, alpha: 0.92 })
+      .fill({ color: palette().bubbleBg, alpha: 0.92 })
       .roundRect(0, 0, width, this.bubbleHeight, 8)
       .stroke({ width: 1, color: this.color, alpha: 0.6 })
     this.placeBubble()
@@ -273,7 +276,7 @@ export class Actor {
       this.ring
         .clear()
         .circle(0, 0, this.radius + 6)
-        .stroke({ width: 2, color: MOOD_RING[this.mood] })
+        .stroke({ width: 2, color: inkFor(MOOD_RING[this.mood]) })
     }
     const pulse = this.mood === 'idle' ? 0 : (Math.sin(t * 5) + 1) / 2
     this.ring.alpha = 0.25 + pulse * 0.45
