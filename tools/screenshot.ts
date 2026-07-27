@@ -43,7 +43,12 @@ async function shot(page: Page, name: string): Promise<void> {
 await mkdir(outDir, { recursive: true })
 
 const browser = await chromium.launch()
-const page = await browser.newPage({ viewport: { width: 1600, height: 900 } })
+// `colorScheme` explícito: Chromium sin ventana prefiere el tema claro, y las capturas del
+// README son las del tema oscuro.
+const page = await browser.newPage({
+  viewport: { width: 1600, height: 900 },
+  colorScheme: 'dark',
+})
 watch(page)
 
 console.log(`abriendo ${url}`)

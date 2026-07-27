@@ -116,6 +116,10 @@ export function palette(): Palette {
 export function inkFor(color: number): number {
   if (theme.value !== 'light') return color
   const channels = [(color >> 16) & 0xff, (color >> 8) & 0xff, color & 0xff]
-  const darker = channels.map((value) => Math.round(value * 0.62))
+  // Se oscurece más cuanto más claro es el tono de partida: un 38 % le sienta bien a los
+  // colores medios, pero el gris casi blanco de Claude quedaría ilegible sobre fondo claro.
+  const luma = (0.2126 * channels[0]! + 0.7152 * channels[1]! + 0.0722 * channels[2]!) / 255
+  const factor = 0.62 - 0.4 * Math.max(0, Math.min(1, (luma - 0.7) / 0.3))
+  const darker = channels.map((value) => Math.round(value * factor))
   return (darker[0]! << 16) | (darker[1]! << 8) | darker[2]!
 }

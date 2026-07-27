@@ -1,0 +1,149 @@
+================================================================================
+ claude-live - Registro de cambios / Changelog
+================================================================================
+
+ Mundo en vivo de lo que hace Claude Code.
+ A living world of what Claude Code is doing.
+
+ Lo nuevo arriba. Fechas en AAAA-MM-DD. Cada linea acaba con el commit corto.
+ Newest first. Dates as YYYY-MM-DD. Each line ends with the short commit.
+
+ ES = solo en castellano abajo   EN = English section at the bottom
+
+
+--------------------------------------------------------------------------------
+ 2026-07-27
+--------------------------------------------------------------------------------
+
+  + Tema claro ademas del oscuro, con un boton unico al lado de los idiomas.
+    Cambia tambien el escenario: la escena tiene su propia paleta, porque el
+    canvas no hereda las variables CSS.                                [b9bcd06]
+  + El historial se puede ver como arbol de proyectos, con las sesiones
+    plegables dentro de cada uno, contador y tamano por proyecto.      [b9bcd06]
+  + Ancho de la timeline ajustable arrastrando el divisor con el raton;
+    doble clic vuelve al ancho por omision. Se recuerda entre sesiones. [749d69c]
+  + El aviso de retencion deja una linea permanente al descartarlo, con un
+    "por que?" que lo vuelve a desplegar.                             [749d69c]
+  * Al pulsar una sesion del historial se salta al mundo de inmediato, sin
+    esperar a que cargue el transcript (antes habia que pulsar "En vivo"). [b9bcd06]
+  * El reproductor llega hasta el final de las conversaciones largas: se
+    trae el historico por tramos de 1000 eventos segun avanza.        [f95783a]
+  + El historial avisa de lo que Claude Code ya ha borrado (30 dias por
+    omision) y explica como ampliar la retencion.                     [f95783a]
+  ! El boton de salto al final se paraba en 1024 de 1586.             [f95783a]
+
+--------------------------------------------------------------------------------
+ 2026-07-26
+--------------------------------------------------------------------------------
+
+  + Interfaz completa en castellano e ingles, con banderas en el conmutador;
+    los resumenes que compone el servidor tambien cambian de idioma.  [9b4b496]
+                                                                      [8eda9d0]
+  + README en los dos idiomas.                                        [f605b03]
+  + GIF del mundo en marcha en la cabecera del README.                [1c57b55]
+  + Doce yelmos medievales, uno por caballero, con su emblema dibujado.
+                                                            [e96a48f] [acbdabe]
+  ! El escudo de Sir Robin se salia de la mesa.                       [b803c87]
+
+--------------------------------------------------------------------------------
+ 2026-07-25
+--------------------------------------------------------------------------------
+
+  + Primera version: servidor que lee ~/.claude sin tocar nada y mundo en
+    canvas con sus estaciones, actores y timeline sincronizada.       [f0949a0]
+  + Enganche automatico a cualquier sesion de Claude Code: nada que
+    configurar en el proyecto.                                        [f0949a0]
+  + Hooks HTTP opcionales para latencia cero y permisos pendientes.   [ac9c32d]
+  + Reproductor del historico con play, pausa, saltos y velocidad.    [f0949a0]
+  + Leyenda con todo lo que significa cada lugar, actor y color.      [5515ca0]
+  + Tooltips en el propio mundo, para no abrir la leyenda cada vez.   [5515ca0]
+  + Insignia de estado sobre el avatar (cerebro pensando, llave
+    trabajando, admiracion esperando permiso).                        [5515ca0]
+  + Subagentes distinguibles: tono propio, numeracion y su cometido
+    debajo del nombre.                                                [69ce19e]
+  + La mesa cuadrada de los caballeros de Monty Python, con grabado,
+    doce caballeros con nombre y el conejo asesino en el Trastero.
+                                          [6f9102e] [2795e2d] [b041214] [64cd5c1]
+  + Script scripts/claude-live.sh para arrancar y parar el servidor a mano.
+                                                                      [a4772ea]
+  + Mundo de demostracion y capturas automaticas para el README.      [6cee684]
+  ! Eventos duplicados al reconectar y subagentes atribuidos a la sesion
+    equivocada con dos sesiones abiertas.                             [9eefde1]
+  ! Los subagentes terminados volvian a aparecer sentados a la mesa.  [7b2efaf]
+  ! La escena consumia de mas: 30 fps de techo, resolucion 1 y pausa con la
+    pestana en segundo plano.                                         [a4772ea]
+  ! El mundo no se adaptaba al redimensionar la ventana.              [a4772ea]
+  ! La leyenda se cortaba por debajo, sin scroll.                     [5515ca0]
+
+  Leyenda de simbolos:  + novedad   * mejora   ! correccion
+
+
+================================================================================
+ English
+================================================================================
+
+--------------------------------------------------------------------------------
+ 2026-07-27
+--------------------------------------------------------------------------------
+
+  + Light theme next to the dark one, with a single button beside the
+    languages. The stage changes too: the scene has its own palette,
+    because a canvas does not inherit CSS variables.                   [b9bcd06]
+  + History can be browsed as a project tree, with collapsible sessions,
+    a count and a size per project.                                    [b9bcd06]
+  + Timeline width is resizable by dragging the splitter; double-click
+    restores the default. Remembered across sessions.                 [749d69c]
+  + Dismissing the retention notice leaves a permanent one-liner, with a
+    "why?" that brings it back.                                       [749d69c]
+  * Clicking a session in the history jumps to the world right away,
+    without waiting for the transcript to load.                        [b9bcd06]
+  * The player now reaches the end of long conversations: history is
+    fetched in 1000-event chunks as it advances.                      [f95783a]
+  + The history warns about what Claude Code has already deleted (30 days
+    by default) and explains how to keep more.                        [f95783a]
+  ! The skip-to-end button stopped at 1024 of 1586.                   [f95783a]
+
+--------------------------------------------------------------------------------
+ 2026-07-26
+--------------------------------------------------------------------------------
+
+  + Fully bilingual interface (Spanish / English) with flags on the switch;
+    server-composed summaries switch language too.       [9b4b496] [8eda9d0]
+  + README in both languages.                                         [f605b03]
+  + GIF of the world in motion at the top of the README.              [1c57b55]
+  + Twelve medieval helmets, one per knight, each with its own crest.
+                                                            [e96a48f] [acbdabe]
+  ! Sir Robin's shield stuck out of the table.                        [b803c87]
+
+--------------------------------------------------------------------------------
+ 2026-07-25
+--------------------------------------------------------------------------------
+
+  + First version: a server that reads ~/.claude without touching anything,
+    and a canvas world with stations, actors and a synced timeline.   [f0949a0]
+  + Automatic attach to any Claude Code session: nothing to set up per
+    project.                                                          [f0949a0]
+  + Optional HTTP hooks for zero latency and pending permissions.     [ac9c32d]
+  + History player with play, pause, stepping and speed.              [f0949a0]
+  + Legend explaining every place, actor and colour.                  [5515ca0]
+  + In-world tooltips, so the legend is not the only way.             [5515ca0]
+  + State badge over the avatar (brain thinking, wrench working, bang
+    waiting for permission).                                          [5515ca0]
+  + Subagents told apart: own shade, numbering and their task below the
+    name.                                                             [69ce19e]
+  + The square table of the Monty Python knights, with engraving, twelve
+    named knights and the killer rabbit in the Junk Room.
+                                          [6f9102e] [2795e2d] [b041214] [64cd5c1]
+  + scripts/claude-live.sh to start and stop the server by hand.      [a4772ea]
+  + Demo world and automatic screenshots for the README.              [6cee684]
+  ! Duplicate events on reconnect, and subagents attributed to the wrong
+    session when two were open.                                       [9eefde1]
+  ! Finished subagents reappeared sitting at the table.               [7b2efaf]
+  ! The scene was too hungry: capped at 30 fps, resolution 1, and paused
+    when the tab is in the background.                                [a4772ea]
+  ! The world did not adapt when the window was resized.              [a4772ea]
+  ! The legend was cut off at the bottom, with no scroll.             [5515ca0]
+
+  Symbols:  + new   * improved   ! fixed
+
+================================================================================

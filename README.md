@@ -48,12 +48,29 @@ ficheros que Claude Code escribe en `~/.claude`.*
 
   ![Leyenda del mundo](docs/leyenda.png)
 
+- **Historial como tabla o como árbol** (conmutador `☰ Tabla` / `🌳 Árbol`): el árbol agrupa las
+  sesiones por proyecto, plegables, con cuántas hay y cuánto ocupan; los proyectos con sesión
+  viva salen primero y buscar despliega solo lo que coincide.
+
+  ![Historial en árbol](docs/arbol.png)
+
 - **Modo sobrio**: apaga la escena y deja solo la timeline, para cuando quieras leer en vez
   de mirar.
 - **Castellano e inglés**, con el conmutador 🇪🇸 ES / 🇬🇧 EN junto a la leyenda. La elección se
   recuerda entre visitas y traduce todo: el mundo (nombres de las estaciones, el grabado de la
   mesa, los caballeros) y también los resúmenes de la timeline, porque el servidor emite el
   dato («74 líneas» sale de `{ kind: 'lines', n: 74 }`) y el idioma se decide al pintarlo.
+- **Tema claro y oscuro**, con un botón (☀ / 🌙) al lado de los idiomas. Cambia también el
+  escenario: el canvas no hereda las variables CSS, así que la escena tiene su propia paleta
+  con el equivalente de cada tono. Los colores de estado y de tipo de subagente son los mismos
+  en los dos temas (verde trabajando, azul `Explore`), solo se oscurecen sobre fondo claro.
+  La primera vez se respeta la preferencia de tu sistema.
+
+  ![El mundo en tema claro](docs/preview-claro.png)
+
+- **Timeline de ancho ajustable**: arrastra el divisor entre el mundo y el panel para darle
+  el sitio que necesites (doble clic vuelve al ancho por omisión). Se recuerda, y al estrechar
+  la ventana se reajusta para que el mundo no se quede sin espacio.
 
 ## Requisitos
 
@@ -302,7 +319,7 @@ Las pruebas usan **tus propios transcripts**, no mocks, porque el riesgo real de
 proyecto es que el formato cambie o que aparezca un caso hostil:
 
 ```bash
-npm test           # parser + agrupación + store
+npm test           # parser + agrupación + store + unidades + divisor
 npm run typecheck  # vue-tsc
 ```
 
@@ -313,6 +330,8 @@ mensajes del servidor al store del front sin navegador, para cubrir lo que se ro
 silencio: eventos duplicados al reconectar el SSE y subagentes atribuidos a la sesión
 equivocada cuando hay dos abiertas. `test:stats` comprueba que los resúmenes con unidades se
 leen bien en los dos idiomas, con los resultados tal como los devuelven las herramientas.
+`test:split` acota el divisor de la timeline por los dos extremos: que el panel no se coma el
+escenario y que en una pantalla ancha se pueda ampliar de verdad.
 
 ### Mundo de demostración
 
@@ -337,8 +356,11 @@ ventana, informa de los errores de consola y guarda las capturas de las tres vis
 
 ## Estado y qué falta
 
-Funcionando: sesiones vivas, subagentes, timeline, inspector, historial con reproductor
-completo, aviso de retención, leyenda, modo sobrio, ingesta de hooks e interfaz bilingüe.
+Funcionando: sesiones vivas, subagentes, timeline (de ancho ajustable), inspector, historial en
+tabla o en árbol con reproductor completo, aviso de retención, leyenda, modo sobrio, tema claro
+y oscuro, ingesta de hooks e interfaz bilingüe.
+
+Lo que se va haciendo, resumido y en texto plano, está en [`CHANGELOG.txt`](CHANGELOG.txt).
 
 **Ojo con el historial**: Claude Code borra los transcripts pasados `cleanupPeriodDays` días
 (30 por omisión), así que lo que ves no es todo lo que has hecho, sino lo que sobrevive. El

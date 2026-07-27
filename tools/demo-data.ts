@@ -301,6 +301,85 @@ async function selfProcStart(): Promise<string | undefined> {
   }
 }
 
+/**
+ * Sesiones «de otros días» en otros proyectos: solo ficheros de transcript, sin roster, para
+ * que el histórico tenga varios proyectos que agrupar en el árbol. Cada una son cuatro líneas,
+ * lo justo para que el índice saque proyecto, título, rama, modelo y fechas.
+ */
+const ARCHIVE: { cwd: string; branch: string; titles: string[] }[] = [
+  {
+    cwd: '/home/demo/proyectos/tienda-api',
+    branch: 'main',
+    titles: ['Migrar los pedidos a cursor', 'Revisar los índices de Postgres', 'Subir el SDK a la v3'],
+  },
+  {
+    cwd: '/home/demo/proyectos/web-clientes',
+    branch: 'rediseño',
+    titles: ['Rehacer la ficha de cliente', 'Quitar el bundle de iconos'],
+  },
+  {
+    cwd: '/home/demo/infra',
+    branch: 'main',
+    titles: ['Rotar los certificados', 'Alertas de disco en los nodos', 'Presupuesto del clúster'],
+  },
+  { cwd: '/home/demo/notas', branch: 'main', titles: ['Ordenar las notas de la semana'] },
+]
+
+/** Escribe el histórico ficticio. Devuelve cuántas sesiones ha dejado en disco. */
+async function writeArchive(dir: string, endedAt: number): Promise<number> {
+  let written = 0
+  for (const [p, project] of ARCHIVE.entries()) {
+    const slug = project.cwd.replace(/[^a-zA-Z0-9]/g, '-')
+    await mkdir(join(dir, 'projects', slug), { recursive: true })
+    for (const [t, title] of project.titles.entries()) {
+      // Fechas escalonadas hacia atrás: días distintos por proyecto y por sesión.
+      const started = endedAt - ((p + 1) * 3 + t) * 86_400_000
+      const sessionId = `dec0de00-0000-4000-8000-1${p}${t}000000000`.slice(0, 36)
+      const ctx: Ctx = { ts: started, parent: { main: null } }
+      const lines = [
+        {
+          uuid: randomUUID(),
+          parentUuid: null,
+          sessionId,
+          cwd: project.cwd,
+          gitBranch: project.branch,
+          version: '2.1.220',
+          isSidechain: false,
+          timestamp: next(ctx, 0),
+          type: 'user',
+          userType: 'external',
+          message: { role: 'user', content: [{ type: 'text', text: title }] },
+        },
+        {
+          uuid: randomUUID(),
+          parentUuid: null,
+          sessionId,
+          cwd: project.cwd,
+          gitBranch: project.branch,
+          version: '2.1.220',
+          isSidechain: false,
+          timestamp: next(ctx, 90),
+          type: 'assistant',
+          message: {
+            role: 'assistant',
+            model: MODEL,
+            usage: usage(3, 120, 18_000 + t * 4_000),
+            content: [{ type: 'text', text: 'Hecho.' }],
+          },
+        },
+        { type: 'ai-title', aiTitle: title, sessionId },
+      ]
+      await writeFile(
+        join(dir, 'projects', slug, `${sessionId}.jsonl`),
+        `${lines.map((line) => JSON.stringify(line)).join('\n')}\n`,
+        'utf8',
+      )
+      written++
+    }
+  }
+  return written
+}
+
 export interface DemoWorld {
   dir: string
   transcript: string
@@ -314,6 +393,9 @@ export async function writeDemoWorld(dir: string, past: DemoStep[]): Promise<Dem
   const subagentDir = join(projectDir, SESSION_ID, 'subagents')
   await mkdir(subagentDir, { recursive: true })
   await mkdir(join(dir, 'sessions'), { recursive: true })
+
+  const archived = await writeArchive(dir, Date.now())
+  console.log(`  histórico ficticio: ${archived} sesiones en ${ARCHIVE.length} proyectos`)
 
   const transcript = join(projectDir, `${SESSION_ID}.jsonl`)
   await writeFile(transcript, '', 'utf8')

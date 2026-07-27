@@ -47,6 +47,12 @@ comes from the files Claude Code writes under `~/.claude`.*
 
   ![The world legend](docs/leyenda.png)
 
+- **History as a table or as a tree** (the `☰ Table` / `🌳 Tree` switch): the tree groups
+  sessions by project, collapsible, with how many there are and how much they take; projects
+  with a live session come first and searching expands only what matches.
+
+  ![History as a tree](docs/arbol.png)
+
 - **Plain mode**: turns the stage off and leaves only the timeline, for when you would rather
   read than watch.
 - **Castilian and English**, with the 🇪🇸 ES / 🇬🇧 EN switch next to the legend. The choice is
@@ -54,6 +60,17 @@ comes from the files Claude Code writes under `~/.claude`.*
   engraving, the knights) and the timeline summaries too, because the server emits the raw
   value ("74 lines" comes from `{ kind: 'lines', n: 74 }`) and the language is decided when it
   is drawn.
+- **Light and dark theme**, with one button (☀ / 🌙) next to the languages. The stage changes
+  too: a canvas does not inherit CSS variables, so the scene keeps its own palette with the
+  equivalent of every tone. State and subagent colours are the same in both themes (green
+  working, blue `Explore`), only darkened over a light background. The first time, your
+  system preference is honoured.
+
+  ![The world in light theme](docs/preview-claro.png)
+
+- **Resizable timeline**: drag the splitter between the world and the panel to give it the room
+  you need (double-click restores the default). It is remembered, and narrowing the window
+  readjusts it so the world is never squeezed out.
 
 ## Requirements
 
@@ -309,7 +326,7 @@ The tests use **your own transcripts**, not mocks, because the real risk in this
 format change or an unexpected hostile case:
 
 ```bash
-npm test           # parser + merging + store
+npm test           # parser + merging + store + units + splitter
 npm run typecheck  # vue-tsc
 ```
 
@@ -319,6 +336,8 @@ the representation does not eat steps. `test:store` applies server messages to t
 store without a browser, covering what breaks silently: duplicated events on SSE reconnect and
 subagents attributed to the wrong session when two are open. `test:stats` checks that summaries
 with units read correctly in both languages, using the results tools actually return.
+`test:split` bounds the timeline splitter from both ends: the panel must not eat the stage, and
+on a wide screen it must really be able to grow.
 
 ### Demo world
 
@@ -344,8 +363,11 @@ Chromium, reports console errors and saves screenshots of the three views.
 
 ## State and what is missing
 
-Working: live sessions, subagents, timeline, inspector, history with a complete player,
-retention warning, legend, plain mode, hook ingest and the bilingual interface.
+Working: live sessions, subagents, a resizable timeline, inspector, history as a table or a
+tree with a complete player, retention warning, legend, plain mode, light and dark theme, hook
+ingest and the bilingual interface.
+
+What has been done, summarised in plain text, lives in [`CHANGELOG.txt`](CHANGELOG.txt).
 
 **A warning about the history**: Claude Code deletes transcripts after `cleanupPeriodDays` days
 (30 by default), so what you see is not everything you have done but whatever survived. The

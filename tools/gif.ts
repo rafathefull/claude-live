@@ -87,6 +87,7 @@ if (!ready) {
 console.log('grabando el mundo…')
 const browser = await chromium.launch()
 const context = await browser.newContext({
+  colorScheme: 'dark',
   viewport,
   locale: 'es-ES',
   recordVideo: { dir: videoDir, size: viewport },

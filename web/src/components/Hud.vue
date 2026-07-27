@@ -166,7 +166,7 @@ const statusLabel = computed(() => {
       </button>
     </div>
     <button class="theme-toggle" :title="tr(L.themeTitle)" @click="toggleTheme">
-      {{ theme === 'dark' ? '☀' : '🌙' }}
+      {{ theme === 'dark' ? '☀️' : '🌙' }}
     </button>
     <button :class="{ active: state.soberMode }" @click="state.soberMode = !state.soberMode">
       {{ state.soberMode ? tr(L.sober) : tr(L.world) }}

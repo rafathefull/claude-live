@@ -87,7 +87,12 @@ if (!(await waitForServer())) {
 
 const problems: string[] = []
 const browser = await chromium.launch()
-const page = await browser.newPage({ viewport: { width: 1600, height: 900 } })
+// `colorScheme` explícito: Chromium sin ventana prefiere el tema claro, y las capturas del
+// README son las del tema oscuro.
+const page = await browser.newPage({
+  viewport: { width: 1600, height: 900 },
+  colorScheme: 'dark',
+})
 page.on('pageerror', (error) => problems.push(`[pageerror] ${error.message}`))
 page.on('console', (message) => {
   if (message.type() === 'error') problems.push(`[error] ${message.text()}`)
@@ -147,6 +152,32 @@ for (const size of [
   await page.screenshot({ path })
   console.log(`  captura → ${path} (${size.width}×${size.height})`)
 }
+
+// Histórico en árbol: la vista que agrupa las sesiones por proyecto.
+await page.getByRole('button', { name: /Historial/ }).click()
+await page.locator('.history').waitFor({ state: 'visible' })
+await page.waitForTimeout(800)
+await page.getByRole('button', { name: /Árbol/ }).click()
+await page.getByRole('button', { name: /Abrir todo/ }).click()
+await page.waitForTimeout(400)
+const proyectos = await page.locator('.tree-node').count()
+const hojas = await page.locator('.tree-node li').count()
+console.log(`  árbol del histórico: ${proyectos} proyectos, ${hojas} sesiones`)
+await page.screenshot({ path: join(outDir, 'arbol.png') })
+console.log(`  captura → ${join(outDir, 'arbol.png')}`)
+
+// Y el mismo mundo en tema claro.
+await page.getByRole('button', { name: /En vivo/ }).click()
+await page.waitForTimeout(1200)
+await page.locator('.theme-toggle').click()
+await page.waitForTimeout(2200)
+const claro = await page.evaluate(() => document.documentElement.dataset.theme)
+if (claro !== 'light') throw new Error(`el botón del tema no dejó la página en claro: ${claro}`)
+console.log(`  tema aplicado: ${claro}`)
+await page.screenshot({ path: join(outDir, 'preview-claro.png') })
+console.log(`  captura → ${join(outDir, 'preview-claro.png')}`)
+await page.locator('.theme-toggle').click()
+await page.waitForTimeout(1200)
 
 await page.locator('.timeline-head button', { hasText: 'pensamiento' }).waitFor()
 await browser.close()

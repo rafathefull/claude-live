@@ -4,6 +4,7 @@ import type { ActorMood } from './Actor'
 import { shouldMerge } from './grouping'
 import { tr } from '../i18n'
 import { summaryOf } from '../format'
+import { inkFor } from './palette'
 
 /**
  * El reloj del mundo.
@@ -63,7 +64,7 @@ export class Director {
     this.scene.ensureActor({
       id: USER_ID,
       emoji: '🧑',
-      color: 0xfacc15,
+      color: inkFor(0xfacc15),
       label: tr({ es: 'tú', en: 'you' }),
       subLabel: tr({ es: 'quien pide las cosas', en: 'the one who asks' }),
       at: 'desk',
@@ -73,7 +74,7 @@ export class Director {
     this.scene.ensureActor({
       id: MAIN_ID,
       emoji: '🤖',
-      color: 0xe5e7eb,
+      color: inkFor(0xe5e7eb),
       label: sessionLabel,
       subLabel: tr({ es: 'el agente principal', en: 'the main agent' }),
       radius: 28,
