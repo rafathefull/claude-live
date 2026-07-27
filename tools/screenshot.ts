@@ -48,6 +48,9 @@ const browser = await chromium.launch()
 const page = await browser.newPage({
   viewport: { width: 1600, height: 900 },
   colorScheme: 'dark',
+  // El idioma se detecta del navegador, y el de la integración continua habla inglés: sin
+  // fijarlo, las capturas salían traducidas a medias según quién las generase.
+  locale: 'es-ES',
 })
 watch(page)
 

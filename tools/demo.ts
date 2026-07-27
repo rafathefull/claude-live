@@ -92,6 +92,9 @@ const browser = await chromium.launch()
 const page = await browser.newPage({
   viewport: { width: 1600, height: 900 },
   colorScheme: 'dark',
+  // El idioma se detecta del navegador, y el de la integración continua habla inglés: sin
+  // fijarlo, las capturas salían traducidas a medias según quién las generase.
+  locale: 'es-ES',
 })
 page.on('pageerror', (error) => problems.push(`[pageerror] ${error.message}`))
 page.on('console', (message) => {
@@ -118,7 +121,7 @@ console.log(`  sesiones detectadas: ${health.sessions} · ${eventos?.trim()} · 
 await page.screenshot({ path: join(outDir, 'preview.png') })
 console.log(`  captura → ${join(outDir, 'preview.png')}`)
 
-await page.getByRole('button', { name: /Leyenda/ }).click()
+await page.getByRole('button', { name: /Leyenda|Legend/ }).click()
 await page.locator('.legend').waitFor({ state: 'visible' })
 await page.waitForTimeout(400)
 await page.screenshot({ path: join(outDir, 'leyenda.png') })
@@ -154,11 +157,11 @@ for (const size of [
 }
 
 // Histórico en árbol: la vista que agrupa las sesiones por proyecto.
-await page.getByRole('button', { name: /Historial/ }).click()
+await page.getByRole('button', { name: /Historial|History/ }).click()
 await page.locator('.history').waitFor({ state: 'visible' })
 await page.waitForTimeout(800)
-await page.getByRole('button', { name: /Árbol/ }).click()
-await page.getByRole('button', { name: /Abrir todo/ }).click()
+await page.getByRole('button', { name: /Árbol|Tree/ }).click()
+await page.getByRole('button', { name: /Abrir todo|Expand all/ }).click()
 await page.waitForTimeout(400)
 const proyectos = await page.locator('.tree-node').count()
 const hojas = await page.locator('.tree-node li').count()
@@ -167,7 +170,7 @@ await page.screenshot({ path: join(outDir, 'arbol.png') })
 console.log(`  captura → ${join(outDir, 'arbol.png')}`)
 
 // Y el mismo mundo en tema claro.
-await page.getByRole('button', { name: /En vivo/ }).click()
+await page.getByRole('button', { name: /En vivo|Live/ }).click()
 await page.waitForTimeout(1200)
 await page.locator('.theme-toggle').click()
 await page.waitForTimeout(2200)
@@ -179,7 +182,7 @@ console.log(`  captura → ${join(outDir, 'preview-claro.png')}`)
 await page.locator('.theme-toggle').click()
 await page.waitForTimeout(1200)
 
-await page.locator('.timeline-head button', { hasText: 'pensamiento' }).waitFor()
+await page.locator('.timeline-head button', { hasText: /pensamiento|thinking/ }).waitFor()
 await browser.close()
 
 if (keep) {
