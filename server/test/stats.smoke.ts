@@ -123,7 +123,11 @@ if (files[0]) {
   await forEachLine(files[0].path, (line) => {
     for (const event of parser.parse(line).events) {
       if (event.kind !== 'tool_result') continue
-      if (/(línea|coincidencia|fichero|tarea|sin salida|lanzado|elegido)/.test(event.summary)) {
+      // Solo los resúmenes que compone el parser, y ancados al principio: un stderr ajeno puede
+      // contener la palabra «línea» («/bin/bash: línea 8: …») sin ser un resumen con unidades, y
+      // contarlo daba un falso positivo que acusaba al parser de algo que no hacía.
+      if (event.isError) continue
+      if (/^(\d[\d.,]*\s+(línea|coincidencia|fichero|tarea)|sin salida|lanzado |elegido:)/.test(event.summary)) {
         withUnits++
         if (event.stat) withStat++
       }

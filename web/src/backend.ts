@@ -17,7 +17,11 @@ import type { Retention } from './store'
  * lo que se ve ahí es lo que hace el visor de verdad.
  */
 
-export const STATIC_MODE = import.meta.env.VITE_STATIC === '1'
+/**
+ * `import.meta.env` lo inyecta Vite, y este módulo también se importa desde Node en las pruebas
+ * del store: sin el `?.` allí explota al cargarlo. Fuera de Vite no hay modo estático.
+ */
+export const STATIC_MODE = import.meta.env?.VITE_STATIC === '1'
 
 export interface EventsPage {
   events: TimelineEvent[]
