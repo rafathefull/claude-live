@@ -199,6 +199,50 @@ export interface JobInfo {
   transcriptPath?: string
 }
 
+/* --------------------------------------------------------------- métricas */
+
+/** Lo que se puede sumar de un tramo de trabajo: un día, un proyecto o todo junto. */
+export interface MetricsBucket {
+  sessions: number
+  events: number
+  toolCalls: number
+  errors: number
+  prompts: number
+  agents: number
+  tokensIn: number
+  tokensOut: number
+  tokensCache: number
+  bytes: number
+}
+
+/** Resumen de un transcript, la unidad que se cachea para no releer cien megas cada vez. */
+export interface TranscriptSummary {
+  sessionId: string
+  agentId: string | null
+  cwd?: string
+  /** Clave `AAAA-MM-DD`: el trabajo se reparte por el día de cada evento. */
+  days: Record<string, MetricsBucket>
+  tools: Record<string, number>
+  models: Record<string, number>
+  agentTypes: Record<string, number>
+  firstTs?: string
+  lastTs?: string
+}
+
+export interface Metrics {
+  byDay: Record<string, MetricsBucket>
+  byProject: Record<string, MetricsBucket>
+  /** Proyecto → día → lo que se hizo, para poder filtrar la gráfica por proyecto. */
+  projectDays: Record<string, Record<string, MetricsBucket>>
+  tools: Record<string, number>
+  models: Record<string, number>
+  agentTypes: Record<string, number>
+  transcripts: number
+  /** Cuántos transcripts hubo que releer: el resto salió de la caché. */
+  reread: number
+  computedInMs: number
+}
+
 /** Mensajes que el servidor empuja por SSE. */
 export type ServerMessage =
   | { type: 'hello'; sessions: SessionInfo[]; agents: ActorInfo[]; jobs: JobInfo[] }

@@ -15,6 +15,11 @@
  2026-07-27
 --------------------------------------------------------------------------------
 
+  + Metricas por proyecto y por dia: sesiones, peticiones, eventos,
+    herramientas, errores, subagentes, tokens y tamano en disco, con grafica de
+    barras y rankings de herramientas, modelos y tipos de subagente. El
+    servidor recorre los transcripts una vez (0,7 s con 123) y cachea por
+    fichero: la segunda vez son 6 ms.                                  [pend.]
   + Vecindario: todas las sesiones vivas a la vez, cada una con el plano de sus
     estaciones (se encienden al usarse y llevan su recuento), lo que esta
     haciendo, sus subagentes y su contexto. Un clic entra en esa habitacion.
@@ -113,6 +118,10 @@
  2026-07-27
 --------------------------------------------------------------------------------
 
+  + Metrics per project and per day: sessions, prompts, events, tool calls,
+    errors, subagents, tokens and size on disk, with a bar chart and rankings
+    of tools, models and subagent types. The server walks the transcripts once
+    (0.7 s for 123) and caches per file: the second time is 6 ms.      [pend.]
   + Neighbourhood: every live session at once, each with a plan of its
     stations (they light up when used and carry their count), what it is doing,
     its subagents and its context. One click enters that room. Background

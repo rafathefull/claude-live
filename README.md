@@ -75,6 +75,13 @@ ficheros que Claude Code escribe en `~/.claude`.*
 
   ![Historial en árbol](docs/arbol.png)
 
+- **Métricas** por proyecto y por día: sesiones, peticiones tuyas, eventos, herramientas,
+  errores, subagentes, tokens (los de caché aparte) y tamaño en disco, con gráfica de barras y
+  los rankings de herramientas, modelos y tipos de subagente. Se puede filtrar por proyecto y
+  por rango, y pulsar un proyecto de la tabla lo enfoca.
+
+  ![Métricas por proyecto y día](docs/metricas.png)
+
 - **Modo sobrio**: apaga la escena y deja solo la timeline, para cuando quieras leer en vez
   de mirar.
 - **Castellano e inglés**, con el conmutador 🇪🇸 ES / 🇬🇧 EN junto a la leyenda. La elección se
@@ -331,6 +338,7 @@ lo hace el parser, así que afecta tanto al stream como a la timeline paginada; 
 | `GET /api/sessions/:id/events?from=&limit=&agents=0` | Timeline paginada. Los subagentes vienen intercalados salvo que se pase `agents=0`; `limit` es 500 por defecto y está topado a 2000 por petición, y el reproductor encadena tramos con `from` |
 | `GET /api/retention` | Cuántas sesiones sobreviven a la limpieza de Claude Code y cuántas se han perdido |
 | `GET /api/jobs` | Jobs en segundo plano, vivos y terminados, con su estado contrastado contra los procesos que hay de verdad |
+| `GET /api/metrics?force=1` | Métricas agregadas por proyecto y día. La primera vez recorre todos los transcripts (0,7 s con 123 aquí); después solo los que hayan cambiado, con `force=1` para recalcular todo |
 | `GET /api/sessions/:id/raw/:uuid` | Línea cruda de un evento, sin recortar (solo para eventos del transcript: los que nacen de un hook no están en ningún fichero) |
 | `POST /hook` | Ingesta de los hooks de Claude Code |
 | `GET /api/health` | Sesiones detectadas y clientes conectados |
@@ -341,7 +349,7 @@ Las pruebas usan **tus propios transcripts**, no mocks, porque el riesgo real de
 proyecto es que el formato cambie o que aparezca un caso hostil:
 
 ```bash
-npm test           # parser + agrupación + store + unidades + divisor + atajos + jobs + vecindario
+npm test           # parser + agrupación + store + unidades + divisor + atajos + jobs + vecindario + métricas
 npm run typecheck  # vue-tsc
 ```
 
@@ -363,6 +371,12 @@ haciendo» el último evento a secas, que puede ser un cambio de modo.
 `test:jobs` prueba el lector de `~/.claude/jobs` con formato hostil y con tus propios jobs, y
 sobre todo la regla que no está en el fichero: un job que se dice «trabajando» sin proceso
 detrás es un residuo.
+
+`test:metrics` cubre el filtrado de la vista: que los días sin actividad se dibujen a cero (si
+se saltaran, una semana de vacaciones parecería trabajo seguido) y que el rango se cuente desde
+el último día con datos y no desde hoy. `test:metrics-server` comprueba que el agregado cuadra
+por los tres caminos —por día, por proyecto y por proyecto×día— contra tus propios transcripts,
+y que la segunda pasada no relee ninguno.
 
 Donde no hay historia que leer (una máquina recién estrenada, la integración continua) se puede
 sembrar un `~/.claude` sintético con el guion de la demostración:
@@ -401,7 +415,8 @@ ventana, informa de los errores de consola y guarda las capturas de las tres vis
 ## Estado y qué falta
 
 Funcionando: sesiones vivas, subagentes, timeline (de ancho ajustable), inspector, historial en
-tabla o en árbol con reproductor completo, vecindario multi-sesión, jobs en segundo plano, aviso de retención, leyenda,
+tabla o en árbol con reproductor completo, vecindario multi-sesión, métricas por proyecto y día,
+jobs en segundo plano, aviso de retención, leyenda,
 modo sobrio, tema claro y oscuro, ingesta de hooks e interfaz bilingüe.
 
 Lo que se va haciendo, resumido y en texto plano, está en [`CHANGELOG.txt`](CHANGELOG.txt).
@@ -414,7 +429,6 @@ conservar más, añade `"cleanupPeriodDays": 365` a `~/.claude/settings.json`.
 
 Pendiente:
 
-- Panel de métricas agregadas por proyecto y día.
 - No se muestra coste en dinero, solo tokens y porcentaje de contexto: habría que fijar las
   tarifas de cada modelo a mano.
 - Empaquetado como app de escritorio.

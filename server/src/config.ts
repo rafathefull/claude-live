@@ -40,6 +40,12 @@ export const INDEX_CACHE = join(
   process.env.CLAUDE_CONFIG_DIR ? `index-${slugify(CLAUDE_DIR)}.json` : 'index.json',
 )
 
+/** Las métricas se cachean aparte del índice: se calculan enteras y se invalidan por fichero. */
+export const METRICS_CACHE = join(
+  CACHE_DIR,
+  process.env.CLAUDE_CONFIG_DIR ? `metrics-${slugify(CLAUDE_DIR)}.json` : 'metrics.json',
+)
+
 function slugify(value: string): string {
   return value.replace(/[^a-zA-Z0-9]/g, '-').replace(/^-+|-+$/g, '').slice(-60)
 }

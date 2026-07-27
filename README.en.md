@@ -73,6 +73,13 @@ comes from the files Claude Code writes under `~/.claude`.*
 
   ![History as a tree](docs/arbol.png)
 
+- **Metrics** per project and per day: sessions, your prompts, events, tool calls, errors,
+  subagents, tokens (cache counted apart) and size on disk, with a bar chart and the rankings of
+  tools, models and subagent types. Filterable by project and range; clicking a project in the
+  table focuses it.
+
+  ![Metrics per project and day](docs/metricas.png)
+
 - **Plain mode**: turns the stage off and leaves only the timeline, for when you would rather
   read than watch.
 - **Castilian and English**, with the 🇪🇸 ES / 🇬🇧 EN switch next to the legend. The choice is
@@ -330,6 +337,7 @@ fetched separately with `/raw/:uuid`.
 | `GET /api/sessions/:id/events?from=&limit=&agents=0` | Paginated timeline. Subagents come interleaved unless `agents=0` is passed; `limit` defaults to 500 and is capped at 2000 per request, and the player chains chunks with `from` |
 | `GET /api/retention` | How many sessions survive Claude Code's cleanup and how many are already gone |
 | `GET /api/jobs` | Background jobs, running and finished, with their state checked against the processes that actually exist |
+| `GET /api/metrics?force=1` | Aggregated metrics per project and day. The first call walks every transcript (0.7 s for 123 here); later ones only the changed files, with `force=1` to recompute everything |
 | `GET /api/sessions/:id/raw/:uuid` | The raw line of an event, untrimmed (transcript events only: the ones born from a hook are in no file) |
 | `POST /hook` | Ingest for Claude Code hooks |
 | `GET /api/health` | Sessions detected, clients connected and hooks received |
@@ -347,7 +355,7 @@ The tests use **your own transcripts**, not mocks, because the real risk in this
 format change or an unexpected hostile case:
 
 ```bash
-npm test           # parser + merging + store + units + splitter + shortcuts + jobs + hood
+npm test           # parser + merging + store + units + splitter + shortcuts + jobs + hood + metrics
 npm run typecheck  # vue-tsc
 ```
 
@@ -368,6 +376,12 @@ it is doing", which may be a mode change.
 `test:jobs` exercises the `~/.claude/jobs` reader with hostile input and with your own jobs,
 and above all the rule that is not in the file: a job claiming to be "working" with no process
 behind it is stale.
+
+`test:metrics` covers the view's filtering: that days with no activity are drawn as zero (skipping
+them would make a week off look like a week of work) and that the range counts back from the last
+day with data, not from today. `test:metrics-server` checks the aggregate adds up three ways —by
+day, by project and by project×day— against your own transcripts, and that a second pass re-reads
+nothing.
 
 Where there is no history to read (a brand new machine, continuous integration) you can seed a
 synthetic `~/.claude` with the demo script:
@@ -407,7 +421,8 @@ Chromium, reports console errors and saves screenshots of the three views.
 ## State and what is missing
 
 Working: live sessions, subagents, a resizable timeline, inspector, history as a table or a
-tree with a complete player, a multi-session neighbourhood, background jobs, retention warning, legend, plain mode, light and
+tree with a complete player, a multi-session neighbourhood, metrics per project and day,
+background jobs, retention warning, legend, plain mode, light and
 dark theme, hook ingest and the bilingual interface.
 
 What has been done, summarised in plain text, lives in [`CHANGELOG.txt`](CHANGELOG.txt).
@@ -420,7 +435,6 @@ add `"cleanupPeriodDays": 365` to `~/.claude/settings.json`.
 
 Pending:
 
-- An aggregate metrics panel per project and per day.
 - No cost in money is shown, only tokens and context percentage: that would mean pinning each
   model's pricing by hand.
 - Packaging as a desktop app.

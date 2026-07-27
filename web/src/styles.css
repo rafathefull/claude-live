@@ -1401,3 +1401,230 @@ button.linkish {
 .hood-doing.past .doing-tool {
   color: var(--text-dim);
 }
+
+/* --------------------------------------------------------------- métricas */
+
+.metrics {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.metrics-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.metrics-controls {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.metrics-controls label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.metrics-controls select {
+  background: var(--bg-panel);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  padding: 2px 6px;
+  font: inherit;
+}
+
+.chips {
+  display: flex;
+  gap: 4px;
+}
+
+.metrics-totals {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.metrics-totals b {
+  color: var(--text);
+  font-size: 14px;
+  margin-right: 3px;
+}
+
+.metrics-totals .bad b,
+td.bad {
+  color: var(--warn);
+}
+
+/* Gráfica de barras a base de divs: son cuatro rectángulos y no hace falta una librería. */
+.chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 180px;
+  padding: 8px 10px 0;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.chart-col {
+  flex: 1 0 14px;
+  min-width: 10px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 3px;
+}
+
+.chart-bar {
+  width: 100%;
+  min-height: 1px;
+  border-radius: 2px 2px 0 0;
+  background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 45%, transparent));
+}
+
+.chart-col:hover .chart-bar {
+  background: var(--ok);
+}
+
+.chart-day {
+  font-size: 9px;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.metrics-grid h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-faint);
+}
+
+.metrics-grid section + section {
+  margin-top: 12px;
+}
+
+.metrics-grid table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.metrics-grid th {
+  text-align: right;
+  color: var(--text-faint);
+  font-weight: 400;
+  border-bottom: 1px solid var(--border);
+  padding: 4px 6px;
+}
+
+.metrics-grid th:first-child,
+.metrics-grid td:first-child {
+  text-align: left;
+}
+
+.metrics-grid td {
+  text-align: right;
+  padding: 3px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.metrics-grid tbody tr {
+  cursor: pointer;
+}
+
+.metrics-grid tbody tr:hover {
+  background: var(--bg-panel);
+}
+
+.metrics-grid tbody tr.selected {
+  background: var(--bg-raised);
+}
+
+/* Ranking con su barra proporcional al primero. */
+.ranking {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.ranking li {
+  display: grid;
+  grid-template-columns: minmax(0, 12ch) 1fr auto;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+}
+
+.rank-key {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-dim);
+}
+
+.rank-bar {
+  height: 7px;
+  background: var(--bg-raised);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.rank-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.rank-n {
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+.metrics-note {
+  margin-top: 10px;
+  font-size: 11px;
+  max-width: 90ch;
+}
+
+@media (max-width: 1100px) {
+  .metrics-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Escala de la gráfica: sin eje, basta con decir cuánto vale la barra más alta. */
+.chart-scale {
+  font-size: 11px;
+  padding: 0 2px 3px;
+}

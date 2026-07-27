@@ -5,6 +5,7 @@ import { HOST, PORT, WEB_DIST } from './config.js'
 import { listHistory, readRawEvent, readSessionEvents } from './history.js'
 import { normalizeHook, type HookPayload } from './hooks.js'
 import { JobsWatcher, readJobs } from './jobs.js'
+import { computeMetrics } from './metrics.js'
 import { retentionInfo } from './retention.js'
 import { LiveRegistry } from './sessions.js'
 import type { ActorInfo, JobInfo, ServerMessage, TimelineEvent } from '../../shared/types.js'
@@ -103,6 +104,15 @@ app.get('/api/retention', async () => retentionInfo())
 
 /** Jobs en segundo plano, vivos y terminados. Se lee en el momento: son cinco ficheros. */
 app.get('/api/jobs', async () => ({ jobs: await readJobs() }))
+
+/**
+ * Métricas agregadas por proyecto y día. La primera vez recorre todos los transcripts; después
+ * solo los que hayan cambiado. `?force=1` obliga a recalcular todo.
+ */
+app.get('/api/metrics', async (request) => {
+  const query = request.query as { force?: string }
+  return computeMetrics({ force: query.force === '1' })
+})
 
 app.get('/api/sessions/:id/events', async (request) => {
   const { id } = request.params as { id: string }

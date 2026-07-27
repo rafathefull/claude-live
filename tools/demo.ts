@@ -180,6 +180,18 @@ if (hoodCards === 0) throw new Error('el vecindario salió vacío: no se detect�
 await page.screenshot({ path: join(outDir, 'vecindario.png') })
 console.log(`  captura → ${join(outDir, 'vecindario.png')}`)
 
+// Métricas: el servidor recorre los transcripts del mundo de demostración.
+await page.getByRole('button', { name: /Métricas|Metrics/ }).click()
+await page.locator('.metrics-totals').waitFor({ state: 'visible', timeout: 20_000 })
+await page.getByRole('button', { name: /^todo$|^everything$/ }).click()
+await page.waitForTimeout(600)
+const metricsBars = await page.locator('.chart-col').count()
+const metricsRows = await page.locator('.metrics-grid tbody tr').count()
+console.log(`  métricas: ${metricsBars} días · ${metricsRows} proyectos`)
+if (metricsRows === 0) throw new Error('las métricas salieron sin proyectos')
+await page.screenshot({ path: join(outDir, 'metricas.png') })
+console.log(`  captura → ${join(outDir, 'metricas.png')}`)
+
 // Histórico en árbol: la vista que agrupa las sesiones por proyecto.
 await page.getByRole('button', { name: /Historial|History/ }).click()
 await page.locator('.history').waitFor({ state: 'visible' })

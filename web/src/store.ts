@@ -1,5 +1,12 @@
 import { computed, reactive, ref } from 'vue'
-import type { ActorInfo, JobInfo, ServerMessage, SessionInfo, TimelineEvent } from '@shared/types'
+import type {
+  ActorInfo,
+  JobInfo,
+  Metrics,
+  ServerMessage,
+  SessionInfo,
+  TimelineEvent,
+} from '@shared/types'
 
 /**
  * Estado del mundo en el front. Un único store reactivo alimentado por SSE; la escena de
@@ -448,6 +455,13 @@ export async function openJobSession(job: { sessionId?: string; name: string }):
   } finally {
     state.loadingSession = null
   }
+}
+
+/** Métricas agregadas. `force` recalcula ignorando la caché del servidor. */
+export async function loadMetrics(force = false): Promise<Metrics | null> {
+  const response = await fetch(`/api/metrics${force ? '?force=1' : ''}`)
+  if (!response.ok) return null
+  return (await response.json()) as Metrics
 }
 
 export async function loadRaw(sessionId: string, uuid: string): Promise<unknown> {

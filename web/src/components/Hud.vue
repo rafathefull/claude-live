@@ -10,6 +10,11 @@ const L = {
   live: { es: 'En vivo', en: 'Live' },
   history: { es: 'Historial', en: 'History' },
   hood: { es: 'Vecindario', en: 'Neighbourhood' },
+  metrics: { es: 'Métricas', en: 'Metrics' },
+  metricsTitle: {
+    es: 'Cuánto trabajo por proyecto y por día, con herramientas, tokens y errores',
+    en: 'How much work per project and per day, with tools, tokens and errors',
+  },
   hoodTitle: {
     es: 'Todas las sesiones vivas a la vez, con el plano de cada una',
     en: 'Every live session at once, each with its own plan',
@@ -46,9 +51,9 @@ const L = {
   toEnglish: { es: 'Cambiar la interfaz a inglés', en: 'Interface in English' },
 }
 
-const props = defineProps<{ view: 'live' | 'history' | 'hood' }>()
+const props = defineProps<{ view: 'live' | 'history' | 'hood' | 'metrics' }>()
 const emit = defineEmits<{
-  (e: 'view', value: 'live' | 'history' | 'hood'): void
+  (e: 'view', value: 'live' | 'history' | 'hood' | 'metrics'): void
   (e: 'legend'): void
 }>()
 
@@ -91,6 +96,13 @@ const statusLabel = computed(() => {
         @click="emit('view', 'hood')"
       >
         {{ tr(L.hood) }}
+      </button>
+      <button
+        :class="{ active: props.view === 'metrics' }"
+        :title="tr(L.metricsTitle)"
+        @click="emit('view', 'metrics')"
+      >
+        {{ tr(L.metrics) }}
       </button>
     </div>
 
