@@ -67,6 +67,22 @@ const L = {
     es: 'Reproductor — al abrir una conversación del historial aparece una barra con ⏮ ⏪ ⏵ ⏩ ⏭, velocidades de 0,5× a 16× y una barra para saltar a cualquier punto. El ritmo respeta los tiempos reales de la conversación, acotados para que los huecos largos no la congelen.',
     en: 'Player — opening a conversation from the history brings up a bar with ⏮ ⏪ ⏵ ⏩ ⏭, speeds from 0.5× to 16× and a slider to jump anywhere. The pace follows the real timings of the conversation, capped so long gaps do not freeze it.',
   },
+  keysTip: {
+    es: 'Con el reproductor abierto: espacio (o K) reproduce y pausa, ← → avanzan un evento, ⇧← ⇧→ diez, Inicio y Fin van a los extremos, y ↑ ↓ suben y bajan la velocidad. Mientras escribes en un buscador el teclado es suyo.',
+    en: 'With the player open: space (or K) plays and pauses, ← → move one event, ⇧← ⇧→ ten, Home and End jump to the ends, and ↑ ↓ change the speed. While you are typing in a search box the keyboard is left alone.',
+  },
+  treeTip: {
+    es: 'Historial — se puede ver como tabla o como árbol de proyectos (☰ / 🌳). El árbol agrupa las sesiones por carpeta, con cuántas hay y cuánto ocupan.',
+    en: 'History — it can be seen as a table or as a project tree (☰ / 🌳). The tree groups sessions by folder, with how many there are and how much they take.',
+  },
+  themeTip: {
+    es: 'Tema — el botón ☀️/🌙 de arriba cambia entre claro y oscuro, mundo incluido. Los colores de estado y de subagente son los mismos en los dos temas, solo se oscurecen sobre fondo claro.',
+    en: 'Theme — the ☀️/🌙 button above switches between light and dark, the world included. State and subagent colours are the same in both themes, only darkened over a light background.',
+  },
+  widthTip: {
+    es: 'Ancho — arrastra el divisor entre el mundo y la timeline para darle más sitio; doble clic vuelve al ancho de siempre.',
+    en: 'Width — drag the splitter between the world and the timeline to give it more room; double-click restores the default.',
+  },
 }
 
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -210,6 +226,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
           <li><span>{{ tr(L.jokes) }}</span></li>
           <li><span>{{ tr(L.soberTip) }}</span></li>
           <li><span>{{ tr(L.playerTip) }}</span></li>
+          <li><span>{{ tr(L.keysTip) }}</span></li>
+          <li><span>{{ tr(L.treeTip) }}</span></li>
+          <li><span>{{ tr(L.themeTip) }}</span></li>
+          <li><span>{{ tr(L.widthTip) }}</span></li>
         </ul>
       </div>
     </section>

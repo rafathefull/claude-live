@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { basename } from 'node:path'
 import { CACHE_DIR, INDEX_CACHE } from './config.js'
 import { readAgentMeta, scanSubagents, scanTranscripts } from './discover.js'
@@ -102,10 +102,25 @@ export async function listHistory(): Promise<SessionInfo[]> {
   return out
 }
 
+async function exists(path: string): Promise<boolean> {
+  try {
+    await stat(path)
+    return true
+  } catch {
+    return false
+  }
+}
+
 async function resolvePath(sessionId: string): Promise<{ path: string; slug: string } | null> {
   const data = await loadCache()
   for (const entry of Object.values(data)) {
-    if (entry.sessionId === sessionId) return { path: entry.transcriptPath, slug: entry.slug }
+    if (entry.sessionId !== sessionId) continue
+    // La caché puede haber envejecido: Claude Code borra transcripts pasados los
+    // `cleanupPeriodDays`, y un proyecto se puede mover o borrar a mano. Si la ruta ya no
+    // está, se sigue buscando en disco en vez de reventar con ENOENT al leerla.
+    if (await exists(entry.transcriptPath)) {
+      return { path: entry.transcriptPath, slug: entry.slug }
+    }
   }
   for (const file of await scanTranscripts()) {
     if (file.agentId === null && file.sessionId === sessionId) {

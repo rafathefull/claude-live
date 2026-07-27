@@ -183,11 +183,19 @@ await page.locator('.timeline-head button', { hasText: 'pensamiento' }).waitFor(
 await browser.close()
 
 if (keep) {
-  console.log(`\nservidor de demostración en ${url} (Ctrl+C para terminar)`)
-  console.log(`datos en ${demoDir}`)
+  // `unref` suelta el hijo del bucle de eventos: sin esto el proceso no terminaba nunca y el
+  // terminal se quedaba colgado, aunque el trabajo ya estuviera hecho. El servidor sigue vivo
+  // por su cuenta (es un grupo de procesos aparte), así que hay que decir cómo pararlo.
+  server.unref()
+  console.log(`\nservidor de demostración en ${url}, sigue vivo en segundo plano`)
+  console.log(`  para pararlo:  kill -TERM -${server.pid}`)
+  console.log(`  datos en:      ${demoDir}  (bórralo cuando acabes)`)
 } else {
   await cleanup()
 }
 
 console.log(problems.length === 0 ? '\nSin errores de consola' : `\n${problems.length} error(es):`)
 for (const problem of [...new Set(problems)].slice(0, 20)) console.log(`  ${problem}`)
+
+// Un error de consola es un fallo, no una nota al pie: así la integración continua se entera.
+if (problems.length > 0) process.exit(1)

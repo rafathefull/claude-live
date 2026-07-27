@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # Tipos, pruebas y construcción. Las pruebas leen transcripts de ~/.claude a propósito, y
+  # aquí no hay ninguno: se siembra un mundo sintético con el guion de la demostración, así
+  # que comprueban de verdad en vez de pasar de largo.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Sembrar un ~/.claude sintético
+        run: npm run test:seed -- /tmp/claude-live-ci
+      - name: Pruebas
+        run: npm test
+        env:
+          CLAUDE_CONFIG_DIR: /tmp/claude-live-ci
+      - run: npm run build
+      - name: Auditoría de dependencias de producción
+        run: npm audit --omit=dev --audit-level=high
+
+  # El typecheck no ve un fallo de la API de Pixi en tiempo de ejecución: esto monta el mundo
+  # de demostración en un Chromium de verdad y falla si la consola escupe algo.
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - name: Mundo de demostración en un navegador real
+        run: npm run demo -- --out /tmp/shots
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: capturas
+          path: /tmp/shots
+          if-no-files-found: ignore

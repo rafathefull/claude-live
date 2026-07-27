@@ -30,6 +30,18 @@ export const CACHE_DIR = join(
   process.env.XDG_DATA_HOME ?? join(HOME, '.local', 'share'),
   'claude-live',
 )
-export const INDEX_CACHE = join(CACHE_DIR, 'index.json')
+/**
+ * El índice se guarda por directorio de configuración: con un `CLAUDE_CONFIG_DIR` distinto
+ * (la demostración, un mundo sembrado para las pruebas) las entradas de uno apuntaban a
+ * ficheros del otro, y al abrir una sesión se leía una ruta que ya no existía.
+ */
+export const INDEX_CACHE = join(
+  CACHE_DIR,
+  process.env.CLAUDE_CONFIG_DIR ? `index-${slugify(CLAUDE_DIR)}.json` : 'index.json',
+)
+
+function slugify(value: string): string {
+  return value.replace(/[^a-zA-Z0-9]/g, '-').replace(/^-+|-+$/g, '').slice(-60)
+}
 
 export const WEB_DIST = new URL('../../web-dist/', import.meta.url)

@@ -38,6 +38,9 @@ ficheros que Claude Code escribe en `~/.claude`.*
   con `⏮ ⏪ ⏵ ⏩ ⏭`, velocidades de 0,5× a 16× y barra para saltar a cualquier punto. Las
   conversaciones largas se traen por tramos mientras avanza, así que se reproducen enteras, y el
   contador muestra el total real desde el primer momento.
+  Con **atajos de teclado**: espacio (o `K`) reproduce y pausa, `←` `→` avanzan un evento,
+  `⇧←` `⇧→` diez, `Inicio` y `Fin` van a los extremos, y `↑` `↓` cambian la velocidad.
+  Mientras escribes en un buscador el teclado no se toca.
 - **Ayuda en el sitio**: pasa el ratón por cualquier estación o actor y sale su explicación,
   con lo que está haciendo y su estado, sin abrir nada.
 - **Estado a dos señales**: el anillo de cada actor late cuando está activo y su color dice en
@@ -319,7 +322,7 @@ Las pruebas usan **tus propios transcripts**, no mocks, porque el riesgo real de
 proyecto es que el formato cambie o que aparezca un caso hostil:
 
 ```bash
-npm test           # parser + agrupación + store + unidades + divisor
+npm test           # parser + agrupación + store + unidades + divisor + atajos
 npm run typecheck  # vue-tsc
 ```
 
@@ -331,7 +334,22 @@ silencio: eventos duplicados al reconectar el SSE y subagentes atribuidos a la s
 equivocada cuando hay dos abiertas. `test:stats` comprueba que los resúmenes con unidades se
 leen bien en los dos idiomas, con los resultados tal como los devuelven las herramientas.
 `test:split` acota el divisor de la timeline por los dos extremos: que el panel no se coma el
-escenario y que en una pantalla ancha se pueda ampliar de verdad.
+escenario y que en una pantalla ancha se pueda ampliar de verdad. `test:shortcuts` cubre lo que
+de verdad se rompe en los atajos: el contexto —que el espacio siga siendo del buscador cuando
+estás escribiendo, y que Ctrl, Alt y Meta no se pisen—.
+
+Donde no hay historia que leer (una máquina recién estrenada, la integración continua) se puede
+sembrar un `~/.claude` sintético con el guion de la demostración:
+
+```bash
+npm run test:seed -- /tmp/claude-live-ci
+CLAUDE_CONFIG_DIR=/tmp/claude-live-ci npm test
+```
+
+Es un suelo mínimo, no un sustituto: los datos de la demostración son amables y los tuyos no.
+Eso es lo que corre en [la integración continua](.github/workflows/ci.yml), que además monta el
+mundo en un Chromium de verdad y falla si la consola escupe algo —un fallo de la API de Pixi en
+tiempo de ejecución no lo ve el `typecheck`—.
 
 ### Mundo de demostración
 

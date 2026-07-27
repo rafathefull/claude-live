@@ -13,14 +13,19 @@ import {
 } from '../store'
 import { formatTime } from '../format'
 import { tr } from '../i18n'
+/** El salto de los botones es el mismo que el de ⇧← / ⇧→: teclado y ratón no deben discrepar. */
+import { JUMP } from '../shortcuts'
 
+// Cada botón lleva su tecla en el tooltip: así los atajos se descubren usándolo, sin tener
+// que ir a la leyenda.
 const L = {
-  start: { es: 'Al principio', en: 'To the start' },
-  back: { es: 'Atrás 10 eventos', en: 'Back 10 events' },
-  play: { es: 'Reproducir', en: 'Play' },
-  pause: { es: 'Pausa', en: 'Pause' },
-  forward: { es: 'Adelante 10 eventos', en: 'Forward 10 events' },
-  end: { es: 'Al final', en: 'To the end' },
+  start: { es: 'Al principio · Inicio', en: 'To the start · Home' },
+  back: { es: 'Atrás 10 eventos · ⇧←  (← uno)', en: 'Back 10 events · ⇧←  (← one)' },
+  play: { es: 'Reproducir · espacio', en: 'Play · space' },
+  pause: { es: 'Pausa · espacio', en: 'Pause · space' },
+  forward: { es: 'Adelante 10 eventos · ⇧→  (→ uno)', en: 'Forward 10 events · ⇧→  (→ one)' },
+  end: { es: 'Al final · Fin', en: 'To the end · End' },
+  speed: { es: 'Velocidad · ↑ y ↓', en: 'Speed · ↑ and ↓' },
   loading: { es: 'trayendo más…', en: 'loading more…' },
   close: {
     es: 'Cerrar el reproductor (podrás volver a abrirlo con «⏵ Reproducir» en la cabecera)',
@@ -28,8 +33,6 @@ const L = {
   },
 }
 
-/** Salto de los botones «atrás/adelante»: un puñado de eventos, no uno solo. */
-const JUMP = 10
 
 const replay = computed(() => state.replay)
 const position = computed(() => Math.min(state.replay.index, state.replay.total))
@@ -78,7 +81,7 @@ function onScrub(event: Event): void {
       <span v-if="replay.pending > 0" class="muted" :title="tr(L.loading)">…</span>
     </span>
 
-    <div class="replay-speeds">
+    <div class="replay-speeds" :title="tr(L.speed)">
       <button
         v-for="speed in SPEEDS"
         :key="speed"

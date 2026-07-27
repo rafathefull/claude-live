@@ -7,8 +7,17 @@ import Inspector from './components/Inspector.vue'
 import HistoryView from './components/HistoryView.vue'
 import Legend from './components/Legend.vue'
 import ReplayBar from './components/ReplayBar.vue'
-import { isReplaying, state } from './store'
+import {
+  SPEEDS,
+  isReplaying,
+  seekTo,
+  setSpeed,
+  state,
+  step,
+  togglePlay,
+} from './store'
 import { clampTimelineWidth, loadTimelineWidth, saveTimelineWidth } from './split'
+import { actionForKey, isTypingTarget, nextSpeed } from './shortcuts'
 import { tr } from './i18n'
 
 const L = {
@@ -60,10 +69,40 @@ function resetDrag(): void {
   saveTimelineWidth(null)
 }
 
+/**
+ * Atajos del reproductor. Van en el documento y no en la barra porque la barra no tiene el
+ * foco: se pulsa espacio mirando el mundo, no el botón.
+ */
+function onKeydown(event: KeyboardEvent): void {
+  if (!isReplaying.value || isTypingTarget(event.target)) return
+  const action = actionForKey(event)
+  if (!action) return
+  event.preventDefault()
+
+  switch (action.kind) {
+    case 'toggle':
+      togglePlay()
+      break
+    case 'step':
+      step(action.delta)
+      break
+    case 'seekStart':
+      seekTo(0)
+      break
+    case 'seekEnd':
+      seekTo(state.replay.total + state.replay.pending)
+      break
+    case 'speed':
+      setSpeed(nextSpeed(state.replay.speed, action.direction, SPEEDS))
+      break
+  }
+}
+
 // Al estrechar la ventana hay que reajustar: un ancho guardado en una pantalla grande
 // dejaría el escenario en nada al abrir la app en un portátil.
 let observer: ResizeObserver | null = null
 onMounted(() => {
+  document.addEventListener('keydown', onKeydown)
   observer = new ResizeObserver(() => {
     if (timelineWidth.value === null || !body.value) return
     const splitter = body.value.querySelector('.splitter') as HTMLElement | null
@@ -83,7 +122,10 @@ watch(body, (el) => {
   if (el) observer?.observe(el)
 })
 
-onBeforeUnmount(() => observer?.disconnect())
+onBeforeUnmount(() => {
+  observer?.disconnect()
+  document.removeEventListener('keydown', onKeydown)
+})
 </script>
 
 <template>

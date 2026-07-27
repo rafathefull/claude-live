@@ -37,6 +37,9 @@ comes from the files Claude Code writes under `~/.claude`.*
   `⏮ ⏪ ⏵ ⏩ ⏭`, speeds from 0.5× to 16× and a slider to jump anywhere. Long conversations are
   fetched in chunks as it goes, so they play in full, and the counter shows the real total from
   the very start.
+  With **keyboard shortcuts**: space (or `K`) plays and pauses, `←` `→` move one event, `⇧←`
+  `⇧→` ten, `Home` and `End` jump to the ends, and `↑` `↓` change the speed. While you are
+  typing in a search box the keyboard is left alone.
 - **Help where you are**: hover any station or actor and its explanation appears, along with
   what it is doing and its state, without opening anything.
 - **State on two channels**: each actor's ring beats while it is busy and its colour says what
@@ -326,7 +329,7 @@ The tests use **your own transcripts**, not mocks, because the real risk in this
 format change or an unexpected hostile case:
 
 ```bash
-npm test           # parser + merging + store + units + splitter
+npm test           # parser + merging + store + units + splitter + shortcuts
 npm run typecheck  # vue-tsc
 ```
 
@@ -337,7 +340,22 @@ store without a browser, covering what breaks silently: duplicated events on SSE
 subagents attributed to the wrong session when two are open. `test:stats` checks that summaries
 with units read correctly in both languages, using the results tools actually return.
 `test:split` bounds the timeline splitter from both ends: the panel must not eat the stage, and
-on a wide screen it must really be able to grow.
+on a wide screen it must really be able to grow. `test:shortcuts` covers what actually
+breaks in shortcuts: the context —space must still belong to the search box while you type, and
+Ctrl, Alt and Meta must not be hijacked—.
+
+Where there is no history to read (a brand new machine, continuous integration) you can seed a
+synthetic `~/.claude` with the demo script:
+
+```bash
+npm run test:seed -- /tmp/claude-live-ci
+CLAUDE_CONFIG_DIR=/tmp/claude-live-ci npm test
+```
+
+It is a floor, not a substitute: the demo data is friendly and yours is not. That is what runs
+in [continuous integration](.github/workflows/ci.yml), which also mounts the world in a real
+Chromium and fails if the console says anything —a runtime Pixi API failure is invisible to
+`typecheck`—.
 
 ### Demo world
 
