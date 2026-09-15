@@ -26,6 +26,8 @@
     como ruido.                                                     [19dc930]
   * TaskOutput y TaskStop pasan del Tablon a la Terminal: son los nombres
     nuevos de BashOutput y KillShell.                               [19dc930]
+  * Dependencias de produccion al dia (fastify, fast-uri, nanoid y otras dos
+    con avisos altos), que la auditoria paraba la integracion.    [pendiente]
 
 --------------------------------------------------------------------------------
  2026-07-27
@@ -161,6 +163,9 @@
     noise.                                                          [19dc930]
   * TaskOutput and TaskStop move from the Task board to the Terminal: they are
     the new names of BashOutput and KillShell.                      [19dc930]
+  * Production dependencies brought up to date (fastify, fast-uri, nanoid and
+    two more with high advisories), which the audit was blocking CI on.
+                                                                      [pending]
 
 --------------------------------------------------------------------------------
  2026-07-27
