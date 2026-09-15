@@ -4,6 +4,7 @@ import type {
   Metrics,
   ServerMessage,
   SessionInfo,
+  TaskInfo,
   TimelineEvent,
 } from '@shared/types'
 import type { Retention } from './store'
@@ -28,6 +29,19 @@ export interface EventsPage {
   total: number
 }
 
+/** La cola del fichero de salida de un shell o monitor en segundo plano. */
+export interface TaskOutput {
+  /** false mientras la tarea no ha escrito nada: el fichero se crea con el primer byte. */
+  exists: boolean
+  size: number
+  text: string
+  /** true si el fichero era más largo que lo devuelto. */
+  truncated: boolean
+}
+
+/** Cuánta cola se pide por omisión. */
+const OUTPUT_TAIL_BYTES = 64 * 1024
+
 export interface Backend {
   /** Abre el flujo de novedades. Devuelve una función para cerrarlo. */
   connect(handlers: {
@@ -40,6 +54,7 @@ export interface Backend {
   retention(): Promise<Retention | null>
   metrics(force: boolean): Promise<Metrics | null>
   raw(sessionId: string, uuid: string): Promise<unknown>
+  taskOutput(sessionId: string, taskId: string): Promise<TaskOutput | null>
 }
 
 /* ------------------------------------------------------------------ en vivo */
@@ -93,6 +108,14 @@ const live: Backend = {
     if (!response.ok) return null
     return response.json()
   },
+
+  async taskOutput(sessionId, taskId) {
+    const response = await fetch(
+      `/api/sessions/${sessionId}/tasks/${encodeURIComponent(taskId)}/output?tail=${OUTPUT_TAIL_BYTES}`,
+    )
+    if (!response.ok) return null
+    return (await response.json()) as TaskOutput
+  },
 }
 
 /* ------------------------------------------------------------------ estático */
@@ -102,6 +125,9 @@ export interface DemoWorld {
   sessions: SessionInfo[]
   agents: ActorInfo[]
   jobs: JobInfo[]
+  /** Shells y monitores de la sesión «en directo», y la salida que enseñaría cada uno. */
+  tasks?: TaskInfo[]
+  taskOutputs?: Record<string, string>
   events: Record<string, TimelineEvent[]>
   metrics: Metrics
   retention: Retention
@@ -136,6 +162,7 @@ const staticBackend: Backend = {
         sessions: demo.sessions,
         agents: demo.agents,
         jobs: demo.jobs,
+        tasks: demo.tasks ?? [],
       })
 
       const script = demo.events[demo.live.sessionId] ?? []
@@ -205,6 +232,13 @@ const staticBackend: Backend = {
     const demo = await loadWorld()
     const event = (demo.events[sessionId] ?? []).find((candidate) => candidate.uuid === uuid)
     return event?.payload ?? { nota: 'En la demostración solo está el payload recortado.' }
+  },
+
+  async taskOutput(_sessionId, taskId) {
+    const demo = await loadWorld()
+    const text = demo.taskOutputs?.[taskId]
+    if (text === undefined) return { exists: false, size: 0, text: '', truncated: false }
+    return { exists: true, size: text.length, text, truncated: false }
   },
 }
 

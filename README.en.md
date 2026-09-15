@@ -56,6 +56,18 @@ with your own sessions you need to run it on your machine (below).
 
   ![The Camp with background jobs](docs/campamento.png)
 
+- **Background shells and monitors**: what Claude Code counts in its footer as "1 shell ·
+  1 monitor". A shell is a `Bash` with `run_in_background` that runs until it exits; a monitor is
+  a script that wakes Claude on every line it writes. The header carries a chip with the same
+  count, the Terminal sign repeats it and pulses slowly while anything is still running, and
+  clicking either unfolds the list: state, runtime, command, description, each monitor's last
+  event and **its output**, read from the file where Claude Code keeps writing it. A shell's end
+  (with its exit code) and every monitor event enter the timeline. A task that claims to be
+  running with no child process of the session behind it shows up as 💤 stale, by the same rule
+  as jobs. No stop button: the viewer only watches.
+
+  ![The Terminal with a background shell and a monitor](docs/terminal.png)
+
 - **Every tool in its place**: read/search, edit/write, shell, MCP, web, tasks, skills,
   worktrees, and whatever comes back to you (questions, plans, artifacts).
 - **A synchronised timeline**: filterable by actor, with durations, errors and an inspector
@@ -172,6 +184,7 @@ viewer at any moment without affecting any session.
 | `~/.claude/projects/<slug>/<sessionId>.jsonl` | The transcript: one JSON line per event (`thinking`, `text`, `tool_use`, `tool_result`, tokens and cache, model, branch). Read incrementally by keeping a byte offset, the same way Claude Code does with its own jobs. |
 | `<sessionId>/subagents/agent-<id>.jsonl` + `.meta.json` | Each subagent's work plus its `agentType`, `description`, `toolUseId` and `spawnDepth`: that is where the parent → child tree comes from. |
 | `~/.claude/daemon/roster.json` | Sessions launched in the background. |
+| `/tmp/claude-<uid>/<slug>/<sessionId>/tasks/<id>.output` | The output of each background shell or monitor. The only source outside `~/.claude`: Claude Code writes it under the temp directory, creates it with the first byte (a silent monitor has no file) and ends it with `[killed]` or `[exited with code N]`. Birth, events and end of each task come in the transcript, as `backgroundTaskId`, `taskId` and `<task-notification>` notices; whether it is still alive is checked by finding its process among the children of the session's pid, which also gives the exact start time. Movable with `CLAUDE_LIVE_TASKS_DIR`. |
 
 ## HTTP hooks (optional, strongly recommended)
 
@@ -318,6 +331,7 @@ server/src
   sessions.ts   joins roster + transcripts + subagents into one live state
   history.ts    cached history index and paginated reads
   hooks.ts      normalises what arrives via POST /hook
+  tasks.ts      background shells and monitors: notices, output files and processes
   index.ts      Fastify: SSE, REST API and static files
 server/test     parser and pacing regressions, against real transcripts
 web/src
@@ -368,6 +382,8 @@ fetched separately with `/raw/:uuid`.
 | `GET /api/sessions/:id/events?from=&limit=&agents=0` | Paginated timeline. Subagents come interleaved unless `agents=0` is passed; `limit` defaults to 500 and is capped at 2000 per request, and the player chains chunks with `from` |
 | `GET /api/retention` | How many sessions survive Claude Code's cleanup and how many are already gone |
 | `GET /api/jobs` | Background jobs, running and finished, with their state checked against the processes that actually exist |
+| `GET /api/sessions/:id/tasks` | Background shells and monitors of a live session, the running ones first |
+| `GET /api/sessions/:id/tasks/:taskId/output?tail=` | The tail of a task's output file (64 KB by default, 256 KB at most). Served by the server because it lives in `/tmp` |
 | `GET /api/metrics?force=1` | Aggregated metrics per project and day. The first call walks every transcript (0.7 s for 123 here); later ones only the changed files, with `force=1` to recompute everything |
 | `GET /api/sessions/:id/raw/:uuid` | The raw line of an event, untrimmed (transcript events only: the ones born from a hook are in no file) |
 | `POST /hook` | Ingest for Claude Code hooks |
@@ -386,7 +402,7 @@ The tests use **your own transcripts**, not mocks, because the real risk in this
 format change or an unexpected hostile case:
 
 ```bash
-npm test           # parser + merging + store + units + splitter + shortcuts + jobs + hood + metrics
+npm test           # parser + merging + store + units + splitter + shortcuts + jobs + tasks + hood + metrics
 npm run typecheck  # vue-tsc
 ```
 
@@ -407,6 +423,12 @@ it is doing", which may be a mode change.
 `test:jobs` exercises the `~/.claude/jobs` reader with hostile input and with your own jobs,
 and above all the rule that is not in the file: a job claiming to be "working" with no process
 behind it is stale.
+`test:tasks` covers background shells and monitors: that a `Bash` with `run_in_background` is
+not summarised as "no output", that the same `<task-notification>` does not count twice (it
+arrives queued and delivered, milliseconds apart), that the end marker of the `.output` closes
+the task with its exit code, that tasks from a previous process are not taken as alive after a
+`--resume`, and the process matching by command and by start time. It finishes by walking your
+recent transcripts that have tasks.
 
 `test:metrics` covers the view's filtering: that days with no activity are drawn as zero (skipping
 them would make a week off look like a week of work) and that the range counts back from the last
@@ -466,8 +488,8 @@ Chromium, reports console errors and saves screenshots of the three views.
 
 Working: live sessions, subagents, a resizable timeline, inspector, history as a table or a tree
 with a complete player, a multi-session neighbourhood, metrics per project and day, background
-jobs, retention warning, legend, plain mode, light and dark theme, hook ingest and the bilingual
-interface.
+jobs, background shells and monitors with their output, retention warning, legend, plain mode,
+light and dark theme, hook ingest and the bilingual interface.
 
 What has been done, summarised in plain text, lives in [`CHANGELOG.txt`](CHANGELOG.txt).
 

@@ -59,6 +59,18 @@ tu máquina (más abajo).
 
   ![El Campamento con los jobs en segundo plano](docs/campamento.png)
 
+- **Shells y monitores en segundo plano**: lo que Claude Code cuenta en su pie como «1 shell ·
+  1 monitor». Un shell es un `Bash` con `run_in_background` que corre hasta que termina; un
+  monitor es un script que despierta a Claude en cada línea que escribe. La cabecera lleva un chip
+  con el mismo recuento, el cartel de la Terminal lo repite y late despacio mientras quede algo
+  corriendo, y pulsar cualquiera de los dos despliega la lista: estado, cuánto lleva, el comando, la
+  descripción, el último evento de cada monitor y **su salida**, leída del fichero donde Claude
+  Code la va escribiendo. El fin de un shell (con su exit code) y cada evento de un monitor entran
+  en la timeline. Una tarea que se declara en marcha sin proceso hijo de la sesión que la respalde
+  sale como 💤 residuo, con la misma regla que los jobs. Sin botón de parar: el visor solo mira.
+
+  ![La Terminal con un shell y un monitor en segundo plano](docs/terminal.png)
+
 - **Cada herramienta en su lugar**: leer/buscar, editar/escribir, shell, MCP, web, tareas,
   skills, worktrees y lo que vuelve hacia ti (preguntas, planes, artifacts).
 - **Timeline sincronizada**: filtrable por actor, con duraciones, errores y un inspector que
@@ -175,6 +187,7 @@ el visor en cualquier momento sin afectar a ninguna sesión.
 | `~/.claude/projects/<slug>/<sessionId>.jsonl` | El transcript: una línea JSON por evento (`thinking`, `text`, `tool_use`, `tool_result`, tokens y caché, modelo, rama). Se lee de forma incremental guardando el offset en bytes, igual que hace Claude Code con sus propios jobs. |
 | `<sessionId>/subagents/agent-<id>.jsonl` + `.meta.json` | El trabajo de cada subagente y su `agentType`, `description`, `toolUseId` y `spawnDepth`: de ahí sale el árbol padre → hijos. |
 | `~/.claude/daemon/roster.json` | Sesiones lanzadas en segundo plano. |
+| `/tmp/claude-<uid>/<slug>/<sessionId>/tasks/<id>.output` | La salida de cada shell o monitor en segundo plano. Es la única fuente fuera de `~/.claude`: Claude Code la escribe en el directorio temporal, la crea con el primer byte (un monitor callado no tiene fichero) y la remata con `[killed]` o `[exited with code N]`. El nacimiento, los eventos y el fin de cada tarea vienen en el transcript, como `backgroundTaskId`, `taskId` y avisos `<task-notification>`; si la tarea sigue viva se comprueba buscando su proceso entre los hijos del pid de la sesión, que además da la hora exacta de arranque. Se puede mover con `CLAUDE_LIVE_TASKS_DIR`. |
 
 ## Hooks HTTP (opcional, muy recomendable)
 
@@ -321,6 +334,7 @@ server/src
   sessions.ts   une roster + transcripts + subagentes en un estado vivo
   history.ts    índice del historial cacheado y lectura paginada
   hooks.ts      normaliza los eventos que llegan por POST /hook
+  tasks.ts      shells y monitores en segundo plano: avisos, ficheros de salida y procesos
   index.ts      Fastify: SSE, API REST y estáticos
 server/test     regresión del parser y del ritmo, con transcripts reales
 web/src
@@ -370,6 +384,8 @@ lo hace el parser, así que afecta tanto al stream como a la timeline paginada; 
 | `GET /api/sessions/:id/events?from=&limit=&agents=0` | Timeline paginada. Los subagentes vienen intercalados salvo que se pase `agents=0`; `limit` es 500 por defecto y está topado a 2000 por petición, y el reproductor encadena tramos con `from` |
 | `GET /api/retention` | Cuántas sesiones sobreviven a la limpieza de Claude Code y cuántas se han perdido |
 | `GET /api/jobs` | Jobs en segundo plano, vivos y terminados, con su estado contrastado contra los procesos que hay de verdad |
+| `GET /api/sessions/:id/tasks` | Shells y monitores en segundo plano de una sesión viva, los que siguen corriendo primero |
+| `GET /api/sessions/:id/tasks/:taskId/output?tail=` | La cola del fichero de salida de una tarea (64 KB por omisión, 256 KB como mucho). Se sirve desde el servidor porque vive en `/tmp` |
 | `GET /api/metrics?force=1` | Métricas agregadas por proyecto y día. La primera vez recorre todos los transcripts (0,7 s con 123 aquí); después solo los que hayan cambiado, con `force=1` para recalcular todo |
 | `GET /api/sessions/:id/raw/:uuid` | Línea cruda de un evento, sin recortar (solo para eventos del transcript: los que nacen de un hook no están en ningún fichero) |
 | `POST /hook` | Ingesta de los hooks de Claude Code |
@@ -381,7 +397,7 @@ Las pruebas usan **tus propios transcripts**, no mocks, porque el riesgo real de
 proyecto es que el formato cambie o que aparezca un caso hostil:
 
 ```bash
-npm test           # parser + agrupación + store + unidades + divisor + atajos + jobs + vecindario + métricas
+npm test           # parser + agrupación + store + unidades + divisor + atajos + jobs + tareas + vecindario + métricas
 npm run typecheck  # vue-tsc
 ```
 
@@ -403,6 +419,12 @@ haciendo» el último evento a secas, que puede ser un cambio de modo.
 `test:jobs` prueba el lector de `~/.claude/jobs` con formato hostil y con tus propios jobs, y
 sobre todo la regla que no está en el fichero: un job que se dice «trabajando» sin proceso
 detrás es un residuo.
+`test:tasks` cubre los shells y monitores en segundo plano: que un `Bash` con
+`run_in_background` no se resuma como «sin salida», que la misma `<task-notification>` no cuente
+dos veces (llega encolada y entregada, con milisegundos de diferencia), que el marcador final del
+`.output` cierre la tarea con su exit code, que las tareas de un proceso anterior no se den por
+vivas tras un `--resume`, y el emparejado con procesos por comando y por hora de arranque. Acaba
+pasando por tus transcripts recientes que tengan tareas.
 
 `test:metrics` cubre el filtrado de la vista: que los días sin actividad se dibujen a cero (si
 se saltaran, una semana de vacaciones parecería trabajo seguido) y que el rango se cuente desde
@@ -462,8 +484,8 @@ ventana, informa de los errores de consola y guarda las capturas de las tres vis
 
 Funcionando: sesiones vivas, subagentes, timeline de ancho ajustable, inspector, historial en
 tabla o en árbol con reproductor completo, vecindario multi-sesión, métricas por proyecto y día,
-jobs en segundo plano, aviso de retención, leyenda, modo sobrio, tema claro y oscuro, ingesta de
-hooks e interfaz bilingüe.
+jobs en segundo plano, shells y monitores en segundo plano con su salida, aviso de retención,
+leyenda, modo sobrio, tema claro y oscuro, ingesta de hooks e interfaz bilingüe.
 
 Lo que se va haciendo, resumido y en texto plano, está en [`CHANGELOG.txt`](CHANGELOG.txt).
 

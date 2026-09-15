@@ -1,11 +1,12 @@
 import { computed, reactive, ref } from 'vue'
-import { backend, STATIC_MODE } from './backend'
+import { backend, STATIC_MODE, type TaskOutput } from './backend'
 import type {
   ActorInfo,
   JobInfo,
   Metrics,
   ServerMessage,
   SessionInfo,
+  TaskInfo,
   TimelineEvent,
 } from '@shared/types'
 
@@ -60,6 +61,10 @@ interface State {
   selectedEvent: TimelineEvent | null
   /** Jobs en segundo plano. Globales: no pertenecen a la sesión seleccionada. */
   jobs: JobInfo[]
+  /** Shells y monitores en segundo plano, por sesión: a diferencia de los jobs, sí son de una. */
+  tasks: Record<string, TaskInfo[]>
+  /** El panel de la Terminal está abierto. Como `legendOpen`: la escena tiene que saberlo. */
+  tasksOpen: boolean
   /**
    * La leyenda está abierta. Vive aquí y no en el componente porque la escena tiene que
    * enterarse: con un panel delante, el mundo no debe seguir respondiendo al ratón.
@@ -81,6 +86,8 @@ export const state = reactive<State>({
   focusActor: null,
   selectedEvent: null,
   jobs: [],
+  tasks: {},
+  tasksOpen: false,
   legendOpen: false,
   loadingSession: null,
   replay: {
@@ -144,6 +151,17 @@ export const currentEvents = computed(() => {
 export const currentAgents = computed(() =>
   Object.values(state.agents).filter((a) => a.sessionId === state.selectedSessionId),
 )
+
+/** Shells y monitores de la sesión seleccionada, los que siguen en marcha primero. */
+export const currentTasks = computed<TaskInfo[]>(() =>
+  state.selectedSessionId ? (state.tasks[state.selectedSessionId] ?? []) : [],
+)
+
+function groupTasks(tasks: readonly TaskInfo[]): Record<string, TaskInfo[]> {
+  const grouped: Record<string, TaskInfo[]> = {}
+  for (const task of tasks) (grouped[task.sessionId] ??= []).push(task)
+  return grouped
+}
 
 function ensureSelection(): void {
   if (state.selectedSessionId && state.sessions.some((s) => s.sessionId === state.selectedSessionId)) {
@@ -216,11 +234,22 @@ export function applyServerMessage(message: ServerMessage): void {
       state.sessions = message.sessions
       for (const agent of message.agents) upsertAgent(agent, agent.done !== true)
       state.jobs = message.jobs ?? []
+      // El saludo trae las tareas de todas las sesiones vivas; al reconectar se sustituyen.
+      state.tasks = groupTasks(message.tasks ?? [])
       ensureSelection()
       break
-    case 'sessions':
+    case 'sessions': {
       state.sessions = message.sessions
+      // Las tareas de una sesión que ya no está se van con ella.
+      const known = new Set(message.sessions.map((s) => s.sessionId))
+      for (const sessionId of Object.keys(state.tasks)) {
+        if (!known.has(sessionId)) delete state.tasks[sessionId]
+      }
       ensureSelection()
+      break
+    }
+    case 'tasks':
+      state.tasks[message.sessionId] = message.tasks
       break
     case 'event':
       addEvent(message.event)
@@ -450,4 +479,13 @@ export async function loadMetrics(force = false): Promise<Metrics | null> {
 
 export async function loadRaw(sessionId: string, uuid: string): Promise<unknown> {
   return backend.raw(sessionId, uuid)
+}
+
+/** La cola de la salida de un shell o monitor. Vive en /tmp, así que la sirve el servidor. */
+export async function loadTaskOutput(sessionId: string, taskId: string): Promise<TaskOutput | null> {
+  try {
+    return await backend.taskOutput(sessionId, taskId)
+  } catch {
+    return null
+  }
 }

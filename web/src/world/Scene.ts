@@ -11,8 +11,9 @@ import { STATIONS, colorForAgent, toolsForStation, type StationMeta } from '@sha
 // `Text` ya es la clase de texto de Pixi: el tipo de i18n entra con alias.
 import type { Text as Localized } from '@shared/i18n'
 import { inkFor, palette } from './palette'
-import { tr } from '../i18n'
-import type { JobInfo, JobState, StationId } from '@shared/types'
+import { lang, tr } from '../i18n'
+import { countTasks, taskBadgeLabel, taskChipLabel } from '../tasks'
+import type { JobInfo, JobState, StationId, TaskInfo } from '@shared/types'
 import { Actor, MOOD_EMOJI, MOOD_RING } from './Actor'
 
 /** Lo que se muestra al pasar el ratón por un elemento del escenario. */
@@ -175,8 +176,14 @@ interface StationView {
   name: Text
   counter: Text
   detail: Text
+  /** Rótulo fijo dentro del cartel: en la Terminal, cuántos shells y monitores siguen corriendo. */
+  badge: Text
+  /** Lo mismo con palabras, para el tooltip. */
+  badgeTitle?: string
   flashUntil: number
   uses: number
+  /** Algo sigue corriendo aquí aunque nadie la esté usando: el halo late despacio. */
+  busy?: boolean
   /** El Trastero muta cuando se acumulan herramientas sin sitio. */
   beastly?: boolean
 }
@@ -393,6 +400,14 @@ export class Scene {
     counter.anchor.set(1, 0)
     counter.position.set(PLATE_W / 2 - 8, -PLATE_H / 2 + 5)
 
+    // En la otra esquina, lo que sigue corriendo en segundo plano (solo lo usa la Terminal).
+    const badge = new Text({
+      text: '',
+      style: { fontFamily: 'ui-monospace, monospace', fontSize: 11, fill: p.plateDetail },
+    })
+    badge.anchor.set(0, 0)
+    badge.position.set(-PLATE_W / 2 + 8, -PLATE_H / 2 + 5)
+
     // Y el detalle encima, por el mismo motivo.
     const detail = new Text({
       text: '',
@@ -409,7 +424,7 @@ export class Scene {
     detail.anchor.set(0.5, 1)
     detail.y = -PLATE_H / 2 - 6
 
-    view.addChild(glow, plate, icon, name, counter, detail)
+    view.addChild(glow, plate, icon, name, counter, badge, detail)
     view.on('pointertap', () => this.stationClickHandler?.(meta.id))
     // El Campamento se pulsa para ver la lista, así que su cartel lo dice con el cursor.
     if (meta.id === 'camp') view.cursor = 'pointer'
@@ -423,6 +438,7 @@ export class Scene {
       name,
       counter,
       detail,
+      badge,
       flashUntil: 0,
       uses: 0,
     }
@@ -444,6 +460,12 @@ export class Scene {
             ? tr({
                 es: `usada ${station.uses} ${station.uses === 1 ? 'vez' : 'veces'}`,
                 en: `used ${station.uses} time${station.uses === 1 ? '' : 's'}`,
+              })
+            : '',
+          station.badgeTitle
+            ? tr({
+                es: `en segundo plano: ${station.badgeTitle} (pulsa para verlos)`,
+                en: `in the background: ${station.badgeTitle} (click to list them)`,
               })
             : '',
           toolsForStation(meta.id).join(' · '),
@@ -834,19 +856,24 @@ export class Scene {
     return { x: meta.x * this.width, y: meta.y * this.height }
   }
 
-  /** Marca actividad en una estación: destello + contador + etiqueta de lo que se hace. */
-  flashStation(id: StationId, detail?: string): void {
+  /**
+   * Marca actividad en una estación: destello + contador + etiqueta de lo que se hace.
+   * Con `countUse` a false solo destella: un aviso de un monitor no es que alguien la use.
+   */
+  flashStation(id: StationId, detail?: string, countUse = true): void {
     const station = this.stations.get(id)
     if (!station) return
-    station.uses++
-    station.counter.text = `×${station.uses}`
+    if (countUse) {
+      station.uses++
+      station.counter.text = `×${station.uses}`
 
-    // Guiño: un Trastero que se llena es un problema real (herramientas sin mapear), así que
-    // se hace notar. El de Caerbannog parecía inofensivo también.
-    if (id === 'unknown' && !station.beastly && station.uses >= BEAST_THRESHOLD) {
-      station.beastly = true
-      station.icon.text = '🐰'
-      station.name.text = 'Caerbannog'
+      // Guiño: un Trastero que se llena es un problema real (herramientas sin mapear), así que
+      // se hace notar. El de Caerbannog parecía inofensivo también.
+      if (id === 'unknown' && !station.beastly && station.uses >= BEAST_THRESHOLD) {
+        station.beastly = true
+        station.icon.text = '🐰'
+        station.name.text = 'Caerbannog'
+      }
     }
     station.flashUntil = performance.now() + 900
     if (detail !== undefined) {
@@ -946,6 +973,22 @@ export class Scene {
           : tr({ es: 'ninguno en marcha', en: 'none running' })
   }
 
+  /**
+   * Shells y monitores en segundo plano de la sesión. Como con los jobs, en el escenario solo
+   * queda el cartel: la Terminal dice cuántos siguen corriendo («1 shell · 1 monitor»), late
+   * despacio mientras haya alguno y se puede pulsar para desplegar la lista.
+   */
+  syncTasks(tasks: readonly TaskInfo[]): void {
+    const station = this.stations.get('terminal')
+    if (!station) return
+    const counts = countTasks(tasks)
+    station.badge.text = taskBadgeLabel(counts)
+    // El tooltip sí tiene sitio para decirlo con palabras.
+    station.badgeTitle = counts.total > 0 ? taskChipLabel(counts, lang.value) : ''
+    station.busy = counts.running > 0
+    station.view.cursor = counts.total > 0 ? 'pointer' : 'default'
+  }
+
   removeActor(id: string): void {
     this.actors.get(id)?.hide()
   }
@@ -1034,11 +1077,13 @@ export class Scene {
     for (const [id, station] of this.stations) {
       const remaining = station.flashUntil - now
       const intensity = remaining > 0 ? remaining / 900 : 0
+      // Con algo corriendo en segundo plano el halo no se apaga: late despacio, muy tenue.
+      const heartbeat = station.busy ? 0.05 + 0.04 * (0.5 + 0.5 * Math.sin(now / 420)) : 0
       station.glow.clear()
-      if (intensity > 0) {
+      if (intensity > 0 || heartbeat > 0) {
         station.glow
           .roundRect(-PLATE_W / 2 - 7, -PLATE_H / 2 - 7, PLATE_W + 14, PLATE_H + 14, 14)
-          .fill({ color: glowColor, alpha: 0.06 + intensity * 0.16 })
+          .fill({ color: glowColor, alpha: Math.max(heartbeat, 0.06 + intensity * 0.16) })
       }
       // El detalle de una estación es lo último que se hizo allí y caduca; el del Campamento
       // no es un log, es cuántos jobs hay ahora mismo, así que no se borra.

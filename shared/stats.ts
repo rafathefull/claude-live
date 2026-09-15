@@ -1,5 +1,13 @@
 import type { Lang, Text } from './i18n.js'
-import type { Stat } from './types.js'
+import type { Stat, TaskEnd } from './types.js'
+
+/** Cómo acabó un shell o un monitor, en las dos lenguas. Lo usan la timeline y el panel. */
+export const TASK_END_TEXT: Record<TaskEnd, Text> = {
+  completed: { es: 'terminado', en: 'finished' },
+  stopped: { es: 'parado', en: 'stopped' },
+  expired: { es: 'caducado', en: 'expired' },
+  failed: { es: 'falló', en: 'failed' },
+}
 
 /**
  * Da formato a un dato del servidor en el idioma activo. El parser vive en el servidor y no
@@ -57,5 +65,19 @@ export function formatStat(stat: Stat, lang: Lang): string {
       }`
     case 'turnEnded':
       return t({ es: 'turno terminado', en: 'turn finished' })
+    case 'taskStarted':
+      return stat.task === 'monitor'
+        ? `${t({ es: 'monitor armado', en: 'monitor armed' })} (${stat.id})`
+        : `${t({ es: 'shell en segundo plano', en: 'shell in the background' })} (${stat.id})`
+    case 'monitorEvent':
+      return `${t({ es: 'monitor', en: 'monitor' })}: ${stat.text}`
+    case 'taskEnded': {
+      const who = t(
+        stat.task === 'monitor' ? { es: 'monitor', en: 'monitor' } : { es: 'shell', en: 'shell' },
+      )
+      const how = t(TASK_END_TEXT[stat.status])
+      const code = stat.exitCode !== undefined ? ` (exit ${stat.exitCode})` : ''
+      return `${who} ${how}${code}`
+    }
   }
 }

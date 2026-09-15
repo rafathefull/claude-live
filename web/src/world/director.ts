@@ -276,6 +276,23 @@ export class Director {
             scene.actor(actorId)?.say(`❗ ${summaryOf(event)}`, 8000)
           },
         }
+      case 'task_event':
+        // Un shell o monitor en segundo plano dice algo. El aviso va de la Terminal a Claude:
+        // es él quien lo recibe, no quien va a buscarlo, así que el avatar no se mueve. Y no
+        // cuenta como uso de la estación: nadie ha ejecutado nada nuevo.
+        return {
+          station: 'terminal',
+          tool: event.tool,
+          kind: event.kind,
+          count: 1,
+          run: () => {
+            scene.flashStation('terminal', `${event.tool ?? ''}\n${summaryOf(event)}`, false)
+            scene.drawLink(actorId, 'terminal', 0x7dd3fc, 900)
+            if (event.stat?.kind === 'monitorEvent') {
+              scene.actor(actorId)?.say(`📡 ${summaryOf(event)}`, 4500)
+            }
+          },
+        }
       default:
         return null
     }

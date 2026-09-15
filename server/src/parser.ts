@@ -1,6 +1,12 @@
 import { MAX_PAYLOAD_BYTES, MAX_SUMMARY_CHARS } from './config.js'
+import {
+  parseTaskNotifications,
+  updateFromNotification,
+  updateFromToolResult,
+  type TaskUpdate,
+} from './tasks.js'
 import { mcpServerOf, stationForTool } from '../../shared/mapping.js'
-import type { EventKind, Stat, TimelineEvent, TokenUsage } from '../../shared/types.js'
+import type { EventKind, Stat, TaskKind, TimelineEvent, TokenUsage } from '../../shared/types.js'
 
 /**
  * Traduce las líneas crudas de un transcript de Claude Code a eventos del mundo.
@@ -41,9 +47,14 @@ export interface ParseResult {
   spawned: { agentId: string; description?: string; model?: string; toolUseId?: string }[]
   /** toolUseId de subagentes que han terminado (tool_result no asíncrono). */
   finished: string[]
+  /** Shells y monitores en segundo plano: nacen, emiten, acaban (ver tasks.ts). */
+  tasks: TaskUpdate[]
 }
 
-const EMPTY: ParseResult = { events: [], hints: {}, spawned: [], finished: [] }
+const EMPTY: ParseResult = { events: [], hints: {}, spawned: [], finished: [], tasks: [] }
+
+/** Cuántas notificaciones encoladas y aún no entregadas se recuerdan como mucho. */
+const NOTIFICATIONS_REMEMBERED = 400
 
 function clip(text: string, max = MAX_SUMMARY_CHARS): string {
   const flat = text.replace(/\s+/g, ' ').trim()
@@ -190,6 +201,33 @@ export function describeToolResult(
   if (typeof result === 'string') return { summary: clip(result, 120) }
   const r = asRecord(result)
 
+  // Un `Bash` con run_in_background contesta al instante con stdout vacío y el id de la tarea:
+  // decir «sin salida» sería engañar, porque el comando sigue corriendo. Va antes que el stdout.
+  const shellId = str(r.backgroundTaskId)
+  if (shellId) {
+    return {
+      summary: `shell en segundo plano (${shellId})`,
+      stat: { kind: 'taskStarted', id: shellId, task: 'shell' },
+    }
+  }
+  // Un monitor devuelve `{ taskId, timeoutMs, persistent }`; `timeoutMs` no lo trae nadie más.
+  const monitorId = str(r.taskId)
+  if (monitorId && (tool === 'Monitor' || typeof r.timeoutMs === 'number')) {
+    return {
+      summary: `monitor armado (${monitorId})`,
+      stat: { kind: 'taskStarted', id: monitorId, task: 'monitor' },
+    }
+  }
+  // `TaskStop` sobre un shell o un monitor. Aquí no se sabe cuál de los dos era: el parser lo
+  // afina si vio nacer la tarea.
+  const stoppedId = str(r.task_id)
+  if (stoppedId && str(r.task_type) === 'local_bash') {
+    return {
+      summary: `tarea parada (${stoppedId})`,
+      stat: { kind: 'taskEnded', id: stoppedId, task: 'shell', status: 'stopped' },
+    }
+  }
+
   if (typeof r.stdout === 'string' || typeof r.stderr === 'string') {
     const stdout = (str(r.stdout) ?? '').trim()
     const stderr = (str(r.stderr) ?? '').trim()
@@ -281,14 +319,110 @@ function usageOf(message: Record<string, unknown>): TokenUsage | undefined {
 }
 
 export class TranscriptParser {
-  /** toolUseId → instante y nombre, para calcular la duración al llegar el resultado. */
-  private pending = new Map<string, { ts: number; tool: string }>()
+  /**
+   * toolUseId → instante, nombre y entrada, para calcular la duración al llegar el resultado y
+   * saber qué comando lanzó un shell en segundo plano (el resultado solo trae el id).
+   */
+  private pending = new Map<string, { ts: number; tool: string; input?: unknown }>()
   private counter = 0
+  /**
+   * Notificación → cuántas veces se ha visto encolada sin verla entregada todavía.
+   *
+   * La misma `<task-notification>` aparece dos veces en el transcript: en una línea
+   * `queue-operation` cuando ocurre y en una línea `user` cuando se le entrega al modelo, que
+   * puede ser mucho después si Claude estaba ocupado con una herramienta larga. No vale una
+   * ventana de tiempo: se empareja cada entrega con su encolado pendiente, y así dos eventos
+   * iguales de un monitor (encolados los dos) siguen siendo dos.
+   */
+  private pendingDelivery = new Map<string, number>()
+  /** Tareas que se han visto nacer, para saber si lo que se para es un shell o un monitor. */
+  private taskKinds = new Map<string, TaskKind>()
 
   constructor(private ctx: ParseContext) {}
 
   updateContext(patch: Partial<ParseContext>): void {
     this.ctx = { ...this.ctx, ...patch }
+  }
+
+  /**
+   * Tareas que otro parser vio nacer (el que recorre la conversación entera al adoptar una
+   * sesión): así este sabe si lo que se para después es un shell o un monitor.
+   */
+  rememberTasks(tasks: readonly { id: string; kind: TaskKind }[]): void {
+    for (const task of tasks) this.taskKinds.set(task.id, task.kind)
+  }
+
+  /**
+   * Las `<task-notification>` de un texto → actualizaciones de tareas y eventos de la timeline.
+   * Solo las de shells y monitores: las de subagentes ya tienen su ciclo de vida en el mundo.
+   */
+  private notifications(
+    source: string,
+    ts: string,
+    base: Pick<TimelineEvent, 'parentUuid' | 'sessionId' | 'agentId' | 'ts'>,
+    uuid: string,
+    events: TimelineEvent[],
+    tasks: TaskUpdate[],
+    origin: 'queued' | 'delivered',
+  ): void {
+    for (const [index, n] of parseTaskNotifications(source).entries()) {
+      const key = `${n.id}|${n.status ?? ''}|${n.event ?? n.summary ?? ''}`
+      const pending = this.pendingDelivery.get(key) ?? 0
+      if (origin === 'queued') {
+        this.pendingDelivery.set(key, pending + 1)
+        if (this.pendingDelivery.size > NOTIFICATIONS_REMEMBERED) {
+          const oldest = this.pendingDelivery.keys().next().value
+          if (oldest !== undefined) this.pendingDelivery.delete(oldest)
+        }
+      } else if (pending > 0) {
+        // Ya se contó cuando se encoló: esta es su entrega.
+        if (pending === 1) this.pendingDelivery.delete(key)
+        else this.pendingDelivery.set(key, pending - 1)
+        continue
+      }
+      // Entregada sin haberse visto encolada (versiones antiguas, o el encolado quedó fuera del
+      // tramo leído): cuenta una vez.
+
+      const update = updateFromNotification(n, ts)
+      if (!update) continue
+      if (update.action === 'end' && !update.kind) update.kind = this.taskKinds.get(n.id)
+      tasks.push(update)
+
+      const { payload, truncated } = safePayload(n.raw)
+      const evUuid = `${uuid}:task:${index}`
+      if (update.action === 'event') {
+        events.push({
+          ...base,
+          uuid: evUuid,
+          kind: 'task_event',
+          tool: 'Monitor',
+          station: 'terminal',
+          summary: clip(`monitor: ${update.text}`),
+          stat: { kind: 'monitorEvent', id: n.id, text: clip(update.text, 110) },
+          payload,
+          truncated,
+        })
+      } else if (update.action === 'end') {
+        const task = update.kind ?? this.taskKinds.get(n.id) ?? 'shell'
+        events.push({
+          ...base,
+          uuid: evUuid,
+          kind: 'task_event',
+          tool: task === 'monitor' ? 'Monitor' : 'Bash',
+          station: 'terminal',
+          summary: clip(n.summary ?? `${task} ${update.status}`),
+          stat: {
+            kind: 'taskEnded',
+            id: n.id,
+            task,
+            status: update.status,
+            exitCode: update.exitCode,
+          },
+          payload,
+          truncated,
+        })
+      }
+    }
   }
 
   /** Convierte una línea del transcript en 0..n eventos del mundo. */
@@ -308,6 +442,7 @@ export class TranscriptParser {
     const events: TimelineEvent[] = []
     const spawned: ParseResult['spawned'] = []
     const finished: string[] = []
+    const tasks: TaskUpdate[] = []
     const ts = str(raw.timestamp) ?? new Date().toISOString()
 
     if (str(raw.cwd)) hints.cwd = str(raw.cwd)
@@ -325,21 +460,30 @@ export class TranscriptParser {
     switch (type) {
       case 'ai-title':
         hints.aiTitle = str(raw.aiTitle)
-        return { events, hints, spawned, finished }
+        return { events, hints, spawned, finished, tasks }
       case 'mode':
         hints.mode = str(raw.mode)
-        return { events, hints, spawned, finished }
+        return { events, hints, spawned, finished, tasks }
       case 'permission-mode':
         hints.permissionMode = str(raw.permissionMode)
-        return { events, hints, spawned, finished }
+        return { events, hints, spawned, finished, tasks }
+      case 'queue-operation': {
+        // Lo que se encola para el siguiente turno. Casi todo es ruido, salvo los avisos de los
+        // shells y monitores en segundo plano. Cada aviso pasa por aquí dos veces, `enqueue` al
+        // llegar y `remove` al retirarlo de la cola, con el mismo texto: solo cuenta la primera.
+        const content = str(raw.content) ?? ''
+        if (str(raw.operation) === 'enqueue' && content.includes('<task-notification>')) {
+          this.notifications(content, ts, base, uuid, events, tasks, 'queued')
+        }
+        return { events, hints, spawned, finished, tasks }
+      }
       case 'attachment':
       case 'file-history-snapshot':
       case 'file-history-delta':
       case 'last-prompt':
-      case 'queue-operation':
       case 'system':
         // Ruido de mantenimiento: no habita el mundo.
-        return { events, hints, spawned, finished }
+        return { events, hints, spawned, finished, tasks }
       default:
         break
     }
@@ -350,6 +494,13 @@ export class TranscriptParser {
       const content = message.content
       const blocks = Array.isArray(content) ? content : []
       const toolResults = blocks.filter((b) => str(asRecord(b).type) === 'tool_result')
+      const text = textOf(content)
+
+      // Aviso de un shell o monitor entregado a Claude. Suele venir solo, pero también puede
+      // acompañar a un tool_result, así que se mira antes de decidir qué es la línea.
+      if (text.includes('<task-notification>')) {
+        this.notifications(text, ts, base, uuid, events, tasks, 'delivered')
+      }
 
       if (toolResults.length > 0 || raw.toolUseResult !== undefined) {
         for (const block of toolResults.length > 0 ? toolResults : [{}]) {
@@ -373,8 +524,27 @@ export class TranscriptParser {
             finished.push(toolUseId)
           }
 
+          const taskUpdate = updateFromToolResult(
+            tool,
+            open?.input,
+            raw.toolUseResult,
+            textOf(b.content),
+            ts,
+            toolUseId,
+          )
+          if (taskUpdate) {
+            if (taskUpdate.action === 'start') this.taskKinds.set(taskUpdate.id, taskUpdate.kind)
+            tasks.push(taskUpdate)
+          }
+
           const { payload, truncated } = safePayload(raw.toolUseResult ?? b.content)
           const described = describeToolResult(tool, raw.toolUseResult ?? b.content)
+          // El resultado de `TaskStop` no dice si lo parado era un shell o un monitor; si la
+          // tarea se vio nacer, se sabe.
+          if (described.stat?.kind === 'taskEnded') {
+            const known = this.taskKinds.get(described.stat.id)
+            if (known) described.stat = { ...described.stat, task: known }
+          }
           events.push({
             ...base,
             uuid: toolResults.length > 1 && toolUseId ? `${uuid}:${toolUseId}` : uuid,
@@ -390,14 +560,13 @@ export class TranscriptParser {
             isError: b.is_error === true,
           })
         }
-        return { events, hints, spawned, finished }
+        return { events, hints, spawned, finished, tasks }
       }
 
       // Prompt del usuario. Los inyectados por el sistema empiezan por '<' (recordatorios,
       // notificaciones de tarea) y no son cosas que el usuario haya escrito.
-      const text = textOf(content)
       const synthetic = text.trimStart().startsWith('<') || text.startsWith('Caveat:')
-      if (!text || synthetic) return { events, hints, spawned, finished }
+      if (!text || synthetic) return { events, hints, spawned, finished, tasks }
       const { payload, truncated } = safePayload(text)
       events.push({
         ...base,
@@ -408,7 +577,7 @@ export class TranscriptParser {
         payload,
         truncated,
       })
-      return { events, hints, spawned, finished }
+      return { events, hints, spawned, finished, tasks }
     }
 
     if (type === 'assistant') {
@@ -441,7 +610,7 @@ export class TranscriptParser {
         } else if (blockType === 'tool_use') {
           tool = str(b.name) ?? '?'
           const toolUseId = str(b.id)
-          if (toolUseId) this.pending.set(toolUseId, { ts: Date.parse(ts), tool })
+          if (toolUseId) this.pending.set(toolUseId, { ts: Date.parse(ts), tool, input: b.input })
           kind = tool === 'Skill' ? 'skill' : 'tool_call'
           const described = describeToolInput(tool, b.input, this.ctx.cwd ?? hints.cwd)
           summary = described.summary
@@ -478,9 +647,9 @@ export class TranscriptParser {
           model,
         })
       }
-      return { events, hints, spawned, finished }
+      return { events, hints, spawned, finished, tasks }
     }
 
-    return { events, hints, spawned, finished }
+    return { events, hints, spawned, finished, tasks }
   }
 }

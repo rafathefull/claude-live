@@ -8,7 +8,17 @@ import { JobsWatcher, readJobs } from './jobs.js'
 import { computeMetrics } from './metrics.js'
 import { retentionInfo } from './retention.js'
 import { LiveRegistry } from './sessions.js'
-import type { ActorInfo, JobInfo, ServerMessage, TimelineEvent } from '../../shared/types.js'
+import type {
+  ActorInfo,
+  JobInfo,
+  ServerMessage,
+  TaskInfo,
+  TimelineEvent,
+} from '../../shared/types.js'
+
+/** Tope de lo que se devuelve de la salida de una tarea: hay salidas de megas. */
+const MAX_OUTPUT_TAIL = 256 * 1024
+const DEFAULT_OUTPUT_TAIL = 64 * 1024
 
 const app = Fastify({ logger: false, bodyLimit: 4 * 1024 * 1024 })
 const registry = new LiveRegistry()
@@ -48,6 +58,9 @@ jobsWatcher.on('change', (next: JobInfo[]) => {
 registry.on('agent', ({ agent, state }: { agent: ActorInfo; state: 'spawn' | 'done' }) =>
   broadcast({ type: 'agent', agent, state }),
 )
+registry.on('tasks', ({ sessionId, tasks }: { sessionId: string; tasks: TaskInfo[] }) =>
+  broadcast({ type: 'tasks', sessionId, tasks }),
+)
 registry.on('warn', (msg: string) => console.warn(`[claude-live] ${msg}`))
 
 app.get('/api/stream', (request, reply) => {
@@ -66,6 +79,7 @@ app.get('/api/stream', (request, reply) => {
     sessions: registry.listSessions(),
     agents: registry.listAgents(),
     jobs,
+    tasks: registry.listTasks(),
   }
   client.write(`data: ${JSON.stringify(hello)}\n\n`)
   for (const event of registry.recentEvents()) {
@@ -122,6 +136,28 @@ app.get('/api/sessions/:id/events', async (request) => {
     limit: query.limit ? Number(query.limit) : 500,
     includeAgents: query.agents !== '0',
   })
+})
+
+/** Shells y monitores en segundo plano de una sesión viva. */
+app.get('/api/sessions/:id/tasks', async (request, reply) => {
+  const { id } = request.params as { id: string }
+  const tasks = registry.tasksOf(id)
+  if (tasks === null) return reply.code(404).send({ error: 'sesión no encontrada' })
+  return { tasks }
+})
+
+/**
+ * La cola del fichero de salida de una tarea. Se sirve desde aquí porque vive en /tmp, fuera
+ * del alcance del navegador. `tail` son bytes, con un tope para las salidas de megas.
+ */
+app.get('/api/sessions/:id/tasks/:taskId/output', async (request, reply) => {
+  const { id, taskId } = request.params as { id: string; taskId: string }
+  const query = request.query as { tail?: string }
+  const wanted = query.tail ? Number(query.tail) : DEFAULT_OUTPUT_TAIL
+  const tail = Number.isFinite(wanted) && wanted > 0 ? Math.min(wanted, MAX_OUTPUT_TAIL) : DEFAULT_OUTPUT_TAIL
+  const output = await registry.taskOutput(id, taskId, tail)
+  if (output === null) return reply.code(404).send({ error: 'tarea no encontrada' })
+  return output
 })
 
 app.get('/api/sessions/:id/raw/:uuid', async (request, reply) => {

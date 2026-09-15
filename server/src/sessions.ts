@@ -15,8 +15,16 @@ import {
   transcriptPathFor,
   type RosterEntry,
 } from './roster.js'
+import { forEachLine } from './lines.js'
+import { TaskTracker, mentionsTask, readOutputTail, type OutputTail } from './tasks.js'
 import { TranscriptWatcher } from './watcher.js'
-import type { ActorInfo, SessionInfo, TimelineEvent, TokenUsage } from '../../shared/types.js'
+import type {
+  ActorInfo,
+  SessionInfo,
+  TaskInfo,
+  TimelineEvent,
+  TokenUsage,
+} from '../../shared/types.js'
 
 /**
  * Une las tres fuentes en un solo estado vivo:
@@ -48,6 +56,10 @@ interface SessionState {
   agentByToolUse: Map<string, string>
   recent: TimelineEvent[]
   tokens: TokenUsage
+  /** Shells y monitores en segundo plano de la sesión. */
+  tasks: TaskTracker
+  /** Emisión pendiente de `tasks`: un monitor parlanchín no debe repintar el panel por línea. */
+  tasksTimer?: NodeJS.Timeout
   diedAt?: number
 }
 
@@ -98,6 +110,66 @@ export class LiveRegistry extends EventEmitter {
     return all.slice(-limit)
   }
 
+  // ---------------------------------------------------------------- tareas
+
+  /** Shells y monitores de todas las sesiones vivas, para el saludo. */
+  listTasks(): TaskInfo[] {
+    return [...this.sessions.values()].flatMap((s) => s.tasks.list())
+  }
+
+  tasksOf(sessionId: string): TaskInfo[] | null {
+    return this.sessions.get(sessionId)?.tasks.list() ?? null
+  }
+
+  /** La cola del fichero de salida de una tarea, o null si la tarea no existe. */
+  async taskOutput(sessionId: string, taskId: string, maxBytes: number): Promise<OutputTail | null> {
+    const task = this.sessions.get(sessionId)?.tasks.get(taskId)
+    if (!task?.outputPath) return null
+    return readOutputTail(task.outputPath, maxBytes)
+  }
+
+  /**
+   * Recorre el transcript completo parseando solo las líneas que pueden hablar de una tarea, que
+   * son pocas: sale barato aun con conversaciones de megas. Lo que encuentra va al rastreador y al
+   * parser en vivo, para que este sepa qué clase de tarea es la que se pare después.
+   */
+  private async scanTasks(state: SessionState, path: string): Promise<void> {
+    const parser = new TranscriptParser({
+      sessionId: state.info.sessionId,
+      agentId: null,
+      cwd: state.info.cwd,
+    })
+    try {
+      await forEachLine(path, (line) => {
+        if (!mentionsTask(line)) return
+        for (const update of parser.parse(line).tasks) state.tasks.apply(update)
+      })
+    } catch {
+      // el transcript todavía no existe: la sesión acaba de abrirse y no ha escrito nada
+    }
+    state.parser.rememberTasks(state.tasks.list())
+  }
+
+  private emitTasks(state: SessionState): void {
+    if (state.tasksTimer) clearTimeout(state.tasksTimer)
+    state.tasksTimer = setTimeout(() => {
+      state.tasksTimer = undefined
+      this.emit('tasks', { sessionId: state.info.sessionId, tasks: state.tasks.list() })
+    }, 120)
+  }
+
+  /** Contrasta las tareas abiertas con sus procesos y ficheros de salida. Lo llama el barrido. */
+  private async refreshTasks(): Promise<void> {
+    for (const state of this.sessions.values()) {
+      if (!state.tasks.hasOpen()) continue
+      const live = state.info.live
+      const changed = await state.tasks.refresh(live ? state.info.pid : undefined, {
+        processStartedAt: live ? state.info.startedAt : undefined,
+      })
+      if (changed) this.emitTasks(state)
+    }
+  }
+
   // ---------------------------------------------------------------- roster
 
   private async onRoster(entries: RosterEntry[]): Promise<void> {
@@ -122,6 +194,8 @@ export class LiveRegistry extends EventEmitter {
       state.info.status = 'dead'
       state.diedAt = Date.now()
       for (const agent of state.agents.values()) this.finishAgent(state, agent)
+      // Sus shells y monitores mueren con ella: Claude Code los mata al salir.
+      if (state.tasks.sessionDied()) this.emitTasks(state)
     }
 
     this.emit('sessions', this.listSessions())
@@ -156,20 +230,33 @@ export class LiveRegistry extends EventEmitter {
       agentByToolUse: new Map(),
       recent: [],
       tokens: emptyTokens(),
+      tasks: new TaskTracker(entry.sessionId, info.slug),
     }
     this.sessions.set(entry.sessionId, state)
+
+    // Las tareas se buscan en la conversación entera: un shell lanzado hace tres horas queda muy
+    // por detrás de la cola que se lee a continuación, y sin esto no se vería hasta que dijera
+    // algo. La cola no vuelve a aplicarlas, que los eventos de un monitor se contarían dos veces.
+    await this.scanTasks(state, path)
 
     // Backfill: se leen las últimas líneas para que el mundo no arranque vacío, y a partir
     // de ahí el watcher sigue el fichero desde el final.
     const tail = await this.watcher.tail(path, BACKFILL_LINES)
     await this.watcher.prime(path)
-    this.ingest(state, null, tail, { silent: true })
+    this.ingest(state, null, tail, { silent: true, skipTasks: true })
 
     for (const ref of await scanSubagents(entry.sessionId, info.slug)) {
       await this.adoptAgent(state, ref, { backfill: true })
     }
 
+    // Las tareas que venían en la cola se contrastan ya con sus procesos: así el saludo no
+    // dice «en marcha» de un monitor que murió con la sesión anterior.
+    if (state.tasks.hasOpen()) {
+      await state.tasks.refresh(entry.pid, { processStartedAt: entry.startedAt })
+    }
+
     this.emit('event-batch', state.recent.slice(-BACKFILL_LINES))
+    if (state.tasks.list().length > 0) this.emitTasks(state)
   }
 
   // ---------------------------------------------------------------- subagentes
@@ -373,9 +460,10 @@ export class LiveRegistry extends EventEmitter {
     state: SessionState,
     agent: AgentState | null,
     lines: string[],
-    opts: { silent?: boolean } = {},
+    opts: { silent?: boolean; skipTasks?: boolean } = {},
   ): void {
     const parser = agent ? agent.parser : state.parser
+    let tasksChanged = false
     for (const line of lines) {
       const result = parser.parse(line)
       this.applyHints(state, result.hints)
@@ -386,12 +474,19 @@ export class LiveRegistry extends EventEmitter {
         const target = agentId ? state.agents.get(agentId) : undefined
         if (target) this.finishAgent(state, target)
       }
+      // Las tareas de un subagente son de la sesión igual: comparten pid y directorio de salida.
+      if (!opts.skipTasks) {
+        for (const update of result.tasks) {
+          if (state.tasks.apply(update)) tasksChanged = true
+        }
+      }
 
       for (const event of result.events) {
         if (agent) event.actor = agent.info
         this.push(state, event, opts.silent)
       }
     }
+    if (tasksChanged && !opts.silent) this.emitTasks(state)
   }
 
   private applyHints(state: SessionState, hints: SessionHints): void {
@@ -451,6 +546,7 @@ export class LiveRegistry extends EventEmitter {
   private sweep(): void {
     const now = Date.now()
     let sessionsChanged = false
+    void this.refreshTasks()
 
     for (const [sessionId, state] of this.sessions) {
       for (const agent of state.agents.values()) {
@@ -460,6 +556,7 @@ export class LiveRegistry extends EventEmitter {
       }
       if (state.diedAt && now - state.diedAt > DEAD_GRACE_MS) {
         this.sessions.delete(sessionId)
+        if (state.tasksTimer) clearTimeout(state.tasksTimer)
         this.watcher.forget(state.info.transcriptPath)
         for (const agent of state.agents.values()) {
           if (agent.path) this.watcher.forget(agent.path)

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { isReplaying, onEvent, selectedSession, state } from '../store'
+import { currentTasks, isReplaying, onEvent, selectedSession, state } from '../store'
 import { Scene, type HoverInfo } from '../world/Scene'
 import JobsBanner from './JobsBanner.vue'
+import TasksPanel from './TasksPanel.vue'
 import { Director } from '../world/director'
 import type { TimelineEvent } from '@shared/types'
 import { lang, tr } from '../i18n'
@@ -28,7 +29,7 @@ const campOpen = ref(false)
  * Con un panel delante (el banner o la leyenda) el mundo se queda sordo: Pixi no sabe que hay
  * HTML encima y seguía sacando tooltips de lo que quedaba debajo del panel.
  */
-const covered = computed(() => campOpen.value || state.legendOpen)
+const covered = computed(() => campOpen.value || state.legendOpen || state.tasksOpen)
 watch(covered, (value) => scene?.setInteractive(!value))
 let scene: Scene | null = null
 let director: Director | null = null
@@ -77,9 +78,12 @@ async function mountWorld(): Promise<void> {
   })
   scene.setStationClickHandler((station) => {
     if (station === 'camp') campOpen.value = !campOpen.value
+    // La Terminal solo se despliega si tiene algo en segundo plano que enseñar.
+    if (station === 'terminal' && currentTasks.value.length > 0) state.tasksOpen = !state.tasksOpen
   })
   unsubscribe = onEvent(feed)
   scene.syncJobs(state.jobs)
+  scene.syncTasks(currentTasks.value)
   scene.setInteractive(!covered.value)
   fitter = new ResizeObserver(() => scene?.app.queueResize())
   fitter.observe(host.value)
@@ -131,6 +135,13 @@ watch(
   { deep: true, immediate: true },
 )
 
+// Los shells y monitores son de la sesión seleccionada: cambian con ella y con cada aviso.
+watch(
+  currentTasks,
+  (tasks) => scene?.syncTasks(tasks),
+  { deep: true, immediate: true },
+)
+
 watch(() => state.selectedSessionId, primeWorld)
 watch(() => state.replay.seekToken, primeWorld)
 
@@ -174,6 +185,7 @@ onBeforeUnmount(unmountWorld)
     </aside>
 
     <JobsBanner v-if="campOpen" @close="campOpen = false" />
+    <TasksPanel v-if="state.tasksOpen" @close="state.tasksOpen = false" />
 
     <slot />
   </div>

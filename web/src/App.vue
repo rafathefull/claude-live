@@ -11,6 +11,7 @@ import DemoNotice from './components/DemoNotice.vue'
 import Tour from './components/Tour.vue'
 import Legend from './components/Legend.vue'
 import ReplayBar from './components/ReplayBar.vue'
+import TasksPanel from './components/TasksPanel.vue'
 import {
   SPEEDS,
   isReplaying,
@@ -177,6 +178,8 @@ onBeforeUnmount(() => {
         @dblclick="resetDrag"
       />
       <Timeline />
+      <!-- En modo sobrio no hay escenario que lo monte: el panel de la Terminal sale aquí. -->
+      <TasksPanel v-if="state.soberMode && state.tasksOpen" @close="state.tasksOpen = false" />
     </div>
 
     <Legend v-if="state.legendOpen" @close="state.legendOpen = false" />

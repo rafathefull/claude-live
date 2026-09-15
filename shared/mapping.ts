@@ -17,11 +17,14 @@ const EXACT: Record<string, StationId> = {
   Edit: 'workshop',
   Write: 'workshop',
   NotebookEdit: 'workshop',
-  // Terminal
+  // Terminal. Leer la salida de una tarea en segundo plano o pararla también es cosa del shell:
+  // `TaskOutput` y `TaskStop` son los nombres nuevos de `BashOutput` y `KillShell`.
   Bash: 'terminal',
   BashOutput: 'terminal',
   KillShell: 'terminal',
   Monitor: 'terminal',
+  TaskOutput: 'terminal',
+  TaskStop: 'terminal',
   // Exterior
   WebSearch: 'outside',
   WebFetch: 'outside',
@@ -30,8 +33,6 @@ const EXACT: Record<string, StationId> = {
   TaskUpdate: 'board',
   TaskList: 'board',
   TaskGet: 'board',
-  TaskOutput: 'board',
-  TaskStop: 'board',
   // Estante de skills
   Skill: 'skills',
   // Lanzar un subagente no es «ir a un sitio»: ocurre en la Mesa, junto a Claude, que es
@@ -102,8 +103,8 @@ export const STATIONS: StationMeta[] = [
     x: 0.4,
     y: 0.15,
     help: {
-      es: 'Ejecuta comandos de shell (tests, git, builds). Es la estación con más tráfico y la única que puede tener efectos fuera del proyecto.',
-      en: 'Runs shell commands (tests, git, builds). The busiest station, and the only one that can have effects outside the project.',
+      es: 'Ejecuta comandos de shell (tests, git, builds). Es la estación con más tráfico y la única que puede tener efectos fuera del proyecto. Los shells en segundo plano y los monitores —scripts que avisan a Claude en cada línea— se quedan aquí corriendo: el cartel dice cuántos hay y pulsarlo los despliega.',
+      en: 'Runs shell commands (tests, git, builds). The busiest station, and the only one that can have effects outside the project. Background shells and monitors —scripts that wake Claude on every line— keep running here: the sign counts them and clicking it lists them.',
     },
   },
   {

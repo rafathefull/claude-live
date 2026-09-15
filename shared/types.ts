@@ -31,6 +31,7 @@ export type EventKind =
   | 'agent_done' // el subagente entrega y muere
   | 'skill' // se coge un manual del estante
   | 'permission' // esperando permiso del usuario
+  | 'task_event' // un shell o monitor en segundo plano dice algo (evento, fin, parada)
   | 'session_start'
   | 'session_end'
   | 'meta' // cambios de modo, títulos, etc.
@@ -59,6 +60,10 @@ export type Stat =
   | { kind: 'waitingPermission'; tool: string; detail: string }
   | { kind: 'agentState'; agentType: string; started: boolean }
   | { kind: 'turnEnded' }
+  // Shells y monitores en segundo plano (ver TaskInfo).
+  | { kind: 'taskStarted'; id: string; task: TaskKind }
+  | { kind: 'monitorEvent'; id: string; text: string }
+  | { kind: 'taskEnded'; id: string; task: TaskKind; status: TaskEnd; exitCode?: number }
 
 export interface TokenUsage {
   input: number
@@ -199,6 +204,53 @@ export interface JobInfo {
   transcriptPath?: string
 }
 
+/* ------------------------------------------------- shells y monitores en segundo plano */
+
+/**
+ * Lo que Claude Code llama «tareas» de tipo `local_bash`: un `Bash` con `run_in_background`
+ * (un shell que corre hasta que termina) o un `Monitor` (un script que emite líneas y despierta
+ * a Claude en cada una). Son de la sesión, no del mundo: mueren con ella.
+ */
+export type TaskKind = 'shell' | 'monitor'
+
+/** Cómo acabó: salió solo, lo paró Claude, caducó el monitor o falló (exit code ≠ 0). */
+export type TaskEnd = 'completed' | 'stopped' | 'expired' | 'failed'
+
+/**
+ * `running` es lo que dice el transcript; `stale` lo deduce el visor cuando la tarea se declara
+ * en marcha pero no hay proceso hijo de la sesión que la respalde (igual que con los jobs).
+ */
+export type TaskState = 'running' | 'stale' | TaskEnd
+
+export interface TaskInfo {
+  /** Id corto que le pone Claude Code (`b4nw4b34e`). */
+  id: string
+  sessionId: string
+  kind: TaskKind
+  state: TaskState
+  /** El comando o script tal cual se lanzó. */
+  command: string
+  /** La descripción con la que se lanzó, si la puso. */
+  description?: string
+  toolUseId?: string
+  /** ISO-8601, del transcript; si hay proceso detrás, se afina con su hora de arranque. */
+  startedAt: string
+  endedAt?: string
+  exitCode?: number
+  /** Solo monitores: cuántos eventos han llegado y el último. */
+  events: number
+  lastEvent?: string
+  lastEventAt?: string
+  timeoutMs?: number
+  /** Dónde escribe Claude Code la salida (`/tmp/claude-<uid>/<slug>/<sessionId>/tasks/<id>.output`). */
+  outputPath?: string
+  /** Tamaño de ese fichero la última vez que se miró; ausente si todavía no existe. */
+  outputBytes?: number
+  /** Hay un proceso hijo de la sesión que se corresponde con esta tarea. */
+  alive: boolean
+  pid?: number
+}
+
 /* --------------------------------------------------------------- métricas */
 
 /** Lo que se puede sumar de un tramo de trabajo: un día, un proyecto o todo junto. */
@@ -272,8 +324,17 @@ export interface Metrics {
 
 /** Mensajes que el servidor empuja por SSE. */
 export type ServerMessage =
-  | { type: 'hello'; sessions: SessionInfo[]; agents: ActorInfo[]; jobs: JobInfo[] }
+  | {
+      type: 'hello'
+      sessions: SessionInfo[]
+      agents: ActorInfo[]
+      jobs: JobInfo[]
+      /** Opcional para no invalidar los mundos de demostración ya publicados. */
+      tasks?: TaskInfo[]
+    }
   | { type: 'event'; event: TimelineEvent }
   | { type: 'sessions'; sessions: SessionInfo[] }
   | { type: 'agent'; agent: ActorInfo; state: 'spawn' | 'done' }
   | { type: 'jobs'; jobs: JobInfo[] }
+  /** Las tareas de una sesión, completas: el front sustituye las que tuviera de esa sesión. */
+  | { type: 'tasks'; sessionId: string; tasks: TaskInfo[] }

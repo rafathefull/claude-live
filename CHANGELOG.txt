@@ -12,6 +12,22 @@
 
 
 --------------------------------------------------------------------------------
+ 2026-09-15
+--------------------------------------------------------------------------------
+
+  + Shells y monitores en segundo plano, como el "1 shell . 1 monitor" del pie
+    de Claude Code: chip en la cabecera, recuento y latido en el cartel de la
+    Terminal, y un panel con estado, tiempo corriendo, comando, ultimo evento
+    y la salida leida del fichero de /tmp donde Claude Code la escribe. El fin
+    de cada shell y cada evento de monitor entran en la timeline. Sin proceso
+    hijo de la sesion que lo respalde, sale como residuo.        [pendiente]
+  ! Un Bash con run_in_background se resumia como "sin salida" cuando el
+    comando seguia corriendo, y los avisos <task-notification> se tiraban
+    como ruido.                                                   [pendiente]
+  * TaskOutput y TaskStop pasan del Tablon a la Terminal: son los nombres
+    nuevos de BashOutput y KillShell.                             [pendiente]
+
+--------------------------------------------------------------------------------
  2026-07-27
 --------------------------------------------------------------------------------
 
@@ -129,6 +145,22 @@
 ================================================================================
  English
 ================================================================================
+
+--------------------------------------------------------------------------------
+ 2026-09-15
+--------------------------------------------------------------------------------
+
+  + Background shells and monitors, like the "1 shell . 1 monitor" in Claude
+    Code's footer: a chip in the header, count and heartbeat on the Terminal
+    sign, and a panel with state, runtime, command, last event and the output
+    read from the /tmp file where Claude Code writes it. Each shell's end and
+    each monitor event enter the timeline. With no child process of the
+    session behind it, it shows as stale.                          [pending]
+  ! A Bash with run_in_background was summarised as "no output" while the
+    command kept running, and <task-notification> notices were dropped as
+    noise.                                                          [pending]
+  * TaskOutput and TaskStop move from the Task board to the Terminal: they are
+    the new names of BashOutput and KillShell.                      [pending]
 
 --------------------------------------------------------------------------------
  2026-07-27

@@ -31,7 +31,12 @@ export function formatDuration(ms: number | undefined): string {
   if (ms === undefined) return ''
   if (ms < 1000) return `${ms}ms`
   if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`
-  return `${Math.floor(ms / 60_000)}m${Math.round((ms % 60_000) / 1000)}s`
+  const seconds = Math.floor((ms % 60_000) / 1000)
+  if (ms < 3_600_000) return `${Math.floor(ms / 60_000)}m${seconds}s`
+  // Un shell en segundo plano puede llevar horas: «3h 16m 13s», como lo dice Claude Code.
+  const hours = Math.floor(ms / 3_600_000)
+  const minutes = Math.floor((ms % 3_600_000) / 60_000)
+  return `${hours}h ${minutes}m ${seconds}s`
 }
 
 export function formatTime(ts: string): string {
@@ -63,6 +68,7 @@ const KIND_ICON: Record<EventKind, string> = {
   agent_done: '✓',
   skill: '📖',
   permission: '❗',
+  task_event: '📡',
   session_start: '▶',
   session_end: '■',
   meta: '·',

@@ -109,6 +109,7 @@ button.active {
    --timeline-w cuando lo has ajustado con el ratón; si no, manda el valor por omisión de
    cada breakpoint. */
 .body {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 7px var(--timeline-w, 420px);
   flex: 1;
@@ -1746,4 +1747,121 @@ td.bad {
   margin-left: auto;
   border-color: var(--accent);
   color: var(--accent);
+}
+
+/* -------------------------------------------- shells y monitores en segundo plano */
+
+/* El chip de la cabecera: el mismo recuento que el pie de Claude Code («1 shell · 1 monitor»). */
+.tasks-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  color: var(--text-dim);
+}
+
+.tasks-chip.running {
+  border-color: var(--ok);
+  color: var(--text);
+}
+
+.tasks-chip.active {
+  background: var(--bg-raised);
+}
+
+/* El panel reutiliza la caja del Campamento y añade lo suyo: estados y la salida desplegable. */
+.tasks-panel li.running {
+  border-left-color: var(--ok);
+}
+
+.tasks-panel li.stale {
+  border-left-color: var(--text-faint);
+}
+
+.tasks-panel li.completed {
+  border-left-color: var(--accent);
+}
+
+.tasks-panel li.failed {
+  border-left-color: var(--err);
+}
+
+.tasks-panel li.stopped,
+.tasks-panel li.expired {
+  border-left-color: var(--warn);
+}
+
+.tasks-panel li.open {
+  background: var(--bg-raised);
+}
+
+.tasks-panel .mono {
+  font-family: var(--mono);
+}
+
+.tasks-panel li.task-output {
+  display: block;
+  cursor: default;
+  margin: 0 0 4px 22px;
+  padding: 6px 8px 8px;
+  border-left-color: var(--border);
+}
+
+.tasks-panel li.task-output:hover {
+  background: transparent;
+}
+
+.tasks-panel .task-out-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.tasks-panel .task-out-head .path {
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 55%;
+}
+
+.tasks-panel .task-out {
+  margin: 0;
+  max-height: 220px;
+  overflow: auto;
+  padding: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.4;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.tasks-panel li.task-output p {
+  margin: 0;
+  font-size: 11px;
+}
+
+/* En la timeline, lo que dice un shell o monitor va del color del acento: lo trae la Terminal. */
+.row.kind-task_event .summary {
+  color: var(--accent);
+}
+
+/* Lo que corre en segundo plano en una tarjeta del vecindario, con el mismo verde que el chip. */
+.hood-tasks {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.hood-tasks.running {
+  color: var(--ok);
 }

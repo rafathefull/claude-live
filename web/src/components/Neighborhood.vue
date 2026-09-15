@@ -5,7 +5,8 @@ import { liveSessions, state, stopReplay } from '../store'
 import { summarizeSession } from '../neighborhood'
 import { JOB_EMOJI, JOB_STATE_TEXT } from '../world/Scene'
 import { agentColorCss, contextPercent, formatTokens, shortTool } from '../format'
-import { tr } from '../i18n'
+import { lang, tr } from '../i18n'
+import { countTasks, taskChipLabel } from '../tasks'
 import type { SessionInfo } from '@shared/types'
 
 /**
@@ -58,6 +59,8 @@ const cards = computed(() =>
       (candidate) =>
         candidate.sessionId === session.sessionId || session.sessionId.startsWith(candidate.id),
     ),
+    // Lo que le corre en segundo plano: el mismo recuento que el chip de la cabecera.
+    tasks: countTasks(state.tasks[session.sessionId] ?? []),
   })),
 )
 
@@ -161,6 +164,10 @@ function stateLabel(session: SessionInfo): string {
             {{ agent.agentType ?? 'agent' }}
           </span>
         </div>
+
+        <p v-if="card.tasks.total > 0" class="hood-tasks" :class="{ running: card.tasks.running > 0 }">
+          ⌨️ {{ taskChipLabel(card.tasks, lang) }}
+        </p>
 
         <footer>
           <span class="muted">{{ card.session.model ?? '—' }}</span>

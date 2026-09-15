@@ -7,8 +7,9 @@
  *
  *   npm run test:store
  */
-import { applyServerMessage, currentAgents, currentEvents, state } from '../src/store.js'
-import type { ActorInfo, ServerMessage, SessionInfo, TimelineEvent } from '../../shared/types.js'
+import { applyServerMessage, currentAgents, currentEvents, currentTasks, state } from '../src/store.js'
+import { countTasks, taskBadgeLabel, taskChipLabel } from '../src/tasks.js'
+import type { ActorInfo, ServerMessage, SessionInfo, TaskInfo, TimelineEvent } from '../../shared/types.js'
 
 let failures = 0
 
@@ -141,6 +142,74 @@ check(
 // Los eventos también quedan separados por sesión.
 feed({ type: 'event', event: thinking(SESSION_B, 'b-1') })
 check(currentEvents.value.length === 1, 'la sesión B tiene su propia timeline')
+
+// ---------------------------------------------------------------- shells y monitores
+
+console.log('\nshells y monitores en segundo plano')
+
+function task(id: string, sessionId: string, kind: TaskInfo['kind'], state: TaskInfo['state']): TaskInfo {
+  return {
+    id,
+    sessionId,
+    kind,
+    state,
+    command: kind === 'shell' ? 'PORT=3305 pnpm run start:local' : 'tail -f app.log',
+    startedAt: '2026-07-25T10:00:00.000Z',
+    events: 0,
+    alive: state === 'running',
+  }
+}
+
+// Al reconectar, el saludo trae las de todas las sesiones y sustituye lo que hubiera.
+feed({
+  type: 'hello',
+  sessions: [session(SESSION_A, 'tienda-api'), session(SESSION_B, 'facturacion')],
+  agents: [],
+  jobs: [],
+  tasks: [task('t-a1', SESSION_A, 'shell', 'running'), task('t-b1', SESSION_B, 'monitor', 'running')],
+})
+state.selectedSessionId = SESSION_A
+check(
+  currentTasks.value.length === 1 && currentTasks.value[0].id === 't-a1',
+  'cada habitación enseña solo sus propias tareas',
+)
+
+// Un mensaje `tasks` es la lista completa de esa sesión: no se acumula.
+feed({
+  type: 'tasks',
+  sessionId: SESSION_A,
+  tasks: [task('t-a1', SESSION_A, 'shell', 'completed'), task('t-a2', SESSION_A, 'monitor', 'running')],
+})
+check(currentTasks.value.length === 2, 'el mensaje de tareas sustituye la lista de su sesión')
+check(currentTasks.value.find((t) => t.id === 't-a1')?.state === 'completed', 'y trae el estado nuevo')
+
+const counts = countTasks(currentTasks.value)
+check(counts.running === 1 && counts.monitors === 1 && counts.shells === 0, 'el recuento solo cuenta lo que sigue en marcha')
+check(taskChipLabel(counts, 'es') === '1 monitor', `el chip dice «${taskChipLabel(counts, 'es')}»`)
+check(
+  taskChipLabel(countTasks([task('x', SESSION_A, 'shell', 'running'), task('y', SESSION_A, 'shell', 'stale'), task('z', SESSION_A, 'monitor', 'running')]), 'en') ===
+    '2 shells · 1 monitor',
+  'y en inglés, con plurales: «2 shells · 1 monitor»',
+)
+check(
+  taskChipLabel(countTasks([task('x', SESSION_A, 'shell', 'completed')]), 'es') === '1 terminada',
+  'sin nada en marcha, dice cuántas acabaron',
+)
+check(
+  taskBadgeLabel(countTasks([task('x', SESSION_A, 'shell', 'running'), task('z', SESSION_A, 'monitor', 'running')])) === '⌨️1 📡1' &&
+    taskBadgeLabel(countTasks([task('x', SESSION_A, 'shell', 'completed')])) === '✓1' &&
+    taskBadgeLabel(countTasks([])) === '',
+  'el cartel de la Terminal usa la forma compacta con iconos',
+)
+
+// Un saludo antiguo sin tareas (la demostración publicada) no rompe nada.
+feed({ type: 'hello', sessions: [session(SESSION_A, 'tienda-api')], agents: [], jobs: [] })
+check(currentTasks.value.length === 0, 'un saludo sin tareas deja la lista vacía')
+
+// Y la sesión que desaparece se lleva las suyas.
+feed({ type: 'tasks', sessionId: SESSION_B, tasks: [task('t-b1', SESSION_B, 'monitor', 'running')] })
+feed({ type: 'sessions', sessions: [session(SESSION_A, 'tienda-api')] })
+check(state.tasks[SESSION_B] === undefined, 'las tareas de una sesión cerrada se van con ella')
 
 console.log(failures === 0 ? '\nTodo correcto' : `\n${failures} comprobación(es) fallida(s)`)
 process.exit(failures === 0 ? 0 : 1)

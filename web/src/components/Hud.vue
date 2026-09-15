@@ -1,8 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { isReplaying, liveSessions, resumeReplay, selectedSession, state, stopReplay } from '../store'
+import {
+  currentTasks,
+  isReplaying,
+  liveSessions,
+  resumeReplay,
+  selectedSession,
+  state,
+  stopReplay,
+} from '../store'
 import { contextPercent, formatTokens } from '../format'
 import { lang, setLang, tr } from '../i18n'
+import { countTasks, taskChipLabel } from '../tasks'
 import { theme, toggleTheme } from '../theme'
 
 /** Textos de la cabecera, con sus dos versiones juntas. */
@@ -54,6 +63,10 @@ const L = {
   reconnecting: { es: 'reconectando…', en: 'reconnecting…' },
   toSpanish: { es: 'Interfaz en castellano', en: 'Switch the interface to Spanish' },
   toEnglish: { es: 'Cambiar la interfaz a inglés', en: 'Interface in English' },
+  tasksTitle: {
+    es: 'Shells y monitores en segundo plano de esta sesión: pulsa para ver su estado, cuánto llevan y su salida',
+    en: 'Background shells and monitors of this session: click to see their state, runtime and output',
+  },
 }
 
 const props = defineProps<{
@@ -69,6 +82,8 @@ const emit = defineEmits<{
 
 const session = selectedSession
 const ctx = computed(() => (session.value ? contextPercent(session.value) : 0))
+/** Lo que corre en segundo plano en la sesión: el mismo recuento que el pie de Claude Code. */
+const taskCounts = computed(() => countTasks(currentTasks.value))
 /** Volver al directo cierra el reproductor si estaba abierto. */
 function selectLive(sessionId: string): void {
   stopReplay()
@@ -169,6 +184,16 @@ const statusLabel = computed(() => {
         <span class="label">{{ tr(L.state) }}</span>
         <span>{{ statusLabel }}</span>
       </div>
+      <button
+        v-if="taskCounts.total > 0"
+        class="tasks-chip"
+        :class="{ running: taskCounts.running > 0, active: state.tasksOpen }"
+        :title="tr(L.tasksTitle)"
+        @click="state.tasksOpen = !state.tasksOpen"
+      >
+        <i class="dot" :class="{ busy: taskCounts.running > 0 }" />
+        ⌨️ {{ taskChipLabel(taskCounts, lang) }}
+      </button>
     </template>
 
     <div class="spacer" />
