@@ -10,7 +10,14 @@
  *   npm run test:timing
  */
 import { collectSessionEvents, listHistory } from '../src/history.js'
-import { TimingAccumulator, computeTiming, TIMING_CATEGORIES, timingSides } from '../../shared/timing.js'
+import { TranscriptParser } from '../src/parser.js'
+import {
+  TimingAccumulator,
+  computeTiming,
+  TIMING_CATEGORIES,
+  timingSides,
+  tokensPerSecond,
+} from '../../shared/timing.js'
 import type { TimelineEvent } from '../../shared/types.js'
 
 let failures = 0
@@ -178,6 +185,74 @@ check(withAgent.events === 6, 'se cuentan todos los eventos recibidos')
 
 const empty = computeTiming([])
 check(empty.activeMs === 0 && empty.spanMs === 0 && sum(empty.categories) === 0, 'sin eventos, todo a cero y sin explotar')
+
+/* ------------------------------------------------------------------ por modelo */
+
+console.log('\npor modelo')
+
+const speedy = computeTiming([
+  ev('prompt', 0),
+  ev('thinking', 4, { model: 'claude-opus-5', tokens: { input: 10, output: 900, cacheRead: 0, cacheCreate: 0 } }),
+  ev('text', 6, { model: 'claude-opus-5' }), // mismo mensaje: el parser ya no repite los tokens
+  ev('tool_call', 7, { model: 'claude-opus-5', tool: 'Bash', toolUseId: 's1' }),
+  ev('tool_result', 10, { tool: 'Bash', toolUseId: 's1', durationMs: 3000 }),
+  ev('text', 12, { model: 'claude-haiku-4-5', tokens: { input: 5, output: 100, cacheRead: 0, cacheCreate: 0 } }),
+])
+const opus = speedy.models.find((row) => row.model === 'claude-opus-5')
+const haiku = speedy.models.find((row) => row.model === 'claude-haiku-4-5')
+check(opus?.responses === 1 && haiku?.responses === 1, 'cada toma de palabra es una respuesta, aunque tenga tres bloques')
+check(opus?.thinkingMs === 4000 && opus?.writingMs === 3000, 'el tiempo de pensar y escribir va al modelo del bloque')
+check(opus?.outputTokens === 900 && haiku?.outputTokens === 100, 'los tokens de salida se cuentan una vez por respuesta')
+check(Math.round(tokensPerSecond(opus!)! * 10) / 10 === 128.6, `y salen tokens por segundo (${tokensPerSecond(opus!)?.toFixed(1)})`)
+check(tokensPerSecond({ thinkingMs: 0, writingMs: 0, outputTokens: 0 }) === null, 'sin tiempo ni tokens no hay velocidad que inventar')
+
+/* ------------------------------------------------------------------ parser: tokens y paralelas */
+
+console.log('\nparser: tokens una vez por respuesta y duración de las llamadas paralelas')
+
+const parser = new TranscriptParser({ sessionId: SESSION, agentId: null })
+const line = (block: unknown, ts: string, id = 'msg_1'): string =>
+  JSON.stringify({
+    type: 'assistant',
+    uuid: `p-${++n}`,
+    parentUuid: null,
+    timestamp: ts,
+    sessionId: SESSION,
+    message: {
+      id,
+      role: 'assistant',
+      model: 'claude-opus-5',
+      usage: { input_tokens: 32, output_tokens: 4829, cache_read_input_tokens: 83101, cache_creation_input_tokens: 0 },
+      content: [block],
+    },
+  })
+const parsed = [
+  parser.parse(line({ type: 'thinking', thinking: 'a ver…' }, at(0))),
+  parser.parse(line({ type: 'tool_use', id: 'tu_a', name: 'Bash', input: { command: 'sleep 1' } }, at(2))),
+  parser.parse(line({ type: 'tool_use', id: 'tu_b', name: 'Bash', input: { command: 'sleep 2' } }, at(20))),
+]
+const withTokens = parsed.flatMap((result) => result.events).filter((event) => event.tokens)
+check(withTokens.length === 1 && withTokens[0]!.tokens!.output === 4829, 'de tres líneas del mismo mensaje, solo la primera lleva los tokens')
+check(parsed[0]!.hints.tokens !== undefined && parsed[2]!.hints.tokens === undefined, 'y la sesión los suma una vez, no por bloque')
+check(parsed[2]!.hints.lastContextTokens === 32 + 83101, 'el contexto en uso sí se lee en cualquier línea')
+
+const resultLine = (toolUseId: string, ts: string): string =>
+  JSON.stringify({
+    type: 'user',
+    uuid: `p-${++n}`,
+    parentUuid: null,
+    timestamp: ts,
+    sessionId: SESSION,
+    toolUseResult: { stdout: 'ok', stderr: '' },
+    message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: toolUseId, content: 'ok' }] },
+  })
+const resultA = parser.parse(resultLine('tu_a', at(30))).events[0]!
+const resultB = parser.parse(resultLine('tu_b', at(31))).events[0]!
+check(resultA.durationMs === 10_000, `la primera llamada paralela dura desde el último bloque, 10 s, no 28 (${resultA.durationMs})`)
+check(resultB.durationMs === 11_000, `y la segunda 11 s (${resultB.durationMs})`)
+
+const other = parser.parse(line({ type: 'text', text: 'listo' }, at(40), 'msg_2')).events[0]!
+check(other.tokens?.output === 4829, 'un mensaje nuevo vuelve a traer sus tokens')
 
 /* ------------------------------------------------------------------ por día (métricas) */
 

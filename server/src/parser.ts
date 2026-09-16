@@ -337,6 +337,17 @@ export class TranscriptParser {
   private pendingDelivery = new Map<string, number>()
   /** Tareas que se han visto nacer, para saber si lo que se para es un shell o un monitor. */
   private taskKinds = new Map<string, TaskKind>()
+  /**
+   * Último `message.id` visto. Cada bloque de una respuesta va en su propia línea y todas repiten
+   * el mismo `usage`: los tokens se cuentan en la primera y ya, o salen multiplicados por bloques.
+   */
+  private lastMessageId?: string
+  /**
+   * Hora del último bloque de respuesta. Las herramientas arrancan cuando la respuesta termina,
+   * no cuando se escribió su bloque: una llamada en paralelo con tres detrás «duraba» también lo
+   * que tardaron en generarse esas tres.
+   */
+  private lastAssistantTs = 0
 
   constructor(private ctx: ParseContext) {}
 
@@ -558,7 +569,9 @@ export class TranscriptParser {
             payload,
             truncated,
             toolUseId,
-            durationMs: open ? Math.max(0, Date.parse(ts) - open.ts) : undefined,
+            durationMs: open
+              ? Math.max(0, Date.parse(ts) - Math.max(open.ts, this.lastAssistantTs))
+              : undefined,
             isError: b.is_error === true,
           })
         }
@@ -585,11 +598,17 @@ export class TranscriptParser {
     if (type === 'assistant') {
       const model = str(message.model)
       if (model) hints.model = model
-      const tokens = usageOf(message)
-      if (tokens) {
-        hints.tokens = tokens
-        hints.lastContextTokens = tokens.input + tokens.cacheRead + tokens.cacheCreate
-      }
+      const usage = usageOf(message)
+      const messageId = str(message.id)
+      const firstOfMessage = !messageId || messageId !== this.lastMessageId
+      if (messageId) this.lastMessageId = messageId
+      // El contexto en uso es un «último», no una suma: vale en cualquier línea.
+      if (usage) hints.lastContextTokens = usage.input + usage.cacheRead + usage.cacheCreate
+      // Los tokens de la respuesta viajan en la primera línea de cada mensaje y solo en ella.
+      const tokens = firstOfMessage ? usage : undefined
+      if (tokens) hints.tokens = tokens
+      const at = Date.parse(ts)
+      if (Number.isFinite(at)) this.lastAssistantTs = at
       const blocks = Array.isArray(message.content) ? message.content : []
 
       for (const [index, block] of blocks.entries()) {

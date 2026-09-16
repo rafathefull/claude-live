@@ -9,13 +9,32 @@ import {
   addTimingCategories,
   emptyTimingCategories,
 } from '../../shared/timing.js'
-import type { Metrics, MetricsBucket, TokenUsage, TranscriptSummary } from '../../shared/types.js'
+import type {
+  Metrics,
+  MetricsBucket,
+  ModelTimeTotals,
+  TokenUsage,
+  TranscriptSummary,
+} from '../../shared/types.js'
+
+function addModelTime(
+  target: Record<string, ModelTimeTotals>,
+  source: Record<string, ModelTimeTotals> | undefined,
+): void {
+  for (const [model, totals] of Object.entries(source ?? {})) {
+    const into = (target[model] ??= { responses: 0, genMs: 0, outputTokens: 0 })
+    into.responses += totals.responses
+    into.genMs += totals.genMs
+    into.outputTokens += totals.outputTokens
+  }
+}
 
 /**
- * Versión del resumen cacheado. Se sube cuando el resumen gana campos, para que los transcripts
- * ya resumidos se relean una vez en vez de servir cubos sin ese dato (v2: reparto del tiempo).
+ * Versión del resumen cacheado. Se sube cuando el resumen gana campos o cambia una cuenta, para
+ * que los transcripts ya resumidos se relean una vez en vez de servir datos viejos (v2: reparto
+ * del tiempo; v3: tokens una vez por respuesta y tiempo por modelo).
  */
-const SUMMARY_VERSION = 2
+const SUMMARY_VERSION = 3
 
 /**
  * Métricas agregadas por proyecto y por día, calculadas desde los transcripts.
@@ -135,11 +154,11 @@ export async function summarizeTranscript(
   let lastTs: string | undefined
 
   // El tiempo se reparte con la misma regla que el panel de una sesión, hueco a hueco, y cada
-  // hueco cae en el día en que empezó. Los transcripts de subagentes no reparten nada: su
-  // trabajo va en paralelo al de la sesión y ya cuenta allí.
+  // hueco cae en el día en que empezó. Los transcripts de subagentes no reparten nada por día:
+  // su trabajo va en paralelo al de la sesión y ya cuenta allí. Su velocidad por modelo sí vale.
   const timing = new TimingAccumulator({
     onGap: (category, ms, fromTs) => {
-      if (category === 'pause') return
+      if (category === 'pause' || agentId !== null) return
       const day = dayOf(fromTs)
       if (day) (days[day] ??= emptyBucket()).time[category] += ms
     },
@@ -153,7 +172,9 @@ export async function summarizeTranscript(
     }
 
     for (const event of parser.parse(line).events) {
-      if (agentId === null) timing.push(event)
+      // El acumulador ignora los eventos con agentId para el reparto, pero aquí el parser del
+      // subagente los emite con su id: se le quita para que mida su modelo como si fuera principal.
+      timing.push(agentId === null ? event : { ...event, agentId: null })
       const day = dayOf(event.ts)
       if (!day) continue
       const bucket = (days[day] ??= emptyBucket())
@@ -207,7 +228,16 @@ export async function summarizeTranscript(
     }
   }
 
-  return { sessionId, agentId, cwd, days, tools, models, agentTypes, firstTs, lastTs }
+  const modelTime: Record<string, ModelTimeTotals> = {}
+  for (const row of timing.report().models) {
+    modelTime[row.model] = {
+      responses: row.responses,
+      genMs: row.thinkingMs + row.writingMs,
+      outputTokens: row.outputTokens,
+    }
+  }
+
+  return { sessionId, agentId, cwd, days, tools, models, modelTime, agentTypes, firstTs, lastTs }
 }
 
 /** Nombre de proyecto que se muestra: el último tramo del cwd. */
@@ -232,6 +262,7 @@ export async function computeMetrics(opts: MetricsOptions = {}): Promise<Metrics
   const projectDays: Record<string, Record<string, MetricsBucket>> = {}
   const tools: Record<string, number> = {}
   const models: Record<string, number> = {}
+  const modelTime: Record<string, ModelTimeTotals> = {}
   const agentTypes: Record<string, number> = {}
   let reread = 0
 
@@ -267,6 +298,7 @@ export async function computeMetrics(opts: MetricsOptions = {}): Promise<Metrics
     }
     for (const [tool, n] of Object.entries(summary.tools)) bump(tools, tool, n)
     for (const [model, n] of Object.entries(summary.models)) bump(models, model, n)
+    addModelTime(modelTime, summary.modelTime)
     for (const [type, n] of Object.entries(summary.agentTypes)) bump(agentTypes, type, n)
   }
 
@@ -279,6 +311,7 @@ export async function computeMetrics(opts: MetricsOptions = {}): Promise<Metrics
     projectDays,
     tools,
     models,
+    modelTime,
     agentTypes,
     transcripts: files.length,
     reread,

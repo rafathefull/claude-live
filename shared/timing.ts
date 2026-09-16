@@ -126,6 +126,26 @@ export interface AgentTiming {
   events: number
 }
 
+/**
+ * Lo que tardó cada modelo en responder. Una «respuesta» es cada vez que Claude toma la palabra
+ * tras tu mensaje o tras los resultados de las herramientas; su tiempo es el de pensar y escribir
+ * hasta el último bloque, y sus tokens de salida los que declara la respuesta (una vez).
+ */
+export interface ModelTiming {
+  model: string
+  responses: number
+  thinkingMs: number
+  writingMs: number
+  outputTokens: number
+}
+
+/** Velocidad de un modelo: tokens de salida por segundo de generación, o null sin datos. */
+export function tokensPerSecond(row: Pick<ModelTiming, 'thinkingMs' | 'writingMs' | 'outputTokens'>): number | null {
+  const seconds = (row.thinkingMs + row.writingMs) / 1000
+  if (seconds <= 0 || row.outputTokens <= 0) return null
+  return row.outputTokens / seconds
+}
+
 export interface TimingReport {
   firstTs?: string
   lastTs?: string
@@ -141,6 +161,8 @@ export interface TimingReport {
   tools: ToolTiming[]
   slowest: SlowCall[]
   agents: AgentTiming[]
+  /** Por modelo: cuánto tardó en responder y a qué velocidad escribió. */
+  models: ModelTiming[]
   /** Mensajes tuyos. */
   turns: number
   /** Llamadas a herramientas con resultado. */
@@ -210,6 +232,11 @@ function categoryFor(
   }
 }
 
+/** Un bloque de respuesta de Claude: pensamiento, texto o llamada. */
+function isAssistant(e: TimelineEvent): boolean {
+  return e.kind === 'thinking' || e.kind === 'text' || e.kind === 'tool_call' || e.kind === 'skill'
+}
+
 /**
  * La descripción con la que Claude lanzó la llamada («Compilar y pasar las suites»), que dice
  * más que el comando. Viaja en el payload de la llamada cuando la herramienta la admite.
@@ -255,6 +282,12 @@ export class TimingAccumulator {
   private readonly toolRows = new Map<string, ToolTiming>()
   private readonly durations: SlowCall[] = []
   private readonly agentsById = new Map<string, AgentTiming & { first: number; last: number }>()
+  private readonly modelRows = new Map<string, ModelTiming>()
+  /**
+   * Hora del último bloque de respuesta. Las herramientas arrancan cuando la respuesta termina:
+   * una llamada en paralelo no lleva corriendo desde su bloque sino desde el último de todos.
+   */
+  private assistantEndT = 0
 
   constructor(opts: TimingOptions = {}) {
     this.pauseMs = opts.pauseMs ?? DEFAULT_PAUSE_MS
@@ -272,6 +305,7 @@ export class TimingAccumulator {
     }
     if (NOT_A_TICK.has(e.kind)) return
 
+    let attributed: TimingCategory | null = null
     if (this.prev) {
       const gap = t - this.prevT
       if (gap > this.pauseMs) {
@@ -279,14 +313,19 @@ export class TimingAccumulator {
         this.pauses++
         this.onGap?.('pause', gap, this.prev.ts)
       } else if (gap > 0) {
-        const category = categoryFor(e, this.prev, this.pendingTools)
-        this.categories[category] += gap
-        this.onGap?.(category, gap, this.prev.ts)
+        attributed = categoryFor(e, this.prev, this.pendingTools)
+        this.categories[attributed] += gap
+        this.onGap?.(attributed, gap, this.prev.ts)
       }
     } else {
       this.firstTs = e.ts
     }
     this.lastTs = e.ts
+
+    if (isAssistant(e)) {
+      this.assistantEndT = t
+      this.noteModel(e, attributed, t - this.prevT, !this.prev || !isAssistant(this.prev))
+    }
 
     if ((e.kind === 'tool_call' || e.kind === 'skill') && e.toolUseId) {
       this.pendingTools.set(e.toolUseId, e.tool ?? '?')
@@ -305,6 +344,35 @@ export class TimingAccumulator {
     this.prevT = t
   }
 
+  /**
+   * Tiempo y tokens de cada modelo. El hueco que acaba en un bloque de respuesta es de su modelo;
+   * la respuesta se cuenta al primer bloque tras algo que no era de Claude; y los tokens de salida
+   * los trae ya una sola vez por respuesta (el parser los deja solo en su primera línea).
+   */
+  private noteModel(
+    e: TimelineEvent,
+    attributed: TimingCategory | null,
+    gap: number,
+    startsResponse: boolean,
+  ): void {
+    const model = e.model
+    // `<synthetic>` es el modelo que Claude Code pone a los mensajes que inventa él (avisos de
+    // interrupción y parecidos): no generan tokens y su tiempo no es de ningún modelo.
+    if (!model || model.startsWith('<')) return
+    const row = this.modelRows.get(model) ?? {
+      model,
+      responses: 0,
+      thinkingMs: 0,
+      writingMs: 0,
+      outputTokens: 0,
+    }
+    if (attributed === 'thinking') row.thinkingMs += gap
+    else if (attributed === 'writing') row.writingMs += gap
+    if (startsResponse) row.responses++
+    row.outputTokens += e.tokens?.output ?? 0
+    this.modelRows.set(model, row)
+  }
+
   private noteResult(e: TimelineEvent, t: number): void {
     const call = e.toolUseId ? this.callByUse.get(e.toolUseId) : undefined
     if (e.toolUseId) {
@@ -312,7 +380,10 @@ export class TimingAccumulator {
       this.callByUse.delete(e.toolUseId)
     }
     const tool = e.tool ?? call?.tool
-    const ms = e.durationMs ?? (call ? Math.max(0, t - Date.parse(call.ts)) : undefined)
+    // Sin duración del parser, se mide desde que la respuesta terminó, que es cuando arrancó.
+    const ms =
+      e.durationMs ??
+      (call ? Math.max(0, t - Math.max(Date.parse(call.ts), this.assistantEndT)) : undefined)
     if (!tool || ms === undefined) return
 
     // Una llamada que «duró» más que el umbral de pausa atravesó un cierre de sesión.
@@ -376,6 +447,9 @@ export class TimingAccumulator {
       agents: [...this.agentsById.values()]
         .map(({ first, last, ...rest }) => ({ ...rest, ms: Math.max(0, last - first) }))
         .sort((a, b) => b.ms - a.ms),
+      models: [...this.modelRows.values()]
+        .map((row) => ({ ...row }))
+        .sort((a, b) => b.thinkingMs + b.writingMs - (a.thinkingMs + a.writingMs)),
       turns: this.turns,
       calls: this.calls,
       events: this.events,

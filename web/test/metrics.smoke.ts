@@ -57,6 +57,7 @@ const metrics: Metrics = {
   },
   tools: { Bash: 12, Edit: 30, Read: 30 },
   models: { 'claude-opus-5': 5 },
+  modelTime: { 'claude-opus-5': { responses: 5, genMs: 20_000, outputTokens: 800 } },
   agentTypes: { Explore: 2 },
   transcripts: 3,
   reread: 0,

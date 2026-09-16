@@ -301,6 +301,14 @@ export interface ModelRate {
   cacheWrite: number
 }
 
+/** Lo que tardó un modelo en responder, sumado: para la velocidad (tokens de salida por segundo). */
+export interface ModelTimeTotals {
+  responses: number
+  /** Pensar y escribir, en ms. */
+  genMs: number
+  outputTokens: number
+}
+
 /** Resumen de un transcript, la unidad que se cachea para no releer cien megas cada vez. */
 export interface TranscriptSummary {
   sessionId: string
@@ -310,6 +318,7 @@ export interface TranscriptSummary {
   days: Record<string, MetricsBucket>
   tools: Record<string, number>
   models: Record<string, number>
+  modelTime: Record<string, ModelTimeTotals>
   agentTypes: Record<string, number>
   firstTs?: string
   lastTs?: string
@@ -322,6 +331,8 @@ export interface Metrics {
   projectDays: Record<string, Record<string, MetricsBucket>>
   tools: Record<string, number>
   models: Record<string, number>
+  /** Por modelo: respuestas, tiempo de generación y tokens de salida, para la velocidad. */
+  modelTime: Record<string, ModelTimeTotals>
   agentTypes: Record<string, number>
   transcripts: number
   /** Cuántos transcripts hubo que releer: el resto salió de la caché. */

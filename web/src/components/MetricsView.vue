@@ -15,7 +15,13 @@ import {
 } from '../metrics'
 import { formatDuration, formatTokens } from '../format'
 import { tr } from '../i18n'
-import { TIMING_CATEGORIES, TIMING_TEXT, timingSidesOf, type TimingCategory } from '@shared/timing'
+import {
+  TIMING_CATEGORIES,
+  TIMING_TEXT,
+  timingSidesOf,
+  tokensPerSecond,
+  type TimingCategory,
+} from '@shared/timing'
 import type { Metrics, MetricsBucket } from '@shared/types'
 
 /**
@@ -48,6 +54,11 @@ const L = {
     es: 'Qué parte del tiempo activo fue tuya: esperas, preguntas y permisos',
     en: 'How much of the active time was yours: waits, questions and permissions',
   },
+  modelSpeed: {
+    es: 'respuestas · tiempo medio por respuesta · tokens de salida por segundo',
+    en: 'responses · mean time per response · output tokens per second',
+  },
+  perResponse: { es: '/resp', en: '/resp' },
   events: { es: 'eventos', en: 'events' },
   toolCalls: { es: 'herramientas', en: 'tool calls' },
   tokens: { es: 'tokens', en: 'tokens' },
@@ -162,6 +173,19 @@ function sharePct(ms: number): number {
 }
 function timeOf(bucket: MetricsBucket, category: TimingCategory): number {
   return bucket.time?.[category] ?? 0
+}
+
+/** Velocidad de un modelo, si hay datos: «3.2s /resp · 41 tok/s». Vacío en mundos antiguos. */
+function speedOf(model: string): string {
+  const totals = metrics.value?.modelTime?.[model]
+  if (!totals || totals.responses === 0) return ''
+  const perResponse = formatDuration(Math.round(totals.genMs / totals.responses))
+  const rate = tokensPerSecond({
+    thinkingMs: totals.genMs,
+    writingMs: 0,
+    outputTokens: totals.outputTokens,
+  })
+  return `${totals.responses} · ${perResponse}${tr(L.perResponse)}${rate ? ` · ${rate.toFixed(0)} tok/s` : ''}`
 }
 
 function formatBytes(n: number): string {
@@ -370,14 +394,14 @@ const measureLabel = computed(
             </li>
           </ul>
 
-          <h3>{{ tr(L.models) }}</h3>
+          <h3>{{ tr(L.models) }} <span class="muted rank-hint">· {{ tr(L.modelSpeed) }}</span></h3>
           <ul class="ranking">
-            <li v-for="entry in models" :key="entry.key">
+            <li v-for="entry in models" :key="entry.key" :title="speedOf(entry.key)">
               <span class="rank-key">{{ entry.key }}</span>
               <span class="rank-bar">
                 <span :style="{ width: `${(entry.n / (models[0]?.n ?? 1)) * 100}%` }" />
               </span>
-              <span class="rank-n">{{ entry.n }}</span>
+              <span class="rank-n">{{ speedOf(entry.key) || entry.n }}</span>
             </li>
           </ul>
 

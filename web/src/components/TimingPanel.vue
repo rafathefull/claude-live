@@ -10,10 +10,12 @@ import {
   TIMING_CATEGORIES,
   TIMING_TEXT,
   timingSides,
+  tokensPerSecond,
   type SlowCall,
   type TimingCategory,
   type TimingReport,
 } from '@shared/timing'
+import { formatTokens } from '../format'
 
 /**
  * En qué se va el tiempo de la sesión seleccionada.
@@ -66,6 +68,15 @@ const L = {
     en: 'their own working time, first event to last; not part of the split',
   },
   tasks: { es: 'Shells y monitores en segundo plano', en: 'Background shells and monitors' },
+  models: { es: 'Por modelo', en: 'By model' },
+  modelsHint: {
+    es: 'cuánto tardó cada modelo en responder y a qué velocidad escribió',
+    en: 'how long each model took to respond and how fast it wrote',
+  },
+  responses: { es: 'respuestas', en: 'responses' },
+  perResponse: { es: 'por respuesta', en: 'per response' },
+  outTokens: { es: 'tokens de salida', en: 'output tokens' },
+  tokPerSec: { es: 'tok/s', en: 'tok/s' },
   empty: {
     es: 'Todavía no hay dos eventos entre los que medir nada.',
     en: 'Not two events yet to measure anything between.',
@@ -273,6 +284,36 @@ onBeforeUnmount(() => {
             </ul>
           </section>
         </div>
+
+        <section v-if="report.models.length > 0">
+          <h4>{{ tr(L.models) }} <span class="muted">· {{ tr(L.modelsHint) }}</span></h4>
+          <table>
+            <thead>
+              <tr>
+                <th>{{ tr(L.models).toLowerCase() }}</th>
+                <th class="num">{{ tr(L.responses) }}</th>
+                <th class="num">{{ label('thinking') }}</th>
+                <th class="num">{{ label('writing') }}</th>
+                <th class="num">{{ tr(L.perResponse) }}</th>
+                <th class="num">{{ tr(L.outTokens) }}</th>
+                <th class="num">{{ tr(L.tokPerSec) }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in report.models" :key="row.model">
+                <td class="mono">{{ row.model }}</td>
+                <td class="num">{{ row.responses }}</td>
+                <td class="num">{{ formatDuration(row.thinkingMs) }}</td>
+                <td class="num">{{ formatDuration(row.writingMs) }}</td>
+                <td class="num">
+                  {{ row.responses ? formatDuration(Math.round((row.thinkingMs + row.writingMs) / row.responses)) : '—' }}
+                </td>
+                <td class="num">{{ formatTokens(row.outputTokens) }}</td>
+                <td class="num">{{ tokensPerSecond(row)?.toFixed(1) ?? '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
 
         <section v-if="report.agents.length > 0">
           <h4>{{ tr(L.agents) }} <span class="muted">· {{ tr(L.agentsHint) }}</span></h4>
