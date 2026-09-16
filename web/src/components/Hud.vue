@@ -12,6 +12,7 @@ import {
 import { contextPercent, formatTokens } from '../format'
 import { lang, setLang, tr } from '../i18n'
 import { countTasks, taskChipLabel } from '../tasks'
+import { notifyEnabled, notifySupported, toggleNotify } from '../notifications'
 import { theme, toggleTheme } from '../theme'
 
 /** Textos de la cabecera, con sus dos versiones juntas. */
@@ -66,6 +67,14 @@ const L = {
   tasksTitle: {
     es: 'Shells y monitores en segundo plano de esta sesión: pulsa para ver su estado, cuánto llevan y su salida',
     en: 'Background shells and monitors of this session: click to see their state, runtime and output',
+  },
+  notifyOn: {
+    es: 'Avisos del navegador activados: cuando Claude termine el turno, pida permiso o te pregunte, y no estés mirando. Pulsa para apagarlos',
+    en: 'Browser notifications on: when Claude ends its turn, asks for permission or has a question, and you are not looking. Click to turn them off',
+  },
+  notifyOff: {
+    es: 'Avísame en el navegador cuando Claude me espere (pide permiso al navegador)',
+    en: 'Notify me in the browser when Claude is waiting for me (asks the browser for permission)',
   },
   timing: { es: '⏱ Tiempos', en: '⏱ Time' },
   timingTitle: {
@@ -210,6 +219,16 @@ const statusLabel = computed(() => {
       @click="resumeReplay(session.sessionId)"
     >
       {{ tr(L.replay) }}
+    </button>
+    <button
+      v-if="notifySupported"
+      class="notify-toggle"
+      :class="{ active: notifyEnabled }"
+      :title="tr(notifyEnabled ? L.notifyOn : L.notifyOff)"
+      :aria-pressed="notifyEnabled"
+      @click="toggleNotify"
+    >
+      {{ notifyEnabled ? '🔔' : '🔕' }}
     </button>
     <button
       v-if="session"

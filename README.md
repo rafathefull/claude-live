@@ -109,7 +109,10 @@ tu máquina (más abajo).
   rango con el porcentaje de Claude y la máquina frente al tuyo, y la tabla por proyecto lleva el
   tiempo activo y el «% tú». Cada hueco cae en el día en que empezó; las pausas de más de 30
   minutos no están, que no son de nadie. Sale del mismo recorrido cacheado por fichero que el
-  resto de métricas: 86 transcripts en 0,7 s aquí.
+  resto de métricas: 86 transcripts en 0,7 s aquí. Junto a cada modelo va su velocidad: respuestas,
+  segundos por respuesta y tokens de salida por segundo. Los tokens se cuentan **una vez por
+  respuesta**: cada bloque de una respuesta va en su propia línea del transcript y todas repiten
+  el mismo `usage`, así que sumar por línea los multiplicaba.
 
   ![Métricas por proyecto y día](docs/metricas.png)
 
@@ -125,9 +128,19 @@ tu máquina (más abajo).
   servidor sobre el transcript entero; en el reproductor, el reparto hasta el punto actual de la
   película, que se va llenando según avanza. Responde a «¿el tiempo lo consume la máquina o lo
   consumo yo?»: en una sesión larga de este repositorio, un 74 % era espera del usuario y un 26 %
-  Claude y las herramientas; en una autónoma, al revés, con un 38 % de Claude pensando.
+  Claude y las herramientas; en una autónoma, al revés, con un 38 % de Claude pensando. Y **por
+  modelo**: cuántas veces respondió cada uno, cuánto tardó en pensar y escribir, la media por
+  respuesta y los tokens de salida por segundo, que es la velocidad real que ves. Las llamadas en
+  paralelo se miden desde que la respuesta termina, que es cuando arrancan, no desde su bloque.
 
   ![Tiempos de una sesión](docs/tiempos.png)
+
+- **Avisos del navegador** (campana `🔕` / `🔔`, opcional): cuando Claude termina el turno y se
+  queda esperándote, te pide permiso o te hace una pregunta, y **no estás mirando** (la pestaña
+  oculta o la ventana sin foco), sale una notificación del sistema con el proyecto y lo último que
+  dijo; pulsarla trae el visor al frente con esa sesión. Ataca la cifra más grande de los tiempos,
+  la espera de tu siguiente mensaje, sin tocar nada de Claude. Hay que pulsar la campana y aceptar
+  el permiso del navegador; la elección se recuerda.
 
 - **Modo sobrio**: apaga la escena y deja solo la timeline, para cuando quieras leer en vez
   de mirar.

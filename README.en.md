@@ -105,7 +105,10 @@ with your own sessions you need to run it on your machine (below).
   the range split shows Claude and the machine versus you, and the per-project table carries
   active time and "% you". Each gap lands on the day it started; pauses longer than 30 minutes
   are left out, since they belong to nobody. It comes from the same per-file cached walk as the
-  rest of the metrics: 86 transcripts in 0.7 s here.
+  rest of the metrics: 86 transcripts in 0.7 s here. Next to each model goes its speed: responses,
+  seconds per response and output tokens per second. Tokens are counted **once per response**:
+  every block of a response is its own transcript line and all of them repeat the same `usage`,
+  so summing per line multiplied them.
 
   ![Metrics per project and day](docs/metricas.png)
 
@@ -121,9 +124,19 @@ with your own sessions you need to run it on your machine (below).
   transcript; in the player, the split up to the current point of the replay, filling up as it
   plays. It answers "is the machine using the time, or am I?": in a long session of this
   repository, 74 % was waiting on the user and 26 % Claude and the tools; in an autonomous one it
-  was the other way round, with 38 % of Claude thinking.
+  was the other way round, with 38 % of Claude thinking. And **per model**: how many times each
+  one answered, how long it spent thinking and writing, the mean per response and the output
+  tokens per second, which is the speed you actually see. Parallel calls are measured from the
+  moment the response ends, which is when they start, not from their own block.
 
   ![A session's time](docs/tiempos.png)
+
+- **Browser notifications** (`🔕` / `🔔` bell, optional): when Claude ends its turn and waits for
+  you, asks for permission or has a question, and **you are not looking** (tab hidden or window
+  unfocused), a system notification shows the project and the last thing it said; clicking it
+  brings the viewer to the front on that session. It targets the biggest number in the time split,
+  waiting for your next message, without touching Claude at all. Click the bell and accept the
+  browser's permission; the choice is remembered.
 
 - **Plain mode**: turns the stage off and leaves only the timeline, for when you would rather
   read than watch.

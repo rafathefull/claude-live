@@ -23,6 +23,7 @@ import {
   togglePlay,
 } from './store'
 import { STATIC_MODE } from './backend'
+import { startNotifications } from './notifications'
 import { clampTimelineWidth, loadTimelineWidth, saveTimelineWidth } from './split'
 import { actionForKey, isTypingTarget, nextSpeed } from './shortcuts'
 import { tr } from './i18n'
@@ -116,7 +117,9 @@ function onKeydown(event: KeyboardEvent): void {
 // Al estrechar la ventana hay que reajustar: un ancho guardado en una pantalla grande
 // dejaría el escenario en nada al abrir la app en un portátil.
 let observer: ResizeObserver | null = null
+let stopNotifications: (() => void) | null = null
 onMounted(() => {
+  stopNotifications = startNotifications()
   document.addEventListener('keydown', onKeydown)
   observer = new ResizeObserver(() => {
     if (timelineWidth.value === null || !body.value) return
@@ -139,6 +142,7 @@ watch(body, (el) => {
 
 onBeforeUnmount(() => {
   observer?.disconnect()
+  stopNotifications?.()
   document.removeEventListener('keydown', onKeydown)
 })
 </script>
