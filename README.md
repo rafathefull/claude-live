@@ -45,7 +45,9 @@ tu máquina (más abajo).
   job.
 
   ![Vecindario](docs/vecindario.png)
-- **El razonamiento**: los bloques de pensamiento aparecen en la burbuja del avatar.
+- **El razonamiento**: los bloques de pensamiento aparecen en la burbuja del avatar. Con algunos
+  modelos Claude Code guarda solo la firma del razonamiento, no el texto; el bloque se ve igual
+  como pensamiento, marcado como no guardado, porque el tiempo pensando es real.
 - **Subagentes**: nacen junto a quien los lanza, con su tipo (`Explore`, `Plan`,
   `general-purpose`, los tuyos) y la descripción con la que se lanzaron. Se anidan por
   profundidad y entregan su informe al terminar.
@@ -104,6 +106,22 @@ tu máquina (más abajo).
   por rango, y pulsar un proyecto de la tabla lo enfoca.
 
   ![Métricas por proyecto y día](docs/metricas.png)
+
+- **Tiempos** (botón `⏱ Tiempos`): en qué se ha ido el tiempo de la sesión. Cada bloque de una
+  respuesta se escribe al terminar de generarse, así que el hueco entre dos eventos es de lo que
+  estaba pasando: Claude pensando, Claude escribiendo, una herramienta corriendo, una pregunta o un
+  plan esperando tu respuesta, o tu siguiente mensaje. Las categorías suman exactamente el tiempo
+  activo, sin solapes aunque hubiera herramientas en paralelo; los huecos de más de 30 minutos
+  (cerrar y reanudar, irte a comer) se apartan como pausas, con el umbral ajustable. Debajo, la
+  tabla por herramienta con llamadas, total, media y máximo; las llamadas más largas, nombradas por
+  su descripción y con un clic para verlas en la timeline; los subagentes con su tiempo en paralelo;
+  y los shells y monitores con el suyo. En una sesión viva es la foto completa, calculada por el
+  servidor sobre el transcript entero; en el reproductor, el reparto hasta el punto actual de la
+  película, que se va llenando según avanza. Responde a «¿el tiempo lo consume la máquina o lo
+  consumo yo?»: en una sesión larga de este repositorio, un 74 % era espera del usuario y un 26 %
+  Claude y las herramientas; en una autónoma, al revés, con un 38 % de Claude pensando.
+
+  ![Tiempos de una sesión](docs/tiempos.png)
 
 - **Modo sobrio**: apaga la escena y deja solo la timeline, para cuando quieras leer en vez
   de mirar.
@@ -335,6 +353,7 @@ server/src
   history.ts    índice del historial cacheado y lectura paginada
   hooks.ts      normaliza los eventos que llegan por POST /hook
   tasks.ts      shells y monitores en segundo plano: avisos, ficheros de salida y procesos
+  timing.ts     reparto del tiempo de una sesión sobre el transcript completo, con caché
   index.ts      Fastify: SSE, API REST y estáticos
 server/test     regresión del parser y del ritmo, con transcripts reales
 web/src
@@ -345,7 +364,7 @@ web/src
   replay.ts     motor del reproductor, independiente de la escena
   format.ts     formato de tokens, duraciones, contexto y colores
 web/test        pruebas del store sin navegador
-shared/         tipos y tabla herramienta → lugar, compartidos por servidor y front
+shared/         tipos, tabla herramienta → lugar y reparto de tiempos, compartidos por servidor y front
 tools/          mundo de demostración y capturas con Chromium
 ```
 
@@ -386,6 +405,7 @@ lo hace el parser, así que afecta tanto al stream como a la timeline paginada; 
 | `GET /api/jobs` | Jobs en segundo plano, vivos y terminados, con su estado contrastado contra los procesos que hay de verdad |
 | `GET /api/sessions/:id/tasks` | Shells y monitores en segundo plano de una sesión viva, los que siguen corriendo primero |
 | `GET /api/sessions/:id/tasks/:taskId/output?tail=` | La cola del fichero de salida de una tarea (64 KB por omisión, 256 KB como mucho). Se sirve desde el servidor porque vive en `/tmp` |
+| `GET /api/sessions/:id/time?pause=` | En qué se ha ido el tiempo de una sesión, viva o histórica, sobre su transcript completo: categorías, tabla por herramienta, llamadas más largas y subagentes. `pause` son los minutos sin actividad a partir de los cuales un hueco es pausa (30 por omisión). Cacheado por fecha y tamaño del fichero |
 | `GET /api/metrics?force=1` | Métricas agregadas por proyecto y día. La primera vez recorre todos los transcripts (0,7 s con 123 aquí); después solo los que hayan cambiado, con `force=1` para recalcular todo |
 | `GET /api/sessions/:id/raw/:uuid` | Línea cruda de un evento, sin recortar (solo para eventos del transcript: los que nacen de un hook no están en ningún fichero) |
 | `POST /hook` | Ingesta de los hooks de Claude Code |
@@ -397,7 +417,7 @@ Las pruebas usan **tus propios transcripts**, no mocks, porque el riesgo real de
 proyecto es que el formato cambie o que aparezca un caso hostil:
 
 ```bash
-npm test           # parser + agrupación + store + unidades + divisor + atajos + jobs + tareas + vecindario + métricas
+npm test           # parser + agrupación + store + unidades + divisor + atajos + jobs + tareas + tiempos + vecindario + métricas
 npm run typecheck  # vue-tsc
 ```
 
@@ -425,6 +445,11 @@ dos veces (llega encolada y entregada, con milisegundos de diferencia), que el m
 `.output` cierre la tarea con su exit code, que las tareas de un proceso anterior no se den por
 vivas tras un `--resume`, y el emparejado con procesos por comando y por hora de arranque. Acaba
 pasando por tus transcripts recientes que tengan tareas.
+`test:timing` cubre el reparto del tiempo con eventos sintéticos: que cada hueco se atribuya a lo
+que llega, que las pausas no se atribuyan a nadie, que una pregunta cuente como tiempo tuyo y no de
+la herramienta, que dos llamadas en paralelo no sumen dos veces el mismo segundo y que una llamada
+interrumpida no se quede «corriendo» para siempre. Después pasa por tus transcripts recientes y
+exige que las categorías sumen exactamente el tiempo activo.
 
 `test:metrics` cubre el filtrado de la vista: que los días sin actividad se dibujen a cero (si
 se saltaran, una semana de vacaciones parecería trabajo seguido) y que el rango se cuente desde
@@ -484,8 +509,9 @@ ventana, informa de los errores de consola y guarda las capturas de las tres vis
 
 Funcionando: sesiones vivas, subagentes, timeline de ancho ajustable, inspector, historial en
 tabla o en árbol con reproductor completo, vecindario multi-sesión, métricas por proyecto y día,
-jobs en segundo plano, shells y monitores en segundo plano con su salida, aviso de retención,
-leyenda, modo sobrio, tema claro y oscuro, ingesta de hooks e interfaz bilingüe.
+jobs en segundo plano, shells y monitores en segundo plano con su salida, reparto del tiempo de
+cada sesión, aviso de retención, leyenda, modo sobrio, tema claro y oscuro, ingesta de hooks e
+interfaz bilingüe.
 
 Lo que se va haciendo, resumido y en texto plano, está en [`CHANGELOG.txt`](CHANGELOG.txt).
 

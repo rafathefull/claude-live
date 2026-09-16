@@ -65,6 +65,11 @@ export function formatStat(stat: Stat, lang: Lang): string {
       }`
     case 'turnEnded':
       return t({ es: 'turno terminado', en: 'turn finished' })
+    case 'hiddenThinking':
+      return t({
+        es: 'razonamiento (no guardado en el transcript)',
+        en: 'reasoning (not kept in the transcript)',
+      })
     case 'taskStarted':
       return stat.task === 'monitor'
         ? `${t({ es: 'monitor armado', en: 'monitor armed' })} (${stat.id})`

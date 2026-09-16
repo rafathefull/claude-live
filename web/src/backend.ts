@@ -8,6 +8,7 @@ import type {
   TimelineEvent,
 } from '@shared/types'
 import type { Retention } from './store'
+import { computeTiming, type TimingReport } from '@shared/timing'
 
 /**
  * De dónde salen los datos: del servidor local, o de un fichero estático.
@@ -55,6 +56,8 @@ export interface Backend {
   metrics(force: boolean): Promise<Metrics | null>
   raw(sessionId: string, uuid: string): Promise<unknown>
   taskOutput(sessionId: string, taskId: string): Promise<TaskOutput | null>
+  /** Reparto del tiempo de la sesión entera; `pauseMs` aparta los huecos mayores como pausas. */
+  timing(sessionId: string, pauseMs: number): Promise<TimingReport | null>
 }
 
 /* ------------------------------------------------------------------ en vivo */
@@ -115,6 +118,13 @@ const live: Backend = {
     )
     if (!response.ok) return null
     return (await response.json()) as TaskOutput
+  },
+
+  async timing(sessionId, pauseMs) {
+    const minutes = Math.max(1, Math.round(pauseMs / 60_000))
+    const response = await fetch(`/api/sessions/${sessionId}/time?pause=${minutes}`)
+    if (!response.ok) return null
+    return (await response.json()) as TimingReport
   },
 }
 
@@ -239,6 +249,13 @@ const staticBackend: Backend = {
     const text = demo.taskOutputs?.[taskId]
     if (text === undefined) return { exists: false, size: 0, text: '', truncated: false }
     return { exists: true, size: text.length, text, truncated: false }
+  },
+
+  async timing(sessionId, pauseMs) {
+    // Sin servidor, el reparto se hace aquí con la misma función, sobre el guion completo.
+    const demo = await loadWorld()
+    const events = demo.events[sessionId]
+    return events ? computeTiming(events, { pauseMs }) : null
   },
 }
 

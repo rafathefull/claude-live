@@ -8,6 +8,8 @@ import { JobsWatcher, readJobs } from './jobs.js'
 import { computeMetrics } from './metrics.js'
 import { retentionInfo } from './retention.js'
 import { LiveRegistry } from './sessions.js'
+import { sessionTiming } from './timing.js'
+import { DEFAULT_PAUSE_MS } from '../../shared/timing.js'
 import type {
   ActorInfo,
   JobInfo,
@@ -136,6 +138,22 @@ app.get('/api/sessions/:id/events', async (request) => {
     limit: query.limit ? Number(query.limit) : 500,
     includeAgents: query.agents !== '0',
   })
+})
+
+/**
+ * En qué se va el tiempo de una sesión, viva o histórica, sobre su transcript completo. `pause`
+ * son los minutos sin actividad a partir de los cuales un hueco se aparta como pausa (30 por
+ * omisión).
+ */
+app.get('/api/sessions/:id/time', async (request, reply) => {
+  const { id } = request.params as { id: string }
+  const query = request.query as { pause?: string }
+  const minutes = query.pause ? Number(query.pause) : NaN
+  const pauseMs =
+    Number.isFinite(minutes) && minutes > 0 ? Math.round(minutes * 60_000) : DEFAULT_PAUSE_MS
+  const report = await sessionTiming(id, pauseMs)
+  if (report === null) return reply.code(404).send({ error: 'sesión no encontrada' })
+  return report
 })
 
 /** Shells y monitores en segundo plano de una sesión viva. */

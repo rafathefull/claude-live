@@ -42,7 +42,9 @@ with your own sessions you need to run it on your machine (below).
   scene is demanding enough. A background session also shows its job's last report.
 
   ![Neighbourhood](docs/vecindario.png)
-- **The reasoning**: thinking blocks show up in the avatar's speech bubble.
+- **The reasoning**: thinking blocks show up in the avatar's speech bubble. With some models
+  Claude Code keeps only the signature of the reasoning, not the text; the block still shows as
+  thinking, marked as not kept, because the time spent thinking is real.
 - **Subagents**: born next to whoever launched them, with their type (`Explore`, `Plan`,
   `general-purpose`, your own) and the description they were launched with. They nest by depth
   and hand in their report when they finish.
@@ -101,6 +103,22 @@ with your own sessions you need to run it on your machine (below).
   table focuses it.
 
   ![Metrics per project and day](docs/metricas.png)
+
+- **Time** (`⏱ Time` button): where the session's time went. Every block of a response is written
+  when it finishes generating, so the gap between two events belongs to whatever was happening:
+  Claude thinking, Claude writing, a tool running, a question or plan waiting for your answer, or
+  your next message. The categories add up exactly to the active time, with no overlap even when
+  tools ran in parallel; gaps longer than 30 minutes (closing and resuming, going to lunch) are set
+  aside as pauses, with an adjustable threshold. Below it, the per-tool table with calls, total,
+  mean and max; the longest calls, named by their description and one click away from the
+  timeline; the subagents with their time in parallel; and the background shells and monitors with
+  theirs. In a live session it is the full picture, computed by the server over the whole
+  transcript; in the player, the split up to the current point of the replay, filling up as it
+  plays. It answers "is the machine using the time, or am I?": in a long session of this
+  repository, 74 % was waiting on the user and 26 % Claude and the tools; in an autonomous one it
+  was the other way round, with 38 % of Claude thinking.
+
+  ![A session's time](docs/tiempos.png)
 
 - **Plain mode**: turns the stage off and leaves only the timeline, for when you would rather
   read than watch.
@@ -332,6 +350,7 @@ server/src
   history.ts    cached history index and paginated reads
   hooks.ts      normalises what arrives via POST /hook
   tasks.ts      background shells and monitors: notices, output files and processes
+  timing.ts     a session's time split over its whole transcript, cached
   index.ts      Fastify: SSE, REST API and static files
 server/test     parser and pacing regressions, against real transcripts
 web/src
@@ -343,7 +362,7 @@ web/src
   replay.ts     the player engine, independent from the stage
   format.ts     formatting for tokens, durations, context and colours
 web/test        store tests without a browser
-shared/         types, i18n texts and the tool → place table, shared by server and front end
+shared/         types, i18n texts, the tool → place table and the time split, shared by server and front end
 tools/          demo world and screenshots with Chromium
 ```
 
@@ -384,6 +403,7 @@ fetched separately with `/raw/:uuid`.
 | `GET /api/jobs` | Background jobs, running and finished, with their state checked against the processes that actually exist |
 | `GET /api/sessions/:id/tasks` | Background shells and monitors of a live session, the running ones first |
 | `GET /api/sessions/:id/tasks/:taskId/output?tail=` | The tail of a task's output file (64 KB by default, 256 KB at most). Served by the server because it lives in `/tmp` |
+| `GET /api/sessions/:id/time?pause=` | Where a session's time went, live or historical, over its whole transcript: categories, per-tool table, longest calls and subagents. `pause` is the number of idle minutes after which a gap counts as a pause (30 by default). Cached by file date and size |
 | `GET /api/metrics?force=1` | Aggregated metrics per project and day. The first call walks every transcript (0.7 s for 123 here); later ones only the changed files, with `force=1` to recompute everything |
 | `GET /api/sessions/:id/raw/:uuid` | The raw line of an event, untrimmed (transcript events only: the ones born from a hook are in no file) |
 | `POST /hook` | Ingest for Claude Code hooks |
@@ -402,7 +422,7 @@ The tests use **your own transcripts**, not mocks, because the real risk in this
 format change or an unexpected hostile case:
 
 ```bash
-npm test           # parser + merging + store + units + splitter + shortcuts + jobs + tasks + hood + metrics
+npm test           # parser + merging + store + units + splitter + shortcuts + jobs + tasks + timing + hood + metrics
 npm run typecheck  # vue-tsc
 ```
 
@@ -429,6 +449,11 @@ arrives queued and delivered, milliseconds apart), that the end marker of the `.
 the task with its exit code, that tasks from a previous process are not taken as alive after a
 `--resume`, and the process matching by command and by start time. It finishes by walking your
 recent transcripts that have tasks.
+`test:timing` covers the time split with synthetic events: that every gap is attributed to what
+arrives, that pauses are attributed to nobody, that a question counts as your time and not the
+tool's, that two parallel calls do not count the same second twice, and that an interrupted call
+does not stay "running" forever. It then walks your recent transcripts and demands that the
+categories add up exactly to the active time.
 
 `test:metrics` covers the view's filtering: that days with no activity are drawn as zero (skipping
 them would make a week off look like a week of work) and that the range counts back from the last
@@ -488,8 +513,8 @@ Chromium, reports console errors and saves screenshots of the three views.
 
 Working: live sessions, subagents, a resizable timeline, inspector, history as a table or a tree
 with a complete player, a multi-session neighbourhood, metrics per project and day, background
-jobs, background shells and monitors with their output, retention warning, legend, plain mode,
-light and dark theme, hook ingest and the bilingual interface.
+jobs, background shells and monitors with their output, a per-session time split, retention
+warning, legend, plain mode, light and dark theme, hook ingest and the bilingual interface.
 
 What has been done, summarised in plain text, lives in [`CHANGELOG.txt`](CHANGELOG.txt).
 

@@ -225,6 +225,27 @@ const expired = updateFromNotification(
 )
 check(expired?.action === 'end' && expired.status === 'expired', 'un monitor que caduca, caduca')
 
+// La caducidad llega como un «evento» de control, no como estado (visto en 2.1.272).
+const expiredAsEvent = updateFromNotification(
+  parseTaskNotifications(
+    notification(
+      '<task-id>x</task-id>\n<summary>Monitor event: "problemas del canal WS"</summary>\n<event>[Monitor expired after 30m with no events delivered. Re-arm it if you still need the watch — and widen the filter if silence was unexpected.]</event>',
+    ),
+  )[0],
+  t0,
+)
+check(
+  expiredAsEvent?.action === 'end' && expiredAsEvent.status === 'expired' && expiredAsEvent.kind === 'monitor',
+  'un «[Monitor expired…]» dentro de <event> es la caducidad, no un evento más',
+)
+const expiryTracker = new TaskTracker(SESSION, SLUG)
+expiryTracker.apply({ action: 'start', id: 'x', kind: 'monitor', ts: t0, command: 'tail -f y', timeoutMs: 1800000 })
+if (expiredAsEvent) expiryTracker.apply(expiredAsEvent)
+check(
+  expiryTracker.get('x')?.state === 'expired' && expiryTracker.get('x')?.events === 0,
+  'y el monitor queda caducado sin sumar el aviso como evento',
+)
+
 // Así lo dice Claude Code 2.1.272 cuando el script del monitor termina por sí mismo.
 const streamEnded = updateFromNotification(
   parseTaskNotifications(notification('<task-id>x</task-id>\n<tool-use-id>toolu_9</tool-use-id>\n<status>completed</status>\n<summary>Monitor "prueba del visor" stream ended</summary>'))[0],

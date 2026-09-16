@@ -60,6 +60,8 @@ export type Stat =
   | { kind: 'waitingPermission'; tool: string; detail: string }
   | { kind: 'agentState'; agentType: string; started: boolean }
   | { kind: 'turnEnded' }
+  /** Un bloque de razonamiento del que Claude Code solo guardó la firma, no el texto. */
+  | { kind: 'hiddenThinking' }
   // Shells y monitores en segundo plano (ver TaskInfo).
   | { kind: 'taskStarted'; id: string; task: TaskKind }
   | { kind: 'monitorEvent'; id: string; text: string }

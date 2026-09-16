@@ -67,6 +67,11 @@ const L = {
     es: 'Shells y monitores en segundo plano de esta sesión: pulsa para ver su estado, cuánto llevan y su salida',
     en: 'Background shells and monitors of this session: click to see their state, runtime and output',
   },
+  timing: { es: '⏱ Tiempos', en: '⏱ Time' },
+  timingTitle: {
+    es: 'En qué se ha ido el tiempo de esta sesión: Claude pensando y escribiendo, herramientas, esperas',
+    en: 'Where this session’s time went: Claude thinking and writing, tools, waits',
+  },
 }
 
 const props = defineProps<{
@@ -205,6 +210,14 @@ const statusLabel = computed(() => {
       @click="resumeReplay(session.sessionId)"
     >
       {{ tr(L.replay) }}
+    </button>
+    <button
+      v-if="session"
+      :class="{ active: state.timingOpen }"
+      :title="tr(L.timingTitle)"
+      @click="state.timingOpen = !state.timingOpen"
+    >
+      {{ tr(L.timing) }}
     </button>
     <button v-if="props.tour" :title="tr(L.tourTitle)" @click="emit('tour')">
       {{ tr(L.tour) }}

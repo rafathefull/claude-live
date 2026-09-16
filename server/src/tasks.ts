@@ -205,6 +205,27 @@ export function updateFromNotification(n: TaskNotification, ts: string): TaskUpd
   const summary = n.summary ?? ''
 
   if (n.event !== undefined) {
+    // La caducidad (y la parada por exceso de eventos) no llegan como estado sino como un
+    // «evento» de control entre corchetes: `[Monitor expired after 30m with no events…]`.
+    const control = /^\[Monitor\b([^\]]*)\]/i.exec(n.event.trim())
+    if (control) {
+      const body = control[1]
+      const status: TaskEnd | null = /expir|timed? ?out|deadline/i.test(body)
+        ? 'expired'
+        : /stopp|kill|too many|ended|exit/i.test(body)
+          ? 'stopped'
+          : null
+      if (status) {
+        return {
+          action: 'end',
+          id: n.id,
+          ts,
+          status,
+          kind: 'monitor',
+          description: quotedIn(summary),
+        }
+      }
+    }
     return { action: 'event', id: n.id, ts, text: n.event, description: quotedIn(summary) }
   }
 

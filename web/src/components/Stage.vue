@@ -4,6 +4,7 @@ import { currentTasks, isReplaying, onEvent, selectedSession, state } from '../s
 import { Scene, type HoverInfo } from '../world/Scene'
 import JobsBanner from './JobsBanner.vue'
 import TasksPanel from './TasksPanel.vue'
+import TimingPanel from './TimingPanel.vue'
 import { Director } from '../world/director'
 import type { TimelineEvent } from '@shared/types'
 import { lang, tr } from '../i18n'
@@ -29,7 +30,9 @@ const campOpen = ref(false)
  * Con un panel delante (el banner o la leyenda) el mundo se queda sordo: Pixi no sabe que hay
  * HTML encima y seguía sacando tooltips de lo que quedaba debajo del panel.
  */
-const covered = computed(() => campOpen.value || state.legendOpen || state.tasksOpen)
+const covered = computed(
+  () => campOpen.value || state.legendOpen || state.tasksOpen || state.timingOpen,
+)
 watch(covered, (value) => scene?.setInteractive(!value))
 let scene: Scene | null = null
 let director: Director | null = null
@@ -186,6 +189,7 @@ onBeforeUnmount(unmountWorld)
 
     <JobsBanner v-if="campOpen" @close="campOpen = false" />
     <TasksPanel v-if="state.tasksOpen" @close="state.tasksOpen = false" />
+    <TimingPanel v-if="state.timingOpen" @close="state.timingOpen = false" />
 
     <slot />
   </div>

@@ -1,5 +1,6 @@
 import { computed, reactive, ref } from 'vue'
 import { backend, STATIC_MODE, type TaskOutput } from './backend'
+import type { TimingReport } from '@shared/timing'
 import type {
   ActorInfo,
   JobInfo,
@@ -65,6 +66,8 @@ interface State {
   tasks: Record<string, TaskInfo[]>
   /** El panel de la Terminal está abierto. Como `legendOpen`: la escena tiene que saberlo. */
   tasksOpen: boolean
+  /** El panel de tiempos está abierto. Mismo motivo. */
+  timingOpen: boolean
   /**
    * La leyenda está abierta. Vive aquí y no en el componente porque la escena tiene que
    * enterarse: con un panel delante, el mundo no debe seguir respondiendo al ratón.
@@ -88,6 +91,7 @@ export const state = reactive<State>({
   jobs: [],
   tasks: {},
   tasksOpen: false,
+  timingOpen: false,
   legendOpen: false,
   loadingSession: null,
   replay: {
@@ -479,6 +483,15 @@ export async function loadMetrics(force = false): Promise<Metrics | null> {
 
 export async function loadRaw(sessionId: string, uuid: string): Promise<unknown> {
   return backend.raw(sessionId, uuid)
+}
+
+/** El reparto del tiempo de una sesión entera, calculado por el servidor sobre el transcript. */
+export async function loadTiming(sessionId: string, pauseMs: number): Promise<TimingReport | null> {
+  try {
+    return await backend.timing(sessionId, pauseMs)
+  } catch {
+    return null
+  }
 }
 
 /** La cola de la salida de un shell o monitor. Vive en /tmp, así que la sirve el servidor. */

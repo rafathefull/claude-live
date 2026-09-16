@@ -404,13 +404,15 @@ export class TranscriptParser {
         })
       } else if (update.action === 'end') {
         const task = update.kind ?? this.taskKinds.get(n.id) ?? 'shell'
+        // Si el fin vino como «evento» de control ([Monitor expired…]), ese texto es el resumen.
+        const said = n.event?.replace(/^\[|\]$/g, '') ?? n.summary
         events.push({
           ...base,
           uuid: evUuid,
           kind: 'task_event',
           tool: task === 'monitor' ? 'Monitor' : 'Bash',
           station: 'terminal',
-          summary: clip(n.summary ?? `${task} ${update.status}`),
+          summary: clip(said ?? `${task} ${update.status}`),
           stat: {
             kind: 'taskEnded',
             id: n.id,
@@ -596,13 +598,23 @@ export class TranscriptParser {
         const evUuid = blocks.length > 1 ? `${uuid}:${index}` : uuid
         let kind: EventKind | null = null
         let summary = ''
+        let stat: Stat | undefined
         let tool: string | undefined
         let payloadSource: unknown = b
 
         if (blockType === 'thinking') {
           kind = 'thinking'
-          summary = clip(str(b.thinking) ?? '')
-          payloadSource = str(b.thinking)
+          const thought = str(b.thinking) ?? ''
+          if (thought.trim()) {
+            summary = clip(thought)
+            payloadSource = thought
+          } else {
+            // Con algunos modelos Claude Code guarda solo la firma del razonamiento, no el texto.
+            // El bloque sigue siendo tiempo pensando, y el mundo debe enseñarlo como tal.
+            summary = 'razonamiento (no guardado en el transcript)'
+            stat = { kind: 'hiddenThinking' }
+            payloadSource = undefined
+          }
         } else if (blockType === 'text') {
           kind = 'text'
           summary = clip(str(b.text) ?? '')
@@ -641,6 +653,7 @@ export class TranscriptParser {
           kind,
           station: 'desk',
           summary,
+          stat,
           payload,
           truncated,
           tokens,

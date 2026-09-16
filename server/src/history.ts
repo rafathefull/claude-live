@@ -111,6 +111,13 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
+/** Ruta del transcript principal de una sesión, si sigue en disco. */
+export async function resolveTranscript(
+  sessionId: string,
+): Promise<{ path: string; slug: string } | null> {
+  return resolvePath(sessionId)
+}
+
 async function resolvePath(sessionId: string): Promise<{ path: string; slug: string } | null> {
   const data = await loadCache()
   for (const entry of Object.values(data)) {
@@ -142,11 +149,24 @@ export async function readSessionEvents(
   sessionId: string,
   opts: ReadOptions = {},
 ): Promise<{ events: TimelineEvent[]; total: number }> {
-  const resolved = await resolvePath(sessionId)
-  if (!resolved) return { events: [], total: 0 }
-
+  const collected = await collectSessionEvents(sessionId, opts.includeAgents ?? false)
+  if (!collected) return { events: [], total: 0 }
   const from = Math.max(0, opts.from ?? 0)
   const limit = Math.min(opts.limit ?? 500, 2000)
+  return { events: collected.slice(from, from + limit), total: collected.length }
+}
+
+/**
+ * Todos los eventos de una sesión, del primero al último, tal como los produce el parser. Es la
+ * base de la paginación del histórico y del reparto de tiempos, que necesita la conversación
+ * entera. Devuelve null si el transcript ya no está.
+ */
+export async function collectSessionEvents(
+  sessionId: string,
+  includeAgents: boolean,
+): Promise<TimelineEvent[] | null> {
+  const resolved = await resolvePath(sessionId)
+  if (!resolved) return null
 
   const collected: TimelineEvent[] = []
   const parser = new TranscriptParser({ sessionId, agentId: null })
@@ -154,7 +174,7 @@ export async function readSessionEvents(
     for (const event of parser.parse(line).events) collected.push(event)
   })
 
-  if (opts.includeAgents) {
+  if (includeAgents) {
     // Los hermanos del mismo tipo se numeran por orden de aparición, igual que en vivo, para
     // que en el replay tampoco salgan dos `Explore` del mismo color.
     const seenByType = new Map<string, number>()
@@ -183,7 +203,7 @@ export async function readSessionEvents(
     collected.sort((a, b) => a.ts.localeCompare(b.ts))
   }
 
-  return { events: collected.slice(from, from + limit), total: collected.length }
+  return collected
 }
 
 /** Línea cruda de un evento, para el inspector (payloads de cientos de KB incluidos). */

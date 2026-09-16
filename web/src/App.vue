@@ -12,6 +12,7 @@ import Tour from './components/Tour.vue'
 import Legend from './components/Legend.vue'
 import ReplayBar from './components/ReplayBar.vue'
 import TasksPanel from './components/TasksPanel.vue'
+import TimingPanel from './components/TimingPanel.vue'
 import {
   SPEEDS,
   isReplaying,
@@ -180,6 +181,7 @@ onBeforeUnmount(() => {
       <Timeline />
       <!-- En modo sobrio no hay escenario que lo monte: el panel de la Terminal sale aquí. -->
       <TasksPanel v-if="state.soberMode && state.tasksOpen" @close="state.tasksOpen = false" />
+      <TimingPanel v-if="state.soberMode && state.timingOpen" @close="state.timingOpen = false" />
     </div>
 
     <Legend v-if="state.legendOpen" @close="state.legendOpen = false" />

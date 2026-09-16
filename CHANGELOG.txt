@@ -12,6 +12,24 @@
 
 
 --------------------------------------------------------------------------------
+ 2026-09-16
+--------------------------------------------------------------------------------
+
+  + Tiempos: en que se ha ido el tiempo de cada sesion. Cada hueco entre dos
+    eventos se atribuye a lo que estaba pasando (Claude pensando, Claude
+    escribiendo, una herramienta corriendo, una pregunta o tu siguiente
+    mensaje) y las categorias suman exactamente el tiempo activo; los huecos
+    de mas de 30 minutos se apartan como pausas. Tabla por herramienta,
+    llamadas mas largas con un clic a la timeline, subagentes y tareas en
+    segundo plano. En vivo, la foto completa del servidor; en el reproductor,
+    hasta el punto actual de la pelicula.                          [pendiente]
+  ! Los bloques de razonamiento sin texto (Claude Code guarda solo la firma
+    con algunos modelos) se descartaban: Claude nunca "pensaba" en esas
+    sesiones y ese tiempo se colaba en "escribiendo".              [pendiente]
+  ! La caducidad de un monitor llega como un evento de control ("[Monitor
+    expired...]") y se contaba como un evento mas.                [pendiente]
+
+--------------------------------------------------------------------------------
  2026-09-15
 --------------------------------------------------------------------------------
 
@@ -147,6 +165,23 @@
 ================================================================================
  English
 ================================================================================
+
+--------------------------------------------------------------------------------
+ 2026-09-16
+--------------------------------------------------------------------------------
+
+  + Time: where each session's time went. Every gap between two events is
+    attributed to what was happening (Claude thinking, Claude writing, a tool
+    running, a question, or your next message) and the categories add up
+    exactly to the active time; gaps longer than 30 minutes are set aside as
+    pauses. Per-tool table, longest calls with a click to the timeline,
+    subagents and background tasks. Live, the full picture from the server;
+    in the player, up to the current point of the replay.           [pending]
+  ! Reasoning blocks without text (Claude Code keeps only the signature with
+    some models) were dropped: Claude never "thought" in those sessions and
+    that time leaked into "writing".                                [pending]
+  ! A monitor's expiry arrives as a control event ("[Monitor expired...]")
+    and was counted as one more event.                              [pending]
 
 --------------------------------------------------------------------------------
  2026-09-15
