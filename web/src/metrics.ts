@@ -1,4 +1,10 @@
 import type { Metrics, MetricsBucket, Pricing } from '@shared/types'
+import {
+  activeMsOf,
+  addTimingCategories,
+  emptyTimingCategories,
+  timingSidesOf,
+} from '@shared/timing'
 
 /**
  * Filtrado y agregación de las métricas para la vista.
@@ -30,10 +36,15 @@ export function emptyBucket(): MetricsBucket {
     tokensCache: 0,
     bytes: 0,
     modelTokens: {},
+    time: emptyTimingCategories(),
   }
 }
 
 export function addBucket(target: MetricsBucket, source: MetricsBucket): MetricsBucket {
+  // `time` puede faltar en un mundo de demostración publicado antes de que existiera.
+  const time = emptyTimingCategories()
+  addTimingCategories(time, target.time ?? {})
+  addTimingCategories(time, source.time ?? {})
   const modelTokens: MetricsBucket['modelTokens'] = {}
   for (const from of [target.modelTokens, source.modelTokens]) {
     for (const [model, usage] of Object.entries(from ?? {})) {
@@ -46,6 +57,7 @@ export function addBucket(target: MetricsBucket, source: MetricsBucket): Metrics
   }
   return {
     modelTokens,
+    time,
     sessions: target.sessions + source.sessions,
     events: target.events + source.events,
     toolCalls: target.toolCalls + source.toolCalls,
@@ -107,10 +119,12 @@ export function top(counts: Record<string, number>, limit = 8): { key: string; n
 }
 
 /** Qué se dibuja en la gráfica. */
-export type Measure = 'events' | 'toolCalls' | 'tokens' | 'sessions' | 'errors'
+export type Measure = 'time' | 'events' | 'toolCalls' | 'tokens' | 'sessions' | 'errors'
 
 export function valueOf(bucket: MetricsBucket, measure: Measure): number {
   switch (measure) {
+    case 'time':
+      return activeMsOf(bucket.time)
     case 'events':
       return bucket.events
     case 'toolCalls':
@@ -122,6 +136,18 @@ export function valueOf(bucket: MetricsBucket, measure: Measure): number {
     case 'errors':
       return bucket.errors
   }
+}
+
+/** Tiempo activo de un cubo: la suma de sus categorías. */
+export function activeTimeOf(bucket: MetricsBucket): number {
+  return activeMsOf(bucket.time)
+}
+
+/** Qué parte del tiempo activo fue tuya (esperas, preguntas, permisos), de 0 a 100. */
+export function yourShareOf(bucket: MetricsBucket): number {
+  const active = activeMsOf(bucket.time)
+  if (active === 0) return 0
+  return Math.round((100 * timingSidesOf(bucket.time).you) / active)
 }
 
 /**

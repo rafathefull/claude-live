@@ -10,7 +10,7 @@
  *   npm run test:timing
  */
 import { collectSessionEvents, listHistory } from '../src/history.js'
-import { computeTiming, TIMING_CATEGORIES, timingSides } from '../../shared/timing.js'
+import { TimingAccumulator, computeTiming, TIMING_CATEGORIES, timingSides } from '../../shared/timing.js'
 import type { TimelineEvent } from '../../shared/types.js'
 
 let failures = 0
@@ -178,6 +178,26 @@ check(withAgent.events === 6, 'se cuentan todos los eventos recibidos')
 
 const empty = computeTiming([])
 check(empty.activeMs === 0 && empty.spanMs === 0 && sum(empty.categories) === 0, 'sin eventos, todo a cero y sin explotar')
+
+/* ------------------------------------------------------------------ por día (métricas) */
+
+console.log('\nreparto por día, para las métricas')
+
+const byDay: Record<string, number> = {}
+const acc = new TimingAccumulator({
+  onGap: (category, ms, fromTs) => {
+    if (category !== 'pause') byDay[fromTs.slice(0, 10)] = (byDay[fromTs.slice(0, 10)] ?? 0) + ms
+  },
+})
+// Una llamada que empieza a las 23:59:30 y acaba a las 00:00:30: el minuto cae en el día en que empezó.
+const midnight = Date.parse('2026-09-15T23:59:30.000Z')
+const late = (seconds: number, kind: TimelineEvent['kind'], extra: Partial<TimelineEvent> = {}) =>
+  ev(kind, 0, { ...extra, ts: new Date(midnight + seconds * 1000).toISOString() })
+acc.push(late(0, 'tool_call', { tool: 'Bash', toolUseId: 'm1' }))
+acc.push(late(60, 'tool_result', { tool: 'Bash', toolUseId: 'm1', durationMs: 60_000 }))
+acc.push(late(70, 'text'))
+check(byDay['2026-09-15'] === 60_000 && byDay['2026-09-16'] === 10_000, 'cada hueco cae en el día en que empezó')
+check(acc.report().categories.tools === 60_000 && acc.report().categories.writing === 10_000, 'y el informe del acumulador coincide con lo avisado')
 
 /* ------------------------------------------------------------------ transcripts reales */
 

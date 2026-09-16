@@ -100,10 +100,16 @@ tu máquina (más abajo).
 
   ![Historial en árbol](docs/arbol.png)
 
-- **Métricas** por proyecto y por día: sesiones, peticiones tuyas, eventos, herramientas,
-  errores, subagentes, tokens (los de caché aparte) y tamaño en disco, con gráfica de barras y
-  los rankings de herramientas, modelos y tipos de subagente. Se puede filtrar por proyecto y
-  por rango, y pulsar un proyecto de la tabla lo enfoca.
+- **Métricas** por proyecto y por día: tiempo activo, sesiones, peticiones tuyas, eventos,
+  herramientas, errores, subagentes, tokens (los de caché aparte) y tamaño en disco, con gráfica
+  de barras y los rankings de herramientas, modelos y tipos de subagente. Se puede filtrar por
+  proyecto y por rango, y pulsar un proyecto de la tabla lo enfoca. El **tiempo** es la medida por
+  omisión: cada barra de un día va apilada por categoría con los mismos colores que el panel de
+  una sesión (Claude pensando, escribiendo, herramientas, esperas), arriba sale el reparto del
+  rango con el porcentaje de Claude y la máquina frente al tuyo, y la tabla por proyecto lleva el
+  tiempo activo y el «% tú». Cada hueco cae en el día en que empezó; las pausas de más de 30
+  minutos no están, que no son de nadie. Sale del mismo recorrido cacheado por fichero que el
+  resto de métricas: 86 transcripts en 0,7 s aquí.
 
   ![Métricas por proyecto y día](docs/metricas.png)
 

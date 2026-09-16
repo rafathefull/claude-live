@@ -4,7 +4,18 @@ import { readAgentMeta, scanTranscripts } from './discover.js'
 import { readPricing } from './pricing.js'
 import { forEachLine } from './lines.js'
 import { TranscriptParser } from './parser.js'
+import {
+  TimingAccumulator,
+  addTimingCategories,
+  emptyTimingCategories,
+} from '../../shared/timing.js'
 import type { Metrics, MetricsBucket, TokenUsage, TranscriptSummary } from '../../shared/types.js'
+
+/**
+ * Versión del resumen cacheado. Se sube cuando el resumen gana campos, para que los transcripts
+ * ya resumidos se relean una vez en vez de servir cubos sin ese dato (v2: reparto del tiempo).
+ */
+const SUMMARY_VERSION = 2
 
 /**
  * Métricas agregadas por proyecto y por día, calculadas desde los transcripts.
@@ -21,6 +32,7 @@ import type { Metrics, MetricsBucket, TokenUsage, TranscriptSummary } from '../.
 interface CacheEntry {
   mtimeMs: number
   sizeBytes: number
+  version?: number
   summary: TranscriptSummary
 }
 
@@ -67,10 +79,12 @@ function emptyBucket(): MetricsBucket {
     tokensCache: 0,
     bytes: 0,
     modelTokens: {},
+    time: emptyTimingCategories(),
   }
 }
 
 function add(target: MetricsBucket, source: MetricsBucket): void {
+  addTimingCategories(target.time, source.time)
   target.sessions += source.sessions
   target.events += source.events
   target.toolCalls += source.toolCalls
@@ -120,6 +134,17 @@ export async function summarizeTranscript(
   let firstTs: string | undefined
   let lastTs: string | undefined
 
+  // El tiempo se reparte con la misma regla que el panel de una sesión, hueco a hueco, y cada
+  // hueco cae en el día en que empezó. Los transcripts de subagentes no reparten nada: su
+  // trabajo va en paralelo al de la sesión y ya cuenta allí.
+  const timing = new TimingAccumulator({
+    onGap: (category, ms, fromTs) => {
+      if (category === 'pause') return
+      const day = dayOf(fromTs)
+      if (day) (days[day] ??= emptyBucket()).time[category] += ms
+    },
+  })
+
   await forEachLine(path, (line) => {
     // El cwd viaja en cada línea del transcript; con la primera que lo traiga vale.
     if (!cwd) {
@@ -128,6 +153,7 @@ export async function summarizeTranscript(
     }
 
     for (const event of parser.parse(line).events) {
+      if (agentId === null) timing.push(event)
       const day = dayOf(event.ts)
       if (!day) continue
       const bucket = (days[day] ??= emptyBucket())
@@ -212,13 +238,23 @@ export async function computeMetrics(opts: MetricsOptions = {}): Promise<Metrics
   for (const file of files) {
     const cached = data[file.path]
     let summary: TranscriptSummary
-    if (cached && cached.mtimeMs === file.mtimeMs && cached.sizeBytes === file.sizeBytes) {
+    if (
+      cached &&
+      cached.version === SUMMARY_VERSION &&
+      cached.mtimeMs === file.mtimeMs &&
+      cached.sizeBytes === file.sizeBytes
+    ) {
       summary = cached.summary
     } else {
       summary = await summarizeTranscript(file.path, file.sessionId, file.agentId, file.sizeBytes)
       reread++
     }
-    next[file.path] = { mtimeMs: file.mtimeMs, sizeBytes: file.sizeBytes, summary }
+    next[file.path] = {
+      mtimeMs: file.mtimeMs,
+      sizeBytes: file.sizeBytes,
+      version: SUMMARY_VERSION,
+      summary,
+    }
 
     const project = projectOf(summary)
     const projectBucket = (byProject[project] ??= emptyBucket())

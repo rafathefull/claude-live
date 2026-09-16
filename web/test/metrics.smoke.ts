@@ -9,6 +9,8 @@
  */
 import {
   ALL_PROJECTS,
+  activeTimeOf,
+  addBucket,
   costOf,
   emptyBucket,
   formatMoney,
@@ -17,7 +19,9 @@ import {
   top,
   totals,
   valueOf,
+  yourShareOf,
 } from '../src/metrics.js'
+import { emptyTimingCategories } from '../../shared/timing.js'
 import type { Metrics, MetricsBucket, Pricing } from '../../shared/types.js'
 
 let failures = 0
@@ -140,13 +144,28 @@ check(formatMoney({ total: 0.4237, currency: 'USD' , untariffed: [] }) === '0.42
 check(formatMoney({ total: 12.5, currency: 'USD', untariffed: [] }) === '12.50 USD', 'lo normal, céntimos')
 check(formatMoney({ total: 1284.7, currency: 'EUR', untariffed: [] }) === '1285 EUR', 'y lo mucho, sin céntimos')
 
+console.log('\ntiempo')
+const timed = bucket({
+  time: { ...emptyTimingCategories(), thinking: 60_000, tools: 30_000, waiting: 90_000 },
+})
+check(valueOf(timed, 'time') === 180_000 && activeTimeOf(timed) === 180_000, 'la medida «tiempo» es la suma de las categorías')
+check(yourShareOf(timed) === 50, 'y la parte tuya es la espera sobre el activo: 90 de 180 son el 50 %')
+const doubled = addBucket(timed, timed)
+check(doubled.time.thinking === 120_000 && doubled.time.waiting === 180_000, 'sumar dos cubos suma cada categoría')
+check(yourShareOf(bucket({})) === 0, 'sin tiempo no hay porcentaje que inventar')
+// Un mundo de demostración publicado antes de que existiera el tiempo no lo trae.
+const legacy = bucket({ events: 3 }) as Partial<MetricsBucket>
+delete legacy.time
+const merged = addBucket(emptyBucket(), legacy as MetricsBucket)
+check(activeTimeOf(merged) === 0 && merged.events === 3, 'un cubo antiguo sin tiempo se suma sin romper nada')
+
 // Los tokens por modelo tienen que sobrevivir a la suma de dos tramos.
-const merged = totals([
+const twoDays = totals([
   { day: '2026-07-01', bucket: spent },
   { day: '2026-07-02', bucket: spent },
 ])
 check(
-  costOf(merged, pricing)?.total === 180,
+  costOf(twoDays, pricing)?.total === 180,
   'y al sumar dos días el coste se dobla, que es lo que tiene que pasar',
 )
 

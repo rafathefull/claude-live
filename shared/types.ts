@@ -1,3 +1,5 @@
+import type { TimingCategory } from './timing.js'
+
 /**
  * Tipos compartidos entre el servidor (lector de ~/.claude) y el mundo (front).
  *
@@ -272,6 +274,11 @@ export interface MetricsBucket {
    * tarifa, y la caché de lectura y de escritura se facturan distinto que el resto.
    */
   modelTokens: Record<string, TokenUsage>
+  /**
+   * En qué se fue el tiempo, en ms por categoría (ver shared/timing.ts). Cada hueco entre dos
+   * eventos se atribuye al día en que empezó; las pausas no están: no son de nadie.
+   */
+  time: Record<TimingCategory, number>
 }
 
 /**

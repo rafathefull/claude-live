@@ -97,10 +97,15 @@ with your own sessions you need to run it on your machine (below).
 
   ![History as a tree](docs/arbol.png)
 
-- **Metrics** per project and per day: sessions, your prompts, events, tool calls, errors,
-  subagents, tokens (cache counted apart) and size on disk, with a bar chart and the rankings of
-  tools, models and subagent types. Filterable by project and range; clicking a project in the
-  table focuses it.
+- **Metrics** per project and per day: active time, sessions, your prompts, events, tool calls,
+  errors, subagents, tokens (cache counted apart) and size on disk, with a bar chart and the
+  rankings of tools, models and subagent types. Filterable by project and range; clicking a
+  project in the table focuses it. **Time** is the default measure: each day's bar is stacked by
+  category with the same colours as a session's panel (Claude thinking, writing, tools, waits),
+  the range split shows Claude and the machine versus you, and the per-project table carries
+  active time and "% you". Each gap lands on the day it started; pauses longer than 30 minutes
+  are left out, since they belong to nobody. It comes from the same per-file cached walk as the
+  rest of the metrics: 86 transcripts in 0.7 s here.
 
   ![Metrics per project and day](docs/metricas.png)
 

@@ -1987,12 +1987,14 @@ td.bad {
   border-radius: 2px;
 }
 
-.timing-panel .tm-ms {
+.timing-panel .tm-ms,
+.metrics-time .tm-ms {
   font-variant-numeric: tabular-nums;
   color: var(--text);
 }
 
-.timing-panel .tm-pct {
+.timing-panel .tm-pct,
+.metrics-time .tm-pct {
   text-align: right;
   font-variant-numeric: tabular-nums;
   color: var(--text-dim);
@@ -2105,4 +2107,48 @@ td.bad {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--text-dim);
+}
+
+/* ------------------------------------------------- tiempo en las métricas */
+
+.metrics-time {
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.metrics-time-head {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.metrics-time-head .timing-sides {
+  margin: 0;
+}
+
+.metrics-time .timing-legend {
+  margin: 6px 0 0;
+}
+
+/* La barra de un día, apilada por categoría: de abajo arriba, lo de Claude, la máquina y tú. */
+.chart-bar.stacked {
+  display: flex;
+  flex-direction: column-reverse;
+  background: none;
+  overflow: hidden;
+}
+
+.chart-bar.stacked > span {
+  flex-basis: 0;
+  min-height: 0;
+}
+
+.chart-col:hover .chart-bar.stacked {
+  background: none;
+  filter: brightness(1.25);
 }

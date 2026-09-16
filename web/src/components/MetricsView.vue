@@ -3,17 +3,20 @@ import { computed, onMounted, ref } from 'vue'
 import { loadMetrics } from '../store'
 import {
   ALL_PROJECTS,
+  activeTimeOf,
   costOf,
   formatMoney,
   series,
   top,
   totals,
   valueOf,
+  yourShareOf,
   type Measure,
 } from '../metrics'
-import { formatTokens } from '../format'
+import { formatDuration, formatTokens } from '../format'
 import { tr } from '../i18n'
-import type { Metrics } from '@shared/types'
+import { TIMING_CATEGORIES, TIMING_TEXT, timingSidesOf, type TimingCategory } from '@shared/timing'
+import type { Metrics, MetricsBucket } from '@shared/types'
 
 /**
  * Métricas por proyecto y por día.
@@ -36,6 +39,15 @@ const L = {
   everything: { es: 'todo', en: 'everything' },
   days: { es: 'días', en: 'days' },
   measure: { es: 'Medida', en: 'Measure' },
+  time: { es: 'tiempo activo', en: 'active time' },
+  timeSplit: { es: 'En qué se fue el tiempo del rango', en: 'Where the range’s time went' },
+  machine: { es: 'Claude y la máquina', en: 'Claude and the machine' },
+  you: { es: 'tú', en: 'you' },
+  yourShare: { es: '% tú', en: '% you' },
+  yourShareTitle: {
+    es: 'Qué parte del tiempo activo fue tuya: esperas, preguntas y permisos',
+    en: 'How much of the active time was yours: waits, questions and permissions',
+  },
   events: { es: 'eventos', en: 'events' },
   toolCalls: { es: 'herramientas', en: 'tool calls' },
   tokens: { es: 'tokens', en: 'tokens' },
@@ -55,8 +67,8 @@ const L = {
     en: 'Walk every transcript again, ignoring the cache',
   },
   note: {
-    es: 'El trabajo se reparte por el día de cada evento, no por el de la sesión: una conversación de madrugada cuenta en los dos días. Los subagentes se cuentan por su propio transcript.',
-    en: 'Work is spread by the day of each event, not of the session: a conversation past midnight counts on both days. Subagents are counted by their own transcript.',
+    es: 'El trabajo se reparte por el día de cada evento, no por el de la sesión: una conversación de madrugada cuenta en los dos días. Los subagentes se cuentan por su propio transcript. El tiempo se reparte hueco a hueco con la misma regla que el panel de una sesión (cada hueco cae en el día en que empezó) y las pausas de más de 30 minutos no están: no son de nadie.',
+    en: 'Work is spread by the day of each event, not of the session: a conversation past midnight counts on both days. Subagents are counted by their own transcript. Time is split gap by gap with the same rule as a session’s panel (each gap lands on the day it started) and pauses longer than 30 minutes are left out: they belong to nobody.',
   },
   cached: { es: 'de la caché', en: 'from cache' },
   reread: { es: 'releídos', en: 're-read' },
@@ -75,6 +87,7 @@ const L = {
 }
 
 const MEASURES: { key: Measure; label: { es: string; en: string } }[] = [
+  { key: 'time', label: L.time },
   { key: 'events', label: L.events },
   { key: 'toolCalls', label: L.toolCalls },
   { key: 'tokens', label: L.tokens },
@@ -88,7 +101,7 @@ const metrics = ref<Metrics | null>(null)
 const loading = ref(true)
 const project = ref(ALL_PROJECTS)
 const range = ref(30)
-const measure = ref<Measure>('events')
+const measure = ref<Measure>('time')
 
 async function refresh(force = false): Promise<void> {
   loading.value = true
@@ -125,6 +138,30 @@ const agentTypes = computed(() => top(metrics.value?.agentTypes ?? {}, 6))
 /** Alto de cada barra, en porcentaje del pico del rango. */
 function heightOf(value: number): string {
   return `${Math.max(value > 0 ? 3 : 0, Math.round((value / peak.value) * 100))}%`
+}
+
+/** El valor de la medida con su unidad: minutos para el tiempo, «k» para los tokens. */
+function formatMeasure(value: number): string {
+  if (measure.value === 'time') return formatDuration(value)
+  if (measure.value === 'tokens') return formatTokens(value)
+  return String(value)
+}
+
+/** Reparto del tiempo del rango, para la barra y la leyenda: solo las categorías con algo. */
+const timeSplit = computed(() => {
+  const active = Math.max(1, activeTimeOf(sum.value))
+  return TIMING_CATEGORIES.map((category) => ({
+    category,
+    ms: sum.value.time?.[category] ?? 0,
+    pct: Math.round((1000 * (sum.value.time?.[category] ?? 0)) / active) / 10,
+  })).filter((segment) => segment.ms > 0)
+})
+const timeSides = computed(() => timingSidesOf(sum.value.time))
+function sharePct(ms: number): number {
+  return Math.round((100 * ms) / Math.max(1, activeTimeOf(sum.value)))
+}
+function timeOf(bucket: MetricsBucket, category: TimingCategory): number {
+  return bucket.time?.[category] ?? 0
 }
 
 function formatBytes(n: number): string {
@@ -202,6 +239,7 @@ const measureLabel = computed(
 
       <!-- Totales del rango elegido, no del histórico entero. -->
       <div class="metrics-totals">
+        <span><b>{{ formatDuration(activeTimeOf(sum)) }}</b> {{ tr(L.time) }}</span>
         <span><b>{{ sum.sessions }}</b> {{ tr(L.sessions) }}</span>
         <span><b>{{ sum.prompts }}</b> {{ tr(L.prompts) }}</span>
         <span><b>{{ sum.events }}</b> {{ tr(L.events) }}</span>
@@ -218,10 +256,39 @@ const measureLabel = computed(
         ⚠ {{ tr(L.untariffed) }} {{ cost.untariffed.join(', ') }}
       </p>
 
+      <!-- En qué se fue el tiempo del rango: la misma barra y leyenda que el panel de una sesión. -->
+      <div v-if="timeSplit.length > 0" class="metrics-time">
+        <div class="metrics-time-head">
+          <strong>⏱ {{ tr(L.timeSplit) }}</strong>
+          <span class="timing-sides muted">
+            <span>🤖 {{ tr(L.machine) }}: <strong>{{ sharePct(timeSides.machine) }}%</strong></span>
+            <span>🧑 {{ tr(L.you) }}: <strong>{{ sharePct(timeSides.you) }}%</strong></span>
+          </span>
+        </div>
+        <div class="timing-bar" role="img">
+          <span
+            v-for="segment in timeSplit"
+            :key="segment.category"
+            :class="`tm-${segment.category}`"
+            :style="{ flexGrow: segment.ms }"
+            :title="`${tr(TIMING_TEXT[segment.category])} · ${formatDuration(segment.ms)} · ${segment.pct}%`"
+          />
+        </div>
+        <ul class="timing-legend">
+          <li v-for="segment in timeSplit" :key="segment.category">
+            <i class="swatch" :class="`tm-${segment.category}`" />
+            <span class="tm-name">{{ tr(TIMING_TEXT[segment.category]) }}</span>
+            <span class="tm-ms">{{ formatDuration(segment.ms) }}</span>
+            <span class="tm-pct">{{ segment.pct }}%</span>
+          </li>
+        </ul>
+      </div>
+
       <!-- Barras por día. Los días sin actividad se dibujan vacíos: si se saltaran, una semana
-           sin tocar nada parecería una semana de trabajo seguido. -->
+           sin tocar nada parecería una semana de trabajo seguido. Con el tiempo, cada barra se
+           apila por categoría, con los mismos colores que el reparto de arriba. -->
       <div class="chart-scale muted">
-        {{ tr(L.peak) }} {{ measure === 'tokens' ? formatTokens(peak) : peak }}
+        {{ tr(L.peak) }} {{ formatMeasure(peak) }}
         {{ tr(measureLabel) }}
       </div>
       <div class="chart">
@@ -229,9 +296,21 @@ const measureLabel = computed(
           v-for="point in points"
           :key="point.day"
           class="chart-col"
-          :title="`${point.day} · ${valueOf(point.bucket, measure)} ${tr(measureLabel)}`"
+          :title="`${point.day} · ${formatMeasure(valueOf(point.bucket, measure))} ${tr(measureLabel)}`"
         >
-          <span class="chart-bar" :style="{ height: heightOf(valueOf(point.bucket, measure)) }" />
+          <span
+            v-if="measure === 'time'"
+            class="chart-bar stacked"
+            :style="{ height: heightOf(valueOf(point.bucket, measure)) }"
+          >
+            <span
+              v-for="category in TIMING_CATEGORIES"
+              :key="category"
+              :class="`tm-${category}`"
+              :style="{ flexGrow: timeOf(point.bucket, category) }"
+            />
+          </span>
+          <span v-else class="chart-bar" :style="{ height: heightOf(valueOf(point.bucket, measure)) }" />
           <span class="chart-day">{{ shortDay(point.day) }}</span>
         </div>
         <p v-if="points.length === 0" class="muted">{{ tr(L.empty) }}</p>
@@ -244,6 +323,8 @@ const measureLabel = computed(
             <thead>
               <tr>
                 <th>{{ tr(L.project) }}</th>
+                <th>{{ tr(L.time) }}</th>
+                <th :title="tr(L.yourShareTitle)">{{ tr(L.yourShare) }}</th>
                 <th>{{ tr(L.sessions) }}</th>
                 <th>{{ tr(L.events) }}</th>
                 <th>{{ tr(L.toolCalls) }}</th>
@@ -261,6 +342,8 @@ const measureLabel = computed(
                 @click="project = entry.name"
               >
                 <td>{{ entry.name }}</td>
+                <td>{{ formatDuration(activeTimeOf(entry.bucket)) }}</td>
+                <td :title="tr(L.yourShareTitle)">{{ yourShareOf(entry.bucket) }}%</td>
                 <td>{{ entry.bucket.sessions }}</td>
                 <td>{{ entry.bucket.events }}</td>
                 <td>{{ entry.bucket.toolCalls }}</td>

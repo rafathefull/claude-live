@@ -67,6 +67,27 @@ check(agents > 0, 'y se cuentan de verdad, que en el transcript no hay evento de
 const sessions = Object.values(first.byDay).reduce((n, bucket) => n + bucket.sessions, 0)
 check(sessions > 0 && sessions <= first.transcripts, `${sessions} sesiones, nunca más que ficheros`)
 
+console.log('\ntiempo')
+const activeOf = (buckets: Iterable<{ time: Record<string, number> }>): number => {
+  let total = 0
+  for (const bucket of buckets) for (const ms of Object.values(bucket.time)) total += ms
+  return total
+}
+const timeByDay = activeOf(Object.values(first.byDay))
+const timeByProject = activeOf(Object.values(first.byProject))
+const timeByProjectDay = activeOf(
+  Object.values(first.projectDays).flatMap((byDay) => Object.values(byDay)),
+)
+check(timeByDay > 0, `hay tiempo repartido: ${Math.round(timeByDay / 60_000)} min activos en total`)
+check(
+  timeByDay === timeByProject && timeByDay === timeByProjectDay,
+  'y cuadra por los tres caminos: por día, por proyecto y por proyecto×día',
+)
+check(
+  Object.values(first.byDay).every((bucket) => Object.values(bucket.time).every((ms) => ms >= 0)),
+  'ninguna categoría sale negativa',
+)
+
 console.log('\nsegunda pasada (caché)')
 const second = await computeMetrics()
 // Los transcripts de las sesiones vivas crecen mientras esto corre —incluida la que está
