@@ -86,8 +86,13 @@ function toEntry(raw: unknown, background: boolean): RosterEntry | null {
     kind: typeof o.kind === 'string' ? o.kind : undefined,
     entrypoint: typeof o.entrypoint === 'string' ? o.entrypoint : undefined,
     name: typeof o.name === 'string' ? o.name : undefined,
+    // `shell` es lo que escribe Claude Code mientras ejecuta un comando: está trabajando.
     status:
-      status === 'busy' || status === 'idle' || status === 'dead' ? status : 'unknown',
+      status === 'busy' || status === 'shell'
+        ? 'busy'
+        : status === 'idle' || status === 'dead'
+          ? status
+          : 'unknown',
     background,
   }
 }
