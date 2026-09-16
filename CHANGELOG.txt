@@ -33,7 +33,7 @@
     frente a ti) y, por proyecto, el tiempo activo y el "% tu". Mismo reparto
     hueco a hueco que el panel de una sesion, cada hueco en el dia en que
     empezo; el resumen cacheado por fichero sube de version y se relee una
-    vez.                                                          [pendiente]
+    vez.                                                            [4b29e29]
 
 --------------------------------------------------------------------------------
  2026-09-15
@@ -192,7 +192,7 @@
     stacked by category, the range split (Claude and the machine versus you)
     and, per project, active time and "% you". Same gap-by-gap split as a
     session's panel, each gap on the day it started; the per-file cached
-    summary bumps its version and is re-read once.                  [pending]
+    summary bumps its version and is re-read once.                  [4b29e29]
 
 --------------------------------------------------------------------------------
  2026-09-15
