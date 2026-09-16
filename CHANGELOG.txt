@@ -34,6 +34,22 @@
     hueco a hueco que el panel de una sesion, cada hueco en el dia en que
     empezo; el resumen cacheado por fichero sube de version y se relee una
     vez.                                                            [4b29e29]
+  + Velocidad por modelo: respuestas, tiempo de pensar y escribir, media por
+    respuesta y tokens de salida por segundo, en el panel de Tiempos y junto
+    a cada modelo en Metricas.                                        [93fcddd]
+  + Avisos del navegador, opcionales (campana en la cabecera): cuando Claude
+    termina el turno y te espera, pide permiso o pregunta, y no estas
+    mirando. Pulsar el aviso trae el visor a esa sesion.             [14b1f05]
+  ! Los tokens se sumaban por cada linea del transcript, y cada bloque de una
+    respuesta es una linea que repite el mismo usage: HUD, metricas y coste
+    salian multiplicados (18,7 M pasan a 5,5 M aqui). Ahora una vez por
+    respuesta.                                                      [93fcddd]
+  ! Una llamada en paralelo "duraba" tambien lo que tardaron en generarse los
+    bloques que venian detras: se mide desde que la respuesta termina, que es
+    cuando arranca.                                                 [93fcddd]
+  ! El estado "shell" del roster (Claude ejecutando un comando) se convertia
+    en "desconocido" y la cabecera decia "ESTADO -": cuenta como trabajando.
+                                                                     [2ae2eeb]
 
 --------------------------------------------------------------------------------
  2026-09-15
@@ -193,6 +209,21 @@
     and, per project, active time and "% you". Same gap-by-gap split as a
     session's panel, each gap on the day it started; the per-file cached
     summary bumps its version and is re-read once.                  [4b29e29]
+  + Speed per model: responses, thinking and writing time, mean per response
+    and output tokens per second, in the Time panel and next to each model in
+    Metrics.                                                         [93fcddd]
+  + Optional browser notifications (bell in the header): when Claude ends its
+    turn and waits for you, asks for permission or has a question, and you
+    are not looking. Clicking the notice brings the viewer to that session.
+                                                                     [14b1f05]
+  ! Tokens were summed per transcript line, and every block of a response is
+    a line repeating the same usage: HUD, metrics and cost came out
+    multiplied (18.7M become 5.5M here). Now once per response.     [93fcddd]
+  ! A parallel call also "lasted" the time the blocks after it took to
+    generate: it is measured from the end of the response, which is when it
+    starts.                                                         [93fcddd]
+  ! The roster's "shell" status (Claude running a command) became "unknown"
+    and the header read "STATE -": it counts as working.             [2ae2eeb]
 
 --------------------------------------------------------------------------------
  2026-09-15
